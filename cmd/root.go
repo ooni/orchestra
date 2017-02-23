@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"strings"
 	"fmt"
 	"os"
 
@@ -14,13 +15,13 @@ import (
 var (
 	cfgFile string
 	logLevel string
+	psqlDBStr string
 )
 
 var ctx = log.WithFields(log.Fields{
 	"env": "production",
 })
 
-// RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "proteus",
 	Short: "I know what probes are out there",
@@ -47,18 +48,15 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports Persistent Flags, which, if defined here,
-	// will be global for your application.
-
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.proteus.yaml)")
-	RootCmd.PersistentFlags().StringVarP(&logLevel, "logLevel", "", "info", "Help message for toggle")
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	RootCmd.PersistentFlags().StringVarP(&logLevel, "logLevel", "", "info", "Set the log level")
+	RootCmd.PersistentFlags().StringP("db-url", "", "", "Set the url of the postgres database (ex. postgres://username:password@host/dbname?sslmode=verify-full)")
+	viper.BindPFlag("database-url", RootCmd.PersistentFlags().Lookup("db-url"))
+	viper.SetDefault("active-probes-table", "active_probes")
+	viper.SetDefault("probe-updates-table", "probe_updates")
+	viper.SetDefault("probe-heartbeats-table", "probe_heartbeats")
 }
 
-// initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if cfgFile != "" { // enable ability to specify config file via flag
 		viper.SetConfigFile(cfgFile)
@@ -67,6 +65,9 @@ func initConfig() {
 	viper.SetConfigName(".proteus") // name of config file (without extension)
 	viper.AddConfigPath("$HOME")  // adding home directory as first search path
 	viper.AutomaticEnv()          // read in environment variables that match
+
+	replacer := strings.NewReplacer("-", "_") // Allows us to defined keys with -, but set them in via env variables with _
+	viper.SetEnvKeyReplacer(replacer)
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
