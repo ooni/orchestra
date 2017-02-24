@@ -23,14 +23,9 @@ var ctx = log.WithFields(log.Fields{
 })
 
 var RootCmd = &cobra.Command{
-	Use:   "proteus-registry",
-	Short: "I know what probes are out there",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Use:   "proteus-notify",
+	Short: "I tell probes what to do",
+	Long: ``,
 }
 
 func Execute() {
