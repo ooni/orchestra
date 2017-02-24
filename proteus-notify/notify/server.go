@@ -2,12 +2,9 @@ package notify
 
 import (
 	"fmt"
-	"time"
-	"errors"
 	"net/http"
 	"database/sql"
 
-	"github.com/satori/go.uuid"
 	"github.com/lib/pq"
 	"github.com/spf13/viper"
 	"gopkg.in/gin-gonic/gin.v1"
@@ -60,6 +57,11 @@ func StartServer() {
 	}
 	defer db.Close()
 
+	ctx.Infof("ENV: %s", viper.GetString("environment"))
+	if viper.GetString("environment") != "development" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	router := gin.Default()
 	router.POST("/api/v1/notify", func(c *gin.Context) {
 		var notifyReq NotifyReq
@@ -70,15 +72,6 @@ func StartServer() {
 					gin.H{"error": "invalid request"})
 			return
 		}
-
-		clientID , err := Register(db, registerReq)
-		if (err != nil) {
-			c.JSON(http.StatusBadRequest,
-					gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"client_id": clientID})
 		return
 	})
 

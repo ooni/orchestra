@@ -1,0 +1,17 @@
+environment = "development"
+server-port = 8081
+server-address = "127.0.0.1"
+log-level = "debug"
+
+database-url = "postgres://username:password@host/dbname?sslmode=verify-full"
+active-probes-table = "active_probes"
+probe-updates-table = "probe_updates"
+
+ios-max-retries = 5
+android-max-retries = 5
+
+fcm-server-key = "XXX"
+
+apn-key-path = "XXX"
+apn-key-password = "XXX"
+apn-production = false
