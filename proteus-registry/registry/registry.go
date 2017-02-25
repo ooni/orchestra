@@ -28,13 +28,13 @@ func initDatabase() (*sql.DB, error) {
 	return db, err
 }
 
-type UpdateReq struct {
-	ProbeCC string `json:"probe_cc"`
-	ProbeASN string `json:"probe_asn"`
-	Platform string `json:"platform"`
+type ClientData struct {
+	ProbeCC string `json:"probe_cc" binding:"required"`
+	ProbeASN string `json:"probe_asn" binding:"required"`
+	Platform string `json:"platform" binding:"required"`
 
-	SoftwareName string `json:"software_name"`
-	SoftwareVersion string `json:"software_version"`
+	SoftwareName string `json:"software_name" binding:"required"`
+	SoftwareVersion string `json:"software_version" binding:"required"`
 	SupportedTests []string `json:"supported_tests"`
 
 	NetworkType string `json:"network_type"`
@@ -60,7 +60,7 @@ func IsClientRegistered(db *sql.DB, clientID string) (bool, error) {
 	return true, nil
 }
 
-func Update(db *sql.DB, clientID string, req UpdateReq) (error) {
+func Update(db *sql.DB, clientID string, req ClientData) (error) {
 	tx, err := db.Begin()
 	if err != nil {
 		ctx.WithError(err).Error("failed to open transaction")
@@ -161,25 +161,8 @@ func Update(db *sql.DB, clientID string, req UpdateReq) (error) {
 	return nil
 }
 
-type RegisterReq struct {
-	ProbeCC string `json:"probe_cc" binding:"required"`
-	ProbeASN string `json:"probe_asn" binding:"required"`
-	Platform string `json:"platform" binding:"required"`
 
-	SoftwareName string `json:"software_name" binding:"required"`
-	SoftwareVersion string `json:"software_version" binding:"required"`
-	SupportedTests []string `json:"supported_tests"`
-
-	NetworkType string `json:"network_type"`
-	AvailableBandwidth string `json:"available_bandwidth"`
-	
-	Token string `json:"token"`
-
-	ProbeFamily string `json:"probe_family"`
-	ProbeID string `json:"probe_id"`
-}
-
-func Register(db *sql.DB, req RegisterReq) (string, error) {
+func Register(db *sql.DB, req ClientData) (string, error) {
 	if ((req.Platform == "ios" || req.Platform == "android") && req.Token == "") {
 		return "", errors.New("missing device token")
 	}
@@ -285,6 +268,74 @@ func Register(db *sql.DB, req RegisterReq) (string, error) {
 	return clientID, nil
 }
 
+type ActiveClient struct {
+	ClientID			string `json:"client_id"`
+
+	ProbeCC				string `json:"probe_cc"`
+	ProbeASN			string `json:"probe_asn"`
+	Platform			string `json:"platform"`
+
+	SoftwareName		string `json:"software_name"`
+	SoftwareVersion		string `json:"software_version"`
+	SupportedTests		string `json:"supported_tests"`
+
+	NetworkType			string `json:"network_type"`
+	AvailableBandwidth	string `json:"available_bandwidth"`
+	
+	Token				string `json:"token"`
+
+	ProbeFamily			string `json:"probe_family"`
+	ProbeID				string `json:"probe_id"`
+
+	LastUpdated			time.Time `json:"last_updated"`
+	CreationTime		time.Time `json:"creation_time"`
+}
+
+
+func ListClients(db *sql.DB) ([]ActiveClient, error) {
+	var activeClients []ActiveClient
+	query := fmt.Sprintf(`SELECT
+			id, creation_time,
+			last_updated,
+			probe_cc, probe_asn,
+			platform, software_name,
+			software_version, supported_tests,
+			network_type, available_bandwidth,
+			token, probe_family,
+			probe_id FROM %s`,
+		pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
+
+	rows, err := db.Query(query)
+	if err != nil {
+		ctx.WithError(err).Error("failed to list clients")
+		return activeClients, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var ac ActiveClient
+		err := rows.Scan(&ac.ClientID,
+						&ac.CreationTime,
+						&ac.LastUpdated,
+						&ac.ProbeCC,
+						&ac.ProbeASN,
+						&ac.Platform,
+						&ac.SoftwareName,
+						&ac.SoftwareVersion,
+						&ac.SupportedTests,
+						&ac.NetworkType,
+						&ac.AvailableBandwidth,
+						&ac.Token,
+						&ac.ProbeFamily,
+						&ac.ProbeID)
+		if err != nil {
+			ctx.WithError(err).Error("failed to iterate over clients")
+			return activeClients, err
+		}
+		activeClients = append(activeClients, ac)
+	}
+	return activeClients, nil
+}
+
 func Start() {
 	db, err := initDatabase()
 
@@ -295,8 +346,20 @@ func Start() {
 	defer db.Close()
 
 	router := gin.Default()
+	router.GET("/api/v1/clients", func(c *gin.Context) {
+		// XXX add authentication
+		clientList, err := ListClients(db)
+		if err != nil {
+			c.JSON(http.StatusBadRequest,
+					gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK,
+				gin.H{"active_clients": clientList})
+	})
+
 	router.POST("/api/v1/clients", func(c *gin.Context) {
-		var registerReq RegisterReq
+		var registerReq ClientData
 		err := c.BindJSON(&registerReq)
 		if (err != nil) {
 			ctx.WithError(err).Error("invalid request")
@@ -318,7 +381,7 @@ func Start() {
 
 	// XXX do we also want to support a PATCH method?
 	router.PUT("/api/v1/clients/:client_id", func(c *gin.Context) {
-		var updateReq UpdateReq
+		var updateReq ClientData
 		clientID := c.Param("client_id")
 		err := c.BindJSON(&updateReq)
 		if (err != nil) {
@@ -347,6 +410,8 @@ func Start() {
 					gin.H{"error": err.Error()})
 			return
 		}
+		c.JSON(http.StatusOK,
+				gin.H{"status": "ok"})
 	})
 
 	Addr := fmt.Sprintf("%s:%d", viper.GetString("api.address"),
