@@ -1,24 +1,12 @@
 [core]
 environment = "development"
 log-level = "debug"
-# worker-num: 0 # defaults to CPU number
-# queue-size: 2048
 
 [api]
-port = 8081
+port = 8080
 address = "127.0.0.1"
 
 [database]
 url = "postgres://user:pass@hostname:port/dbname?sslmode=disable"
 active-probes-table = "active_probes"
 probe-updates-table = "probe_updates"
-
-[fcm]
-server-key = "XXX"
-max-retries = 5
-
-[apn]
-max-retries = 5
-key-path = "XXX"
-key-password = "XXX"
-production = false

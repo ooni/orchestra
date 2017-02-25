@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"runtime"
 	"strings"
 	"fmt"
 	"os"
@@ -41,12 +42,15 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /etc/proteus-notify.toml)")
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info", "Set the log level")
 	RootCmd.PersistentFlags().StringP("db-url", "", "", "Set the url of the postgres database (ex. postgres://username:password@host/dbname?sslmode=verify-full)")
-	viper.BindPFlag("database-url", RootCmd.PersistentFlags().Lookup("db-url"))
-	viper.SetDefault("active-probes-table", "active_probes")
-	viper.SetDefault("probe-updates-table", "probe_updates")
-	viper.SetDefault("ios-max-retries", 5)
-	viper.SetDefault("android-max-retries", 5)
-	viper.SetDefault("environment", "production")
+	viper.BindPFlag("database.url", RootCmd.PersistentFlags().Lookup("db-url"))
+	viper.BindPFlag("database.log-level", RootCmd.PersistentFlags().Lookup("log-level"))
+	viper.SetDefault("database.active-probes-table", "active_probes")
+	viper.SetDefault("database.probe-updates-table", "probe_updates")
+	viper.SetDefault("fcm.max-retries", 5)
+	viper.SetDefault("fcm.max-retries", 5)
+	viper.SetDefault("core.environment", "production")
+	viper.SetDefault("core.worker-num", runtime.NumCPU())
+	viper.SetDefault("core.queue-size", 2048)
 }
 
 func initConfig() {

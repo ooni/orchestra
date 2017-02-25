@@ -20,7 +20,7 @@ var ctx = log.WithFields(log.Fields{
 })
 
 func initDatabase() (*sql.DB, error) {
-	db, err := sql.Open("postgres", viper.GetString("database-url"))
+	db, err := sql.Open("postgres", viper.GetString("database.url"))
 	if err != nil {
 		ctx.Error("failed to open database")
 		return nil, err
@@ -49,7 +49,7 @@ type UpdateReq struct {
 func IsClientRegistered(db *sql.DB, clientID string) (bool, error) {
 	var found string
 	query := fmt.Sprintf(`SELECT id FROM %s WHERE id = $1`,
-				pq.QuoteIdentifier(viper.GetString("active-probes-table")))
+				pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
 	err := db.QueryRow(query, clientID).Scan(&found)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -86,7 +86,7 @@ func Update(db *sql.DB, clientID string, req UpdateReq) (error) {
 			$9, $10,
 			$11, $12,
 			$13, $14, $15)`,
-			pq.QuoteIdentifier(viper.GetString("probe-updates-table")))
+			pq.QuoteIdentifier(viper.GetString("database.probe-updates-table")))
 
 		stmt, err := tx.Prepare(query)
 		if (err != nil) {
@@ -126,7 +126,7 @@ func Update(db *sql.DB, clientID string, req UpdateReq) (error) {
 			probe_family = $12,
 			probe_id = $13
 			WHERE id = $1`,
-			pq.QuoteIdentifier(viper.GetString("active-probes-table")))
+			pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
 
 		stmt, err := tx.Prepare(query)
 		if (err != nil) {
@@ -210,7 +210,7 @@ func Register(db *sql.DB, req RegisterReq) (string, error) {
 			$9, $10,
 			$11, $12,
 			$13, $14)`,
-			pq.QuoteIdentifier(viper.GetString("active-probes-table")))
+			pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
 
 		stmt, err := tx.Prepare(query)
 		if (err != nil) {
@@ -252,7 +252,7 @@ func Register(db *sql.DB, req RegisterReq) (string, error) {
 			$9, $10,
 			$11, $12,
 			$13, $14, $15)`,
-			pq.QuoteIdentifier(viper.GetString("probe-updates-table")))
+			pq.QuoteIdentifier(viper.GetString("database.probe-updates-table")))
 
 		stmt, err := tx.Prepare(query)
 		if (err != nil) {
@@ -349,8 +349,8 @@ func Start() {
 		}
 	})
 
-	Addr := fmt.Sprintf("%s:%d", viper.GetString("server-address"),
-								viper.GetInt("server-port"))
+	Addr := fmt.Sprintf("%s:%d", viper.GetString("api.address"),
+								viper.GetInt("api.port"))
 	ctx.Infof("starting on %s", Addr)
 	s := &http.Server{
 		Addr: Addr,

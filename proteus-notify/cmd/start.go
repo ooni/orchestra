@@ -23,8 +23,8 @@ to quickly create a Cobra application.`,
 func init() {
 	RootCmd.AddCommand(startCmd)
 
-	startCmd.PersistentFlags().IntP("server-port", "", 8080, "Which port we should bind to")
-	startCmd.PersistentFlags().StringP("server-address", "", "127.0.0.1", "Which interface we should listen on")
-	viper.BindPFlag("server-port", startCmd.PersistentFlags().Lookup("server-port"))
-	viper.BindPFlag("server-address", startCmd.PersistentFlags().Lookup("server-address"))
+	startCmd.PersistentFlags().IntP("port", "", 8080, "Which port we should bind to")
+	startCmd.PersistentFlags().StringP("address", "", "127.0.0.1", "Which interface we should listen on")
+	viper.BindPFlag("api.port", startCmd.PersistentFlags().Lookup("port"))
+	viper.BindPFlag("api.address", startCmd.PersistentFlags().Lookup("address"))
 }

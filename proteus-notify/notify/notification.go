@@ -26,18 +26,21 @@ type PushNotification struct {
 	ApnsID		string
 
 	// Android specific
-	ServerKey	string
 	TimeToLive	int
 	DryRun		bool
-	Condition	string
 }
 
 func InitApnsClient() error {
+	// In development environment we don't actually speak to APNs
+	if viper.GetString("core.environment") == "development" {
+		return nil
+	}
+
 	var (
 		err error
-		apnKeyPath = viper.GetString("apn-key-path")
-		apnKeyPassword = viper.GetString("apn-key-password")
-		isProduction = viper.GetBool("apn-production")
+		apnKeyPath = viper.GetString("apn.key-path")
+		apnKeyPassword = viper.GetString("apn.key-password")
+		isProduction = viper.GetBool("apn.production")
 	)
 	ext := filepath.Ext(apnKeyPath)
 	switch ext {
@@ -61,10 +64,10 @@ func InitApnsClient() error {
 	return nil
 }
 
-func InitWorkers(workerNum int64, queueSize int64) {
+func InitWorkers(workerNum int, queueSize int) {
 	ctx.Debugf("worker number: %d, queue size: %d", workerNum, queueSize)
 	QueueNotification = make(chan PushNotification, queueSize)
-	for i := int64(0); i < workerNum; i++ {
+	for i := 0; i < workerNum; i++ {
 		go startWorker()
 	}
 }
@@ -78,18 +81,21 @@ func startWorker() {
 		case "android":
 			PushToFcm(notification)
 		default:
-			ctx.Errorf("Unsupported platform %s", notification.Platform)
+			ctx.Errorf("unsupported platform %s", notification.Platform)
 		}
 	}
 }
 
+func PushToAny(req PushNotification) {
+	QueueNotification <- req
+}
 
 func PushToApn(req PushNotification) {
 	ctx.Debug("Pushing iOS notification to APN")
 	
 	var retryCount = 0
 	var retryAfter = 1
-	var maxRetry = viper.GetInt("ios-max-retry")
+	var maxRetry = viper.GetInt("apn.max-retry")
 
 	if req.Retry > 0 && req.Retry < maxRetry {
 		maxRetry = req.Retry
@@ -103,6 +109,11 @@ func PushToApn(req PushNotification) {
 		notification := MakeApnNotification(req)
 
 		for _, token := range req.Tokens {
+			if viper.GetString("core.environment") == "development" {
+				ctx.Infof("I would have sent a %s notification with token %s", req.Platform, token)
+				continue
+			}
+
 			notification.DeviceToken = token
 			res, err := ApnsClient.Push(notification)
 
@@ -168,7 +179,7 @@ func PushToFcm(req PushNotification) {
 	
 	var retryCount = 0
 	var retryAfter = 1
-	var maxRetry = viper.GetInt("android-max-retry")
+	var maxRetry = viper.GetInt("fcm.max-retry")
 
 	if req.Retry > 0 && req.Retry < maxRetry {
 		maxRetry = req.Retry
@@ -180,6 +191,11 @@ func PushToFcm(req PushNotification) {
 		var toRetryTokens []string
 
 		notification := MakeFcmNotification(req)
+		if viper.GetString("core.environment") == "development" {
+			ctx.Infof("I would have sent a %s notification with token %v", req.Platform, req.Tokens)
+			isDone = true
+			break
+		}
 
 		res, err := notification.Send()
 		if err == nil {
@@ -205,7 +221,12 @@ func PushToFcm(req PushNotification) {
 }
 
 func MakeFcmNotification(req PushNotification) *fcm.FcmClient {
-	notification := fcm.NewFcmClient(viper.GetString("fcm-server-key"))
+	// XXX the FCM API only supports up to 1k devices. We should have checks
+	// for that here and split them up into < 1000 chunks
+	// https://firebase.google.com/docs/cloud-messaging/http-server-ref
+	// 1000 devices
+
+	notification := fcm.NewFcmClient(viper.GetString("fcm.server-key"))
 	notification.NewFcmRegIdsMsg(req.Tokens, req.Data)
 	notification.Message.To = req.Topic
 
