@@ -348,6 +348,7 @@ func Start() {
 	router := gin.Default()
 	router.GET("/api/v1/clients", func(c *gin.Context) {
 		// XXX add authentication
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		clientList, err := ListClients(db)
 		if err != nil {
 			c.JSON(http.StatusBadRequest,
