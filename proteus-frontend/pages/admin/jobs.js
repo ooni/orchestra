@@ -8,12 +8,77 @@ import axios from 'axios'
 import Immutable from 'immutable'
 import moment from 'moment'
 
+import RaisedButton from 'material-ui/RaisedButton'
+import Checkbox from 'material-ui/Checkbox'
 import DatePicker from 'material-ui/DatePicker'
 import TimePicker from 'material-ui/TimePicker'
+import Slider from 'material-ui/Slider'
+import TextField from 'material-ui/TextField'
 
 import Layout from '../../components/layout'
 
-class RepeatPicker extends React.Component {
+class DesignatorSlider extends React.Component {
+  static propTypes = {
+    unit: React.PropTypes.string.isRequired,
+    min: React.PropTypes.number,
+    max: React.PropTypes.number,
+    step: React.PropTypes.number,
+    defaultValue: React.PropTypes.number,
+    onChange: React.PropTypes.func
+  }
+
+  static defaultProps = {
+    min: 0,
+    max: 60,
+    step: 1,
+    defaultValue: 0
+  }
+
+  constructor(props) {
+    super(props)
+    this.state = {
+      value: 0
+    }
+    this.onChange = this.onChange.bind(this)
+  }
+
+  onChange (event, value) {
+    this.setState({ value: value })
+    this.props.onChange(this.props.unit, value)
+  }
+
+  render () {
+    return(
+      <div>
+        <div>
+          {this.props.unit}
+        </div>
+        <Slider
+          axis="y"
+          style={{height: 100}}
+          min={this.props.min}
+          max={this.props.max}
+          step={this.props.step}
+          value={this.state.value}
+          defaultValue={this.props.defaultValue}
+          onChange={this.onChange}
+        />
+        <TextField
+        style={{width: 20}}
+        value={this.state.value}
+        onChange={this.onChange}
+        />
+      </div>
+    )
+  }
+
+}
+
+class DurationPicker extends React.Component {
+  static propTypes = {
+    onChange: React.PropTypes.func.isRequired
+  }
+
   constructor(props) {
     super(props)
     this.state = {
@@ -33,129 +98,70 @@ class RepeatPicker extends React.Component {
   }
 
   setDuration (unit, quantity) {
-    this.setState({duration: this.state.duration.set(unit, quantity)})
-  }
-
-  toggleOpen () {
-    this.setState({ isOpen: !this.state.isOpen })
+    let duration = this.state.duration.set(unit, quantity)
+    this.setState({duration})
+    this.props.onChange(duration.toObject())
   }
 
   render () {
-    const self = this
-    const makeItem = (unit) => {
-      if (this.state.duration.get(unit) === 0) {
-        return null
-      }
-      return (
-        <div className='item'>
-          <span className='quantity'>
-            {this.state.duration.get(unit)}
-          </span>
-          <span className='unit'>
-            {unit}
-          </span>
-          <style jsx>{`
-          .item {
-            display: inline;
-            padding-right: 2px;
-          }
-          .item .quantity {
-            font-size: 16px;
-            font-weight: 200;
-          }
-          .item .unit {
-            font-size: 14px;
-            font-weight: 100;
-          }
-          `}</style>
-        </div>
-      )
-    }
-
-    const makeSelector = (unit, range) => {
-      const options = Array.apply(0, Array(range))
-        .map((_, idx) => {
-          return <div className='option'
-                      key={idx}
-                      onClick={() => { self.setDuration(unit, idx) } }>
-            {idx}
-            <style jsx>{`
-            .option {
-              padding: 0 10px;
-            }
-            .option:hover {
-              background-color: #ccc;
-            }
-            `}</style>
-          </div>
-        })
-
-      return (
-        <div className='selector-options'>
-          <div className='unit'>
-            {unit}
-          </div>
-          <div className='options'>
-            {options}
-          </div>
-          <style jsx>{`
-          .unit {
-            padding: 10px;
-          }
-          .options {
-            height: 100px;
-            padding-right: 10px;
-            overflow-y: scroll;
-          }
-          .selector-options {
-            float: left;
-          }
-          `}</style>
-        </div>
-      )
-    }
-
     return (
       <div className='picker'>
-        <div className='current-selection' onClick={() => this.toggleOpen() }>
-          {makeItem('Y')}
-          {makeItem('M')}
-          {makeItem('W')}
-          {makeItem('D')}
-          {makeItem('h')}
-          {makeItem('m')}
-          {makeItem('s')}
-        </div>
-        {this.state.isOpen
-        && <div className='selector'>
-          {makeSelector('Y', 10)}
-          {makeSelector('M', 12)}
-          {makeSelector('W', 5)}
-          {makeSelector('D', 30)}
-          {makeSelector('h', 24)}
-          {makeSelector('m', 60)}
-          {makeSelector('s', 60)}
-        </div>}
+        <DesignatorSlider unit="Y" max={10} onChange={this.setDuration} />
+        <DesignatorSlider unit="M" max={12} onChange={this.setDuration} />
+        <DesignatorSlider unit="W" max={4} onChange={this.setDuration} />
+        <DesignatorSlider unit="D" max={30} onChange={this.setDuration} />
+        <DesignatorSlider unit="h" max={60} onChange={this.setDuration} />
+        <DesignatorSlider unit="m" max={60} onChange={this.setDuration} />
+        <DesignatorSlider unit="s" max={60} onChange={this.setDuration} />
         <style jsx>{`
-          .picker {
-            position: relative;
-          }
-          .current-selection {
-            padding: 10px;
-            color: #000;
-            background-color: #fff;
-          }
-          .selector {
-            position: absolute;
-            left: 0;
-            color: #000;
-            background-color: #fff;
-          }
+        .picker {
+          display: flex;
+        }
+        .picker > :global(div) {
+          padding-right: 20px;
+        }
         `}</style>
       </div>
     )
   }
 
+}
+
+const RepeatString = ({duration, repeatCount}) => {
+  let units = [
+    {'key': 'Y', 'name': 'year'},
+    {'key': 'M', 'name': 'month'},
+    {'key': 'W', 'name': 'week'},
+    {'key': 'D', 'name': 'day'},
+    {'key': 'h', 'name': 'hour'},
+    {'key': 'm', 'name': 'minute'},
+    {'key': 's', 'name': 'second'}
+  ]
+  return (
+    <div>
+      Will run
+      {repeatCount === 0
+      && ' forever every '}
+      {repeatCount === 1
+      && ' once'}
+      {repeatCount > 1
+      && ` ${repeatCount} times every `}
+      {repeatCount !== 1 && units.map((unit) => {
+        const value = duration[unit.key]
+        if (value && value !== 0) {
+          let unitName = unit.name
+          if (value > 1) {
+            unitName += 's'
+          }
+          return <span>{value} {unitName} </span>
+        }
+      })}
+      <style jsx>{`
+      div {
+        padding-bottom: 20px;
+      `}</style>
+    </div>
+  )
 }
 
 // XXX protect this with some auth
@@ -172,15 +178,21 @@ export default class AdminJobs extends React.Component {
       selectedTest: {},
       targetCountries: [],
       targetPlatforms: [],
-      inputSelectorOpen: false
+      duration: {},
+      urls: '',
+      inputSelectorOpen: false,
+      comment: ''
     }
 
-    this.onRepeatChange = this.onRepeatChange.bind(this);
-    this.onCountryCategoryChange = this.onCountryCategoryChange.bind(this);
-    this.onGlobalCategoryChange = this.onGlobalCategoryChange.bind(this);
-    this.onTestChange = this.onTestChange.bind(this);
-    this.onTargetCountryChange = this.onTargetCountryChange.bind(this);
-    this.onTargetPlatformChange = this.onTargetPlatformChange.bind(this);
+    this.onCountryCategoryChange = this.onCountryCategoryChange.bind(this)
+    this.onGlobalCategoryChange = this.onGlobalCategoryChange.bind(this)
+    this.onTestChange = this.onTestChange.bind(this)
+    this.onTargetCountryChange = this.onTargetCountryChange.bind(this)
+    this.onTargetPlatformChange = this.onTargetPlatformChange.bind(this)
+    this.onDurationChange = this.onDurationChange.bind(this)
+    this.onRepeatChange = this.onRepeatChange.bind(this)
+    this.onURLsChange = this.onURLsChange.bind(this)
+    this.onCommentChange = this.onCommentChange.bind(this)
   }
 
   static async getInitialProps () {
@@ -212,8 +224,20 @@ export default class AdminJobs extends React.Component {
     return { categories, tests, countries, platforms }
   }
 
-  onRepeatChange (event) {
-    this.setState({ repeatCount: event.target.value });
+  onCommentChange (value) {
+    this.setState({ comment: value })
+  }
+
+  onURLsChange (value) {
+    this.setState({ urls: value });
+  }
+
+  onDurationChange (value) {
+    this.setState({ duration: value });
+  }
+
+  onRepeatChange (value) {
+    this.setState({ repeatCount: value });
   }
 
   onCountryCategoryChange (value) {
@@ -280,7 +304,31 @@ export default class AdminJobs extends React.Component {
               <span className='option-name'>
                 Repeat
               </span>
-              <RepeatPicker />
+              <RepeatString duration={this.state.duration} repeatCount={this.state.repeatCount} />
+              <DurationPicker onChange={this.onDurationChange} />
+              <Checkbox
+                label="Repeat forever"
+                checked={this.state.repeatCount === 0}
+                onCheck={(event, isInputChecked) => {
+                  if (isInputChecked === true) this.onRepeatChange(0)
+                  else this.onRepeatChange(1)
+                }}
+              />
+              <TextField
+                style={{width: 20, float: 'left'}}
+                value={this.state.repeatCount}
+                onChange={(event, value) => {this.onRepeatChange(value)}}
+              />
+              <Slider
+                style={{width: 100, float: 'left', marginLeft: 20}}
+                min={1}
+                max={99}
+                step={1}
+                disabled={this.state.repeatCount === 0}
+                value={this.state.repeatCount}
+                defaultValue={1}
+                onChange={(event, value) => {this.onRepeatChange(value)}}
+              />
             </div>
 
           </div>
@@ -302,39 +350,41 @@ export default class AdminJobs extends React.Component {
 
             {this.state.inputSelectorOpen
             && <div className='input-selector'>
-              <div className='option'>
-                <span className='option-name'>
-                  URLS
-                </span>
-                <textarea className='url-list'></textarea>
-              </div>
-
-              <div className='option'>
-                <span className='option-name'>
-                  Global Categories
-                </span>
-                <Select
-                  multi
-                  name='global-categories'
-                  options={this.props.categories}
-                  value={this.state.globalCategories}
-                  onChange={this.onGlobalCategoryChange}
+                <TextField
+                  hintText={`http://example.com/one\nhttp://example.com/two`}
+                  floatingLabelText='URLs'
+                  multiLine={true}
+                  value={this.state.urls}
+                  onChange={(event, value) => this.onURLsChange(value)}
+                  rows={3}
                 />
-              </div>
 
-              <div className='option'>
-                <span className='option-name'>
-                  Country Categories
-                </span>
+                <div className='option'>
+                  <span className='option-name'>
+                    Global Categories
+                  </span>
+                  <Select
+                    multi
+                    name='global-categories'
+                    options={this.props.categories}
+                    value={this.state.globalCategories}
+                    onChange={this.onGlobalCategoryChange}
+                  />
+                </div>
 
-                <Select
-                  multi
-                  name='country-categories'
-                  value={this.state.countryCategories}
-                  onChange={this.onCountryCategoryChange}
-                  options={this.props.categories}
-                />
-              </div>
+                <div className='option'>
+                  <span className='option-name'>
+                    Country Categories
+                  </span>
+
+                  <Select
+                    multi
+                    name='country-categories'
+                    value={this.state.countryCategories}
+                    onChange={this.onCountryCategoryChange}
+                    options={this.props.categories}
+                  />
+                </div>
             </div>}
 
           </div>
@@ -372,15 +422,14 @@ export default class AdminJobs extends React.Component {
 
           <div className='section'>
             <h2>Submit</h2>
+            <TextField
+              hintText='make it something descriptive'
+              floatingLabelText='Task comment'
+              value={this.state.comment}
+              onChange={(event, value) => this.onCommentChange(value)}
+            />
 
-            <div className='option'>
-              <span className='option-name'>
-                Task comment
-              </span>
-              <input type='text' />
-            </div>
-
-            <input type='submit' value='Add' />
+            <RaisedButton label='Add' style={{marginLeft: 20}}/>
           </div>
 
           </div>

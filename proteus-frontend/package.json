@@ -1,0 +1,28 @@
+{
+  "name": "proteus-frontend",
+  "version": "1.0.0",
+  "dependencies": {
+    "axios": "^0.15.3",
+    "express": "^4.14.0",
+    "immutable": "^3.8.1",
+    "material-ui": "^0.17.0",
+    "moment": "^2.17.1",
+    "next": "^2.0.0-beta.32",
+    "react": "^15.4.2",
+    "react-addons-shallow-compare": "^15.4.2",
+    "react-dom": "^15.4.2",
+    "react-no-ssr": "^1.1.0",
+    "react-select": "^1.0.0-rc.3",
+    "react-tap-event-plugin": "^2.0.1"
+  },
+  "devDependencies": {
+    "babel-plugin-transform-define": "^1.2.0"
+  },
+  "scripts": {
+    "dev": "NODE_ENV=development node index.js",
+    "build": "next build",
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "BSD"
+}

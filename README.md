@@ -14,17 +14,28 @@ metadata is.
 
 **proteus-notify**
 
-Status: WIP
+Status: ~COMPLETE
 
 Is responsible for dispatching notifications out to OPOS clients depending on
 the capabilities they support.
 
+**proteus-frontend**
+
+Status: WIP
+
+Is the frontend to:
+
+* Setup schedules
+
+* View active schedules
+
+* View active probes
+
 **proteus-events**
 
-Status: Not started
+Status: Not Started
 
 Is responsible for receiving events via the admin interface and triggering
 notifications via **proteus-notify**.
 
-Can also be used to view the event history
-
+Can also be used to view the event history.
