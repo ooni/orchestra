@@ -1,12 +1,9 @@
 import React from 'react'
 import Head from 'next/head'
 
-import NoSSR from 'react-no-ssr'
 import Select from 'react-select'
 
-import axios from 'axios'
 import Immutable from 'immutable'
-import moment from 'moment'
 
 import RaisedButton from 'material-ui/RaisedButton'
 import Checkbox from 'material-ui/Checkbox'
@@ -16,6 +13,8 @@ import Slider from 'material-ui/Slider'
 import TextField from 'material-ui/TextField'
 
 import Layout from '../../components/layout'
+
+import { Flex, Box, Grid } from 'reflexbox'
 
 class DesignatorSlider extends React.Component {
   static propTypes = {
@@ -124,7 +123,6 @@ class DurationPicker extends React.Component {
       </div>
     )
   }
-
 }
 
 const RepeatString = ({duration, repeatCount}) => {
@@ -137,6 +135,7 @@ const RepeatString = ({duration, repeatCount}) => {
     {'key': 'm', 'name': 'minute'},
     {'key': 's', 'name': 'second'}
   ]
+
   return (
     <div>
       Will run
@@ -156,18 +155,13 @@ const RepeatString = ({duration, repeatCount}) => {
           return <span>{value} {unitName} </span>
         }
       })}
-      <style jsx>{`
-      div {
-        padding-bottom: 20px;
-      `}</style>
     </div>
   )
 }
 
-// XXX protect this with some auth
 export default class AdminJobs extends React.Component {
 
-  constructor(props) {
+  constructor (props) {
     super(props)
     this.state = {
       startDate: null,
@@ -181,6 +175,7 @@ export default class AdminJobs extends React.Component {
       duration: {},
       urls: '',
       inputSelectorOpen: false,
+      submitted: false,
       comment: ''
     }
 
@@ -193,11 +188,16 @@ export default class AdminJobs extends React.Component {
     this.onRepeatChange = this.onRepeatChange.bind(this)
     this.onURLsChange = this.onURLsChange.bind(this)
     this.onCommentChange = this.onCommentChange.bind(this)
+    this.onSubmit = this.onSubmit.bind(this)
   }
 
   static async getInitialProps () {
-		// XXX get this from lists API server
-    let categories = [{'value': 'ALDR', 'label': 'Alcohol & Drugs'}, {'value': 'REL', 'label': 'Religion'}, {'value': 'PORN', 'label': 'Pornography'}, {'value': 'PROV', 'label': 'Provocative Attire'}, {'value': 'POLR', 'label': 'Political Criticism'}, {'value': 'HUMR', 'label': 'Human Rights Issues'}, {'value': 'ENV', 'label': 'Environment'}, {'value': 'MILX', 'label': 'Terrorism and Militants'}, {'value': 'HATE', 'label': 'Hate Speech'}, {'value': 'NEWS', 'label': 'News Media'}, {'value': 'XED', 'label': 'Sex Education'}, {'value': 'PUBH', 'label': 'Public Health'}, {'value': 'GMB', 'label': 'Gambling'}, {'value': 'ANON', 'label': 'Anonymization and circumvention tools'}, {'value': 'DATE', 'label': 'Online Dating'}, {'value': 'GRP', 'label': 'Social Networking'}, {'value': 'LGBT', 'label': 'LGBT'}, {'value': 'FILE', 'label': 'File-sharing'}, {'value': 'HACK', 'label': 'Hacking Tools'}, {'value': 'COMT', 'label': 'Communication Tools'}, {'value': 'MMED', 'label': 'Media sharing'}, {'value': 'HOST', 'label': 'Hosting and Blogging Platforms'}, {'value': 'SRCH', 'label': 'Search Engines'}, {'value': 'GAME', 'label': 'Gaming'}, {'value': 'CULTR', 'label': 'Culture'}, {'value': 'ECON', 'label': 'Economics'}, {'value': 'GOVT', 'label': 'Government'}, {'value': 'COMM', 'label': 'E-commerce'}, {'value': 'CTRL', 'label': 'Control content'}, {'value': 'IGO', 'label': 'Intergovernmental Organizations'}, {'value': 'MISC', 'label': 'Miscelaneous content'}]
+		// XXX get this from lists API serve
+    const cat_codes = require('../../static/category-codes.json')
+    let categories = []
+    for (let code in cat_codes) {
+      categories.push({ 'value': code, 'label': cat_codes[code] })
+    }
 
     let tests = [
       { 'value': 'web_connectivity', 'label': 'Web Connectivity' },
@@ -265,7 +265,27 @@ export default class AdminJobs extends React.Component {
     this.setState({ selectedTest: value })
   }
 
+  onSubmit () {
+    this.setState({
+      submitted: true
+    })
+  }
+
   render () {
+    const {
+      submitted,
+      startDate, startTime,
+      repeatCount,
+      globalCategories,
+      countryCategories,
+      selectedTest,
+      targetCountries,
+      targetPlatforms,
+      duration,
+      urls,
+      comment
+    } = this.state
+
     return (
       <Layout>
         <Head>
@@ -274,32 +294,136 @@ export default class AdminJobs extends React.Component {
           <link href="/static/vendor/timepicker.css" rel="stylesheet" />
           <link href="/static/vendor/react-select.css" rel="stylesheet" />
         </Head>
-        <div className='scheduled-jobs'>
+
+        {submitted && <div>
+          <h2>Periodic job summary</h2>
+
+          <h3>Start time</h3>
+          <p>{startTime.toString()} - {startDate.toString()}</p>
+
+          <h3>Repeat count</h3>
+          <p>{repeatCount.toString()}</p>
+
+          <h3>globalCategories</h3>
+          <p>{globalCategories.toString()}</p>
+
+          <h3>country categories</h3>
+          <p>{countryCategories.toString()}</p>
+
+          <h3>selectedTest</h3>
+          <p>{selectedTest.toString()}</p>
+
+          <h3>targetCountries</h3>
+          <p>{targetCountries.toString()}</p>
+
+          <h3>targetPlatforms</h3>
+          <p>{targetPlatforms.toString()}</p>
+
+          <h3>duration</h3>
+          <p>{duration.toString()}</p>
+
+          <h3>urls</h3>
+          <p>{urls.toString()}</p>
+
+          <h3>comment</h3>
+          <p>{comment.toString()}</p>
+
+        </div>}
+        {!submitted && <div className='scheduled-jobs'>
           <h1>Add periodic job</h1>
           <div>
 
           <div className='section'>
-            <h2>Schedule</h2>
+            <h2>Experiment</h2>
+
+            <Grid col={2} px={2}>
             <div className='option'>
               <span className='option-name'>
-                Start on
+                Test
               </span>
-
-							<DatePicker
-								floatingLabelText="Start date"
-								autoOk={true}
-								value={this.state.startDate}
-								onChange={(event, startDate) => { this.setState({ startDate })} }
-							/>
-              <TimePicker
-                format="24hr"
-                value={this.state.startTime}
-                hintText="Start time"
-								onChange={(event, startTime) => { this.setState({ startTime })} }
+              <Select
+                name='test'
+                options={this.props.tests}
+                value={this.state.selectedTest}
+                onChange={this.onTestChange}
               />
-
             </div>
+            </Grid>
 
+            {this.state.inputSelectorOpen
+            && <div className='input-selector'>
+
+              <Grid col={3} px={2}>
+                <TextField
+                  hintText={`http://example.com/one\nhttp://example.com/two`}
+                  floatingLabelText='URLs'
+                  multiLine={true}
+                  value={this.state.urls}
+                  onChange={(event, value) => this.onURLsChange(value)}
+                  rows={3}
+                />
+              </Grid>
+
+              <Grid col={3} px={2}>
+                <div className='option'>
+                  <span className='option-name'>
+                    Global Categories
+                  </span>
+                  <Select
+                    multi
+                    name='global-categories'
+                    options={this.props.categories}
+                    value={this.state.globalCategories}
+                    onChange={this.onGlobalCategoryChange}
+                  />
+                </div>
+              </Grid>
+
+              <Grid col={3} px={2}>
+                <div className='option'>
+                  <span className='option-name'>
+                    Country Categories
+                  </span>
+
+                  <Select
+                    multi
+                    name='country-categories'
+                    value={this.state.countryCategories}
+                    onChange={this.onCountryCategoryChange}
+                    options={this.props.categories}
+                  />
+                </div>
+              </Grid>
+            </div>}
+
+          </div>
+
+          <div className='section'>
+            <h2>Schedule</h2>
+            <Flex>
+            <Box px={2}>
+              <div className='option'>
+                <span className='option-name'>
+                  Start on
+                </span>
+
+                <DatePicker
+                  floatingLabelText="Start date"
+                  autoOk={true}
+                  value={this.state.startDate}
+                  onChange={(event, startDate) => { this.setState({ startDate })} }
+                />
+                <TimePicker
+                  format="24hr"
+                  value={this.state.startTime}
+                  hintText="Start time"
+                  onChange={(event, startTime) => { this.setState({ startTime })} }
+                />
+
+              </div>
+            </Box>
+
+            <Box px={2}>
             <div className='option'>
               <span className='option-name'>
                 Repeat
@@ -330,68 +454,14 @@ export default class AdminJobs extends React.Component {
                 onChange={(event, value) => {this.onRepeatChange(value)}}
               />
             </div>
-
-          </div>
-
-          <div className='section'>
-            <h2>Experiment</h2>
-
-            <div className='option'>
-              <span className='option-name'>
-                Test
-              </span>
-              <Select
-                name='test'
-                options={this.props.tests}
-                value={this.state.selectedTest}
-                onChange={this.onTestChange}
-              />
-            </div>
-
-            {this.state.inputSelectorOpen
-            && <div className='input-selector'>
-                <TextField
-                  hintText={`http://example.com/one\nhttp://example.com/two`}
-                  floatingLabelText='URLs'
-                  multiLine={true}
-                  value={this.state.urls}
-                  onChange={(event, value) => this.onURLsChange(value)}
-                  rows={3}
-                />
-
-                <div className='option'>
-                  <span className='option-name'>
-                    Global Categories
-                  </span>
-                  <Select
-                    multi
-                    name='global-categories'
-                    options={this.props.categories}
-                    value={this.state.globalCategories}
-                    onChange={this.onGlobalCategoryChange}
-                  />
-                </div>
-
-                <div className='option'>
-                  <span className='option-name'>
-                    Country Categories
-                  </span>
-
-                  <Select
-                    multi
-                    name='country-categories'
-                    value={this.state.countryCategories}
-                    onChange={this.onCountryCategoryChange}
-                    options={this.props.categories}
-                  />
-                </div>
-            </div>}
+            </Box>
+            </Flex>
 
           </div>
 
           <div className='section'>
             <h2>Target</h2>
-
+            <Grid col={3} px={2}>
             <div className='option'>
               <span className='option-name'>
                 Country
@@ -404,7 +474,9 @@ export default class AdminJobs extends React.Component {
                 onChange={this.onTargetCountryChange}
               />
             </div>
+            </Grid>
 
+            <Grid col={3} px={2}>
             <div className='option'>
               <span className='option-name'>
                 Platform
@@ -417,19 +489,24 @@ export default class AdminJobs extends React.Component {
                 onChange={this.onTargetPlatformChange}
               />
             </div>
+            </Grid>
 
           </div>
 
           <div className='section'>
             <h2>Submit</h2>
+            <Grid col={6} px={2}>
             <TextField
               hintText='make it something descriptive'
               floatingLabelText='Task comment'
               value={this.state.comment}
               onChange={(event, value) => this.onCommentChange(value)}
             />
+            <RaisedButton
+              onTouchTap={this.onSubmit}
+              label='Add' style={{marginLeft: 20}}/>
+            </Grid>
 
-            <RaisedButton label='Add' style={{marginLeft: 20}}/>
           </div>
 
           </div>
@@ -453,7 +530,7 @@ export default class AdminJobs extends React.Component {
             min-height: 100px;
           }
           `}</style>
-        </div>
+        </div>}
       </Layout>
     )
   }
