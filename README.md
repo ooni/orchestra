@@ -33,7 +33,7 @@ Is the frontend to:
 
 **proteus-events**
 
-Status: Not Started
+Status: WIP
 
 Is responsible for receiving events via the admin interface and triggering
 notifications via **proteus-notify**.

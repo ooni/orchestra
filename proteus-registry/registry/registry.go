@@ -369,7 +369,7 @@ func Start() {
 			return
 		}
 
-		clientID , err := Register(db, registerReq)
+		clientID, err := Register(db, registerReq)
 		if (err != nil) {
 			c.JSON(http.StatusBadRequest,
 					gin.H{"error": err.Error()})

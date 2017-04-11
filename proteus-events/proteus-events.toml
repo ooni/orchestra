@@ -1,0 +1,13 @@
+[core]
+environment = "development"
+log-level = "debug"
+
+[api]
+port = 8082
+address = "127.0.0.1"
+
+[database]
+url = "postgres://ooni:antani@127.0.0.1:32768/ooni?sslmode=disable"
+active-probes-table = "active_probes"
+probe-updates-table = "probe_updates"
+jobs-table = "jobs"
