@@ -56,6 +56,12 @@ type JobData struct {
 }
 
 func AddJob(db *sql.DB, jd JobData) (string, error) {
+	_, err := ParseSchedule(jd.Schedule)
+	if err != nil {
+		ctx.WithError(err).Error("invalid schedule format")
+		return "", err
+	}
+
 	tx, err := db.Begin()
 	if err != nil {
 		ctx.WithError(err).Error("failed to open transaction")
