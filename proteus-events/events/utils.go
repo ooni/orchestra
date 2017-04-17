@@ -20,8 +20,71 @@ type ScheduleDuration struct {
 	Seconds	float64
 }
 
+func (d *ScheduleDuration) ToDuration() time.Duration {
+	day := float64(time.Hour) * 24.0
+	year := day * 365.0
+
+	tot := time.Duration(0)
+	tot += time.Duration(int64(d.Years * year))
+	tot += time.Duration(int64(d.Weeks * day * 7.0))
+	tot += time.Duration(int64(d.Days * day))
+	tot += time.Duration(int64(float64(time.Hour) * d.Hours))
+	tot += time.Duration(int64(float64(time.Minute) * d.Minutes))
+	tot += time.Duration(int64(float64(time.Second) * d.Seconds))
+
+	tot += d.getMonthDuration()
+
+	return tot
+}
+
+func (d *ScheduleDuration) getMonthDuration() time.Duration {
+	if d.Months == 0 {
+		return time.Duration(0)
+	}
+	now := time.Now().UTC()
+	currentMonth := int(now.Month())
+	currentYear := int(now.Year())
+
+	value := time.Duration(0)
+	i := 0
+	for ; i < int(d.Months); i++ {
+		currentMonth += 1
+		if currentMonth == 13 {
+			currentMonth = 1
+			currentYear += 1
+		}
+		value += time.Hour * 24 * time.Duration(daysInMonth(currentYear, currentMonth))
+	}
+	remainder := d.Months - float64(i)
+	value += time.Duration(int(float64(time.Hour) * 24.0 * remainder * float64(daysInMonth(currentYear, currentMonth))))
+	return value
+}
+
+func daysInMonth(year, month int) int {
+	if IntInSlice(month, []int{1, 3, 5, 7, 8, 10, 12}) {
+		return 31
+	}
+	if IntInSlice(month, []int{4, 6, 9, 11}) {
+		return 30
+	}
+	// Leap year for Feb
+	if ((year % 400) == 0) || ((year%100) != 0) && ((year%4) == 0) {
+		return 29
+	}
+	return 28
+}
+
+func IntInSlice(num int, slice []int) bool {
+	for i := range slice {
+		if slice[i] == num {
+			return true
+		}
+	}
+	return false
+}
+
 type Schedule struct {
-	Repeat		int
+	Repeat		int64
 	StartTime	time.Time
 	Duration	ScheduleDuration
 }
@@ -117,9 +180,9 @@ func ParseSchedule(s string) (Schedule, error) {
 	}
 
 	// We use -1 to indicate repeat forever
-	var r = -1
+	var r int64 = -1
 	if len(parts[0][1:]) != 0 {
-		r, err = strconv.Atoi(parts[0][1:])
+		r, err = strconv.ParseInt(parts[0][1:], 10, 64)
 		if err != nil {
 			ctx.WithError(err).Error("invalid repeat specifier")
 			return schedule, errors.New("invalid repeat specifier")

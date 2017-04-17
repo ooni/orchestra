@@ -47,7 +47,7 @@ type Task struct {
 
 type JobData struct {
 	Schedule		string `json:"schedule" binding:"required"`
-	Delay			int `json:"delay"`
+	Delay			int64 `json:"delay"`
 	Comment			string `json:"comment" binding:"required"`
 	Task			Task `json:"task"`
 	Target			Target `json:"target"`
