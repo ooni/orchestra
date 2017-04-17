@@ -39,9 +39,10 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.proteus.yaml)")
-	RootCmd.PersistentFlags().StringVarP(&logLevel, "logLevel", "", "info", "Set the log level")
+	RootCmd.PersistentFlags().StringP("log-level", "", "info", "Set the log level")
 	RootCmd.PersistentFlags().StringP("db-url", "", "", "Set the url of the postgres database (ex. postgres://username:password@host/dbname?sslmode=verify-full)")
 	viper.BindPFlag("database.url", RootCmd.PersistentFlags().Lookup("db-url"))
+	viper.BindPFlag("core.log-level", RootCmd.PersistentFlags().Lookup("log-level"))
 	viper.SetDefault("database.active-probes-table", "active_probes")
 	viper.SetDefault("database.probe-updates-table", "probe_updates")
 }
@@ -67,7 +68,7 @@ func initConfig() {
 	ctx.Infof("using config file:", viper.ConfigFileUsed())
 
 	log.SetHandler(cli.Default)
-	level, err := log.ParseLevel(logLevel)
+	level, err := log.ParseLevel(viper.GetString("core.log-level"))
 	if err != nil {
 		fmt.Println("Invalid log level. Must be one of debug, info, warn, error, fatal")
 	}
