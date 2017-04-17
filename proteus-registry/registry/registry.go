@@ -359,7 +359,7 @@ func Start() {
 				gin.H{"active_clients": clientList})
 	})
 
-	router.POST("/api/v1/clients", func(c *gin.Context) {
+	router.POST("/api/v1/register", func(c *gin.Context) {
 		var registerReq ClientData
 		err := c.BindJSON(&registerReq)
 		if (err != nil) {
@@ -381,7 +381,7 @@ func Start() {
 	})
 
 	// XXX do we also want to support a PATCH method?
-	router.PUT("/api/v1/clients/:client_id", func(c *gin.Context) {
+	router.PUT("/api/v1/update/:client_id", func(c *gin.Context) {
 		var updateReq ClientData
 		clientID := c.Param("client_id")
 		err := c.BindJSON(&updateReq)

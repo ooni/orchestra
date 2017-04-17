@@ -58,7 +58,7 @@ Once a client is registered they can update the various metadata related to the 
 To register a probe a the following HTTPS request is issued:
 
 **Method**: `POST`
-**Path**: `/api/v1/clients`
+**Path**: `/api/v1/register`
 **Body**:
 ```json
 {
@@ -89,7 +89,7 @@ The response looks like this:
 In order do update the metadata you to issue the following request:
 
 **Method**: `PUT`
-**Path**: `/api/v1/clients/$CLIENT_ID`
+**Path**: `/api/v1/update/$CLIENT_ID`
 **Body**:
 ```json
 {
