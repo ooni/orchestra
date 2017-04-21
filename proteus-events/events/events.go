@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"sync"
 	_ "errors"
 
 	"github.com/apex/log"
@@ -55,8 +56,8 @@ type JobData struct {
 	CreationTime	time.Time `json:"creation_time"`
 }
 
-func AddJob(db *sql.DB, jd JobData) (string, error) {
-	_, err := ParseSchedule(jd.Schedule)
+func AddJob(db *sql.DB, jd JobData, s *Scheduler) (string, error) {
+	schedule, err := ParseSchedule(jd.Schedule)
 	if err != nil {
 		ctx.WithError(err).Error("invalid schedule format")
 		return "", err
@@ -77,7 +78,10 @@ func AddJob(db *sql.DB, jd JobData) (string, error) {
 			target_platforms,
 			task_test_name,
 			task_arguments,
-			creation_time
+			creation_time,
+			times_run,
+			next_run_at,
+			is_done
 		) VALUES (
 			$1, $2,
 			$3, $4,
@@ -85,7 +89,10 @@ func AddJob(db *sql.DB, jd JobData) (string, error) {
 			$6,
 			$7,
 			$8,
-			$9)`,
+			$9,
+			$10,
+			$11,
+			$12)`,
 		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
 
 		stmt, err := tx.Prepare(query)
@@ -100,14 +107,16 @@ func AddJob(db *sql.DB, jd JobData) (string, error) {
 			ctx.WithError(err).Error("failed to serialise task arguments")
 			return "", err
 		}
-
 		_, err = stmt.Exec(jobID, jd.Comment,
 							jd.Schedule, jd.Delay,
 							pq.Array(jd.Target.Countries),
 							pq.Array(jd.Target.Platforms),
 							jd.Task.TestName,
 							taskArgsStr,
-							time.Now().UTC())
+							time.Now().UTC(),
+							0,
+							schedule.StartTime,
+							false)
 		if err != nil {
 			tx.Rollback()
 			ctx.WithError(err).Error("failed to insert into jobs table")
@@ -119,11 +128,23 @@ func AddJob(db *sql.DB, jd JobData) (string, error) {
 		ctx.WithError(err).Error("failed to commit transaction, rolling back")
 		return "", err
 	}
+	j := Job{
+		Id: jobID,
+		Comment: jd.Comment,
+		Schedule: schedule,
+		Delay: jd.Delay,
+		TimesRun: 0,
+		lock: sync.RWMutex{},
+		IsDone: false,
+		NextRunAt: schedule.StartTime,
+	}
+	go s.RunJob(&j)
 
 	return jobID, nil
 }
 
 func ListJobs(db *sql.DB) ([]JobData, error) {
+	// XXX this can probably be unified with JobDB.GetAll()
 	var currentJobs []JobData
 	query := fmt.Sprintf(`SELECT
 		id, comment,
@@ -167,6 +188,8 @@ func Start() {
 	}
 	defer db.Close()
 
+	scheduler := NewScheduler(db)
+
 	router := gin.Default()
 	router.GET("/api/v1/jobs", func(c *gin.Context) {
 		// XXX add authentication
@@ -192,7 +215,7 @@ func Start() {
 					gin.H{"error": "invalid request"})
 			return
 		}
-		jobID, err := AddJob(db, jobData)	
+		jobID, err := AddJob(db, jobData, scheduler)	
 		if (err != nil) {
 			c.JSON(http.StatusBadRequest,
 					gin.H{"error": err.Error()})
@@ -207,6 +230,8 @@ func Start() {
 	Addr := fmt.Sprintf("%s:%d", viper.GetString("api.address"),
 								viper.GetInt("api.port"))
 	ctx.Infof("starting on %s", Addr)
+
+	scheduler.Start()
 	s := &http.Server{
 		Addr: Addr,
 		Handler: router,

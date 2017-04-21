@@ -8,5 +8,7 @@ CREATE TABLE jobs
     target_countries VARCHAR(2) [],
     target_platforms VARCHAR(10) [],
     task_test_name VARCHAR,
-    task_arguments JSONB
+    task_arguments JSONB,
+    times_run INT,
+    next_run_at TIME WITH TIME ZONE
 );
