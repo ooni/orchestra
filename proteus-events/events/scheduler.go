@@ -40,17 +40,80 @@ type Job struct {
 	IsDone		bool
 }
 
+func (j *Job) CreateTask(cID string, jDB *JobDB) (string, error) {
+	return "t-id-XXX", nil
+}
+
 func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
-	// XXX get these from real data
-	query := fmt.Sprintf(`SELECT
+	var (
+		err error
+		query string
+		targetCountries []string
+		targetPlatforms []string
+		targets []*JobTarget
+		rows *sql.Rows
+	)
+	query = fmt.Sprintf(`SELECT
 		target_countries,
 		target_platforms
-		FROM %s`,
+		FROM %s
+		WHERE id = $1`,
 		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
 
-	targets := make([]*JobTarget, 0)
-	targets = append(targets, NewJobTarget("c-id-1", "t-id-1"))
-	targets = append(targets, NewJobTarget("c-id-2", "t-id-2"))
+	err = jDB.db.QueryRow(query, j.Id).Scan(
+		pq.Array(&targetCountries),
+		pq.Array(&targetPlatforms))
+	if err != nil {
+		ctx.WithError(err).Error("failed to obtain targets")
+		if err == sql.ErrNoRows {
+			panic("could not find job with ID")
+		}
+		panic("other error in query")
+	}
+
+	// XXX this is really ghetto. There is probably a much better way of doing
+	// it.
+	query = fmt.Sprintf("SELECT id FROM %s",
+		pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
+	if len(targetCountries) > 0 && len(targetPlatforms) > 0 {
+		query += " WHERE probe_cc = ANY($1) AND platform = ANY($2)"
+		rows, err = jDB.db.Query(query,
+									pq.Array(targetCountries),
+									pq.Array(targetPlatforms))
+	} else if len(targetCountries) > 0 || len(targetPlatforms) > 0 {
+		if len(targetCountries) > 0 {
+			query += " WHERE probe_cc = ANY($1)"
+			rows, err = jDB.db.Query(query, pq.Array(targetCountries))
+		} else {
+			query += " WHERE platform = ANY($1)"
+			rows, err = jDB.db.Query(query, pq.Array(targetPlatforms))
+		}
+	} else {
+		rows, err = jDB.db.Query(query)
+	}
+
+	if err != nil {
+		ctx.WithError(err).Error("failed to find targets")
+		return targets
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			clientID string
+			taskID string
+		)
+		err = rows.Scan(&clientID)
+		if err != nil {
+			ctx.WithError(err).Error("failed to iterate over targets")
+			return targets
+		}
+		taskID, err = j.CreateTask(clientID, jDB)
+		if err != nil {
+			ctx.WithError(err).Error("failed to create task")
+			return targets
+		}
+		targets = append(targets, NewJobTarget(clientID, taskID))
+	}
 	return targets
 }
 
@@ -100,6 +163,9 @@ func (j *Job) Run(jDB *JobDB) {
 	targets := j.GetTargets(jDB)
 	lastRunAt := time.Now().UTC()
 	for _, t := range targets {
+		// XXX
+		// In here shall go logic to connect to notification server and notify
+		// them of the task
 		ctx.Debugf("notifying %s of %s", t.ClientID, t.TaskID)
 	}
 
