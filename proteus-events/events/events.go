@@ -3,15 +3,17 @@ package events
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 	"sync"
-	_ "errors"
 
 	"github.com/apex/log"
 	"github.com/satori/go.uuid"
 	"github.com/lib/pq"
+	"github.com/jmoiron/sqlx"
+	"github.com/jmoiron/sqlx/types"
 	"github.com/spf13/viper"
 	"gopkg.in/gin-gonic/gin.v1"
 	"github.com/facebookgo/grace/gracehttp"
@@ -21,8 +23,8 @@ var ctx = log.WithFields(log.Fields{
 	"cmd": "events",
 })
 
-func initDatabase() (*sql.DB, error) {
-	db, err := sql.Open("postgres", viper.GetString("database.url"))
+func initDatabase() (*sqlx.DB, error) {
+	db, err := sqlx.Open("postgres", viper.GetString("database.url"))
 	if err != nil {
 		ctx.Error("failed to open database")
 		return nil, err
@@ -56,7 +58,7 @@ type JobData struct {
 	CreationTime	time.Time `json:"creation_time"`
 }
 
-func AddJob(db *sql.DB, jd JobData, s *Scheduler) (string, error) {
+func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 	schedule, err := ParseSchedule(jd.Schedule)
 	if err != nil {
 		ctx.WithError(err).Error("invalid schedule format")
@@ -143,9 +145,11 @@ func AddJob(db *sql.DB, jd JobData, s *Scheduler) (string, error) {
 	return jobID, nil
 }
 
-func ListJobs(db *sql.DB) ([]JobData, error) {
+func ListJobs(db *sqlx.DB) ([]JobData, error) {
 	// XXX this can probably be unified with JobDB.GetAll()
-	var currentJobs []JobData
+	var (
+		currentJobs []JobData
+	)
 	query := fmt.Sprintf(`SELECT
 		id, comment,
 		schedule, delay,
@@ -162,21 +166,61 @@ func ListJobs(db *sql.DB) ([]JobData, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var jd JobData
+		var (
+			jd JobData
+			taskArgs types.JSONText
+		)
 		err := rows.Scan(&jd.Comment,
 						&jd.Schedule,
 						&jd.Delay,
 						&jd.Target.Countries,
 						&jd.Target.Platforms,
 						&jd.Task.TestName,
-						&jd.Task.Arguments)
+						&taskArgs)
 		if err != nil {
 			ctx.WithError(err).Error("failed to iterate over jobs")
+			return currentJobs, err
+		}
+		err = taskArgs.Unmarshal(&jd.Task.Arguments)
+		if err != nil {
+			ctx.WithError(err).Error("failed to unmarshal JSON")
 			return currentJobs, err
 		}
 		currentJobs = append(currentJobs, jd)
 	}
 	return currentJobs, nil
+}
+
+var ErrTaskNotFound = errors.New("task not found")
+
+func GetTask(tID string, db *sqlx.DB) (Task, error) {
+	var (
+		err error
+		taskArgs types.JSONText
+	)
+	task := Task{}
+	query := fmt.Sprintf(`SELECT
+		test_name,
+		arguments
+		FROM %s
+		WHERE id = $1`,
+		pq.QuoteIdentifier(viper.GetString("database.tasks-table")))
+	err = db.QueryRow(query, tID).Scan(
+		&task.TestName,
+		&taskArgs)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return task, ErrTaskNotFound
+		}
+		ctx.WithError(err).Error("failed to get task")
+		return task, err
+	}
+	err = taskArgs.Unmarshal(&task.Arguments)
+	if err != nil {
+		ctx.WithError(err).Error("failed to unmarshal json")
+		return task, err
+	}
+	return task, nil
 }
 
 func Start() {
@@ -191,6 +235,33 @@ func Start() {
 	scheduler := NewScheduler(db)
 
 	router := gin.Default()
+	router.GET("/api/v1/task/:task_id", func(c *gin.Context) {
+		taskID := c.Param("task_id")
+		task, err := GetTask(taskID, db)
+		if err != nil {
+			if err == ErrTaskNotFound {
+				c.JSON(http.StatusNotFound,
+						gin.H{"error": "task not found"})
+				return
+
+			}
+			c.JSON(http.StatusBadRequest,
+					gin.H{"error": "invalid request"})
+			return
+		}
+		c.JSON(http.StatusOK,
+				gin.H{"id": taskID,
+					"test_name": task.TestName,
+					"arguments": task.Arguments})
+		return
+	})
+	router.POST("/api/v1/task/:task_id/accept", func(c *gin.Context) {
+	})
+	router.POST("/api/v1/task/:task_id/progress", func(c *gin.Context) {
+	})
+	router.POST("/api/v1/task/:task_id/done", func(c *gin.Context) {
+	})
+
 	router.GET("/api/v1/jobs", func(c *gin.Context) {
 		// XXX add authentication
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")

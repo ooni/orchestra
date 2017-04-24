@@ -2,6 +2,7 @@ package events
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -10,8 +11,11 @@ import (
 	_ "syscall"
 	"time"
 
+	"github.com/satori/go.uuid"
 	"github.com/spf13/viper"
 	"github.com/lib/pq"
+	"github.com/jmoiron/sqlx"
+	"github.com/jmoiron/sqlx/types"
 )
 
 type JobTarget struct {
@@ -40,8 +44,74 @@ type Job struct {
 	IsDone		bool
 }
 
-func (j *Job) CreateTask(cID string, jDB *JobDB) (string, error) {
-	return "t-id-XXX", nil
+func (j *Job) CreateTask(cID string, t Task, jDB *JobDB) (string, error) {
+	tx, err := jDB.db.Begin()
+	if err != nil {
+		ctx.WithError(err).Error("failed to open createTask transaction")
+		return "", err
+	}
+
+	var taskID = uuid.NewV4().String()
+	{
+		query := fmt.Sprintf(`INSERT INTO %s (
+			id, probe_id,
+			job_id, test_name,
+			arguments,
+			state,
+			progress,
+			creation_time,
+			notification_time,
+			accept_time,
+			done_time,
+			last_updated
+		) VALUES (
+			$1, $2,
+			$3, $4,
+			$5,
+			$6,
+			$7,
+			$8,
+			$9,
+			$10,
+			$11,
+			$12)`,
+		pq.QuoteIdentifier(viper.GetString("database.tasks-table")))
+		stmt, err := tx.Prepare(query)
+		if err != nil {
+			ctx.WithError(err).Error("failed to prepare task create query")
+			return "", err
+		}
+		defer stmt.Close()
+
+		taskArgsStr, err := json.Marshal(t.Arguments)
+		ctx.Debugf("task args: %#", t.Arguments)
+		if err != nil {
+			ctx.WithError(err).Error("failed to serialise task arguments in createTask")
+			return "", err
+		}
+		now := time.Now().UTC()
+		_, err = stmt.Exec(taskID, cID,
+							j.Id, t.TestName,
+							taskArgsStr,
+							"ready",
+							0,
+							now,
+							nil,
+							nil,
+							nil,
+							now)
+		if err != nil {
+			tx.Rollback()
+			ctx.WithError(err).Error("failed to insert into tasks table")
+			return "", err
+		}
+		if err = tx.Commit(); err != nil {
+			ctx.WithError(err).Error("failed to commit transaction in tasks table, rolling back")
+			return "", err
+		}
+	}
+
+	return taskID, nil
 }
 
 func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
@@ -51,24 +121,35 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 		targetCountries []string
 		targetPlatforms []string
 		targets []*JobTarget
+		taskArgs types.JSONText
+		task Task
 		rows *sql.Rows
 	)
 	query = fmt.Sprintf(`SELECT
 		target_countries,
-		target_platforms
+		target_platforms,
+		task_test_name,
+		task_arguments
 		FROM %s
 		WHERE id = $1`,
 		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
-
+	
 	err = jDB.db.QueryRow(query, j.Id).Scan(
 		pq.Array(&targetCountries),
-		pq.Array(&targetPlatforms))
+		pq.Array(&targetPlatforms),
+		&task.TestName,
+		&taskArgs)
 	if err != nil {
 		ctx.WithError(err).Error("failed to obtain targets")
 		if err == sql.ErrNoRows {
 			panic("could not find job with ID")
 		}
 		panic("other error in query")
+	}
+	err = taskArgs.Unmarshal(&task.Arguments)
+	if err != nil {
+		ctx.WithError(err).Error("failed to unmarshal json")
+		panic("invalid JSON in database")
 	}
 
 	// XXX this is really ghetto. There is probably a much better way of doing
@@ -107,7 +188,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 			ctx.WithError(err).Error("failed to iterate over targets")
 			return targets
 		}
-		taskID, err = j.CreateTask(clientID, jDB)
+		taskID, err = j.CreateTask(clientID, task, jDB)
 		if err != nil {
 			ctx.WithError(err).Error("failed to create task")
 			return targets
@@ -258,7 +339,7 @@ func (j *Job) ShouldRun() bool {
 }
 
 type JobDB struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
 func (db *JobDB) GetAll() ([]*Job, error) {
@@ -316,7 +397,7 @@ type Scheduler struct {
 	stopped	chan os.Signal
 }
 
-func NewScheduler(db *sql.DB) *Scheduler {
+func NewScheduler(db *sqlx.DB) *Scheduler {
 	return &Scheduler{
 			stopped: make(chan os.Signal),
 			jobDB: JobDB{db: db}}
