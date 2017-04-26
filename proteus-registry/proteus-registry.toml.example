@@ -2,6 +2,9 @@
 environment = "development"
 log-level = "debug"
 
+[auth]
+jwt-secret = "CHANGEME (must be in sync amongst all instances using JWT)"
+
 [api]
 port = 8080
 address = "127.0.0.1"
@@ -10,3 +13,4 @@ address = "127.0.0.1"
 url = "postgres://user:pass@hostname:port/dbname?sslmode=disable"
 active-probes-table = "active_probes"
 probe-updates-table = "probe_updates"
+accounts-table = "accounts"

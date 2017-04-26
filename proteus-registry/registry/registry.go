@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"database/sql"
 
+	"github.com/thetorproject/proteus/proteus-common"
 	"github.com/apex/log"
 	"github.com/satori/go.uuid"
 	"github.com/lib/pq"
 	"github.com/spf13/viper"
-	"gopkg.in/gin-gonic/gin.v1"
+	"github.com/gin-gonic/gin"
 	"github.com/facebookgo/grace/gracehttp"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var ctx = log.WithFields(log.Fields{
@@ -44,6 +46,8 @@ type ClientData struct {
 
 	ProbeFamily string `json:"probe_family"`
 	ProbeID string `json:"probe_id"`
+
+	Password string `json:"password"`
 }
 
 func IsClientRegistered(db *sql.DB, clientID string) (bool, error) {
@@ -166,6 +170,9 @@ func Register(db *sql.DB, req ClientData) (string, error) {
 	if ((req.Platform == "ios" || req.Platform == "android") && req.Token == "") {
 		return "", errors.New("missing device token")
 	}
+	if (req.Password == "") {
+		return "", errors.New("missing password")
+	}
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -260,6 +267,43 @@ func Register(db *sql.DB, req ClientData) (string, error) {
 		}
 	}
 
+	{
+		query := fmt.Sprintf(`INSERT INTO %s (
+			username,
+			password_hash,
+			last_access,
+			role
+		) VALUES (
+			$1,
+			$2,
+			$3,
+			$4)`,
+			pq.QuoteIdentifier(viper.GetString("database.accounts-table")))
+
+		passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			ctx.WithError(err).Error("failed to hash password")
+			return "", err
+		}
+
+		stmt, err := tx.Prepare(query)
+		if (err != nil) {
+			ctx.WithError(err).Error("failed to prepare accounts query")
+			return "", err
+		}
+		defer stmt.Close()
+
+		_, err = stmt.Exec(clientID,
+							string(passwordHash),
+							time.Now().UTC(),
+							"device")
+		if err != nil {
+			tx.Rollback()
+			ctx.WithError(err).Error("failed to insert into accounts table, rolling back")
+			return "", err
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		ctx.WithError(err).Error("failed to commit transaction, rolling back")
 		return "", err
@@ -336,6 +380,63 @@ func ListClients(db *sql.DB) ([]ActiveClient, error) {
 	return activeClients, nil
 }
 
+func initAuthMiddleware(db *sql.DB) (*middleware.GinJWTMiddleware, error) {
+	return &middleware.GinJWTMiddleware{
+		Realm:      "proteus registry",
+		Key:        []byte(viper.GetString("auth.jwt-token")),
+		Timeout:    time.Hour,
+		MaxRefresh: time.Hour,
+		Authenticator: func(userId string, password string, c *gin.Context) (string, bool) {
+			var (
+				passwordHash string
+				role string
+			)
+			query := fmt.Sprintf(`SELECT
+							password_hash, role
+							FROM %s WHERE username = $1`,
+						pq.QuoteIdentifier(viper.GetString("database.accounts-table")))
+			err := db.QueryRow(query, userId).Scan(
+				&passwordHash,
+				&role)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					return role, false
+				}
+				ctx.WithError(err).Error("failed to lookup password")
+				return role, false
+			}
+			err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
+			if err != nil {
+				return role, false
+			}
+			return role, true
+		},
+		Unauthorized: func(c *gin.Context, code int, message string) {
+			c.JSON(code, gin.H{
+				"code":    code,
+				"message": message,
+			})
+		},
+		TokenLookup: "header:Authorization",
+		TokenHeadName: "Bearer",
+		TimeFunc: time.Now,
+	}, nil
+}
+
+func adminAuthorizor(userId string, c *gin.Context) bool {
+	if userId == "admin" {
+		return true
+	}
+	return false
+}
+
+func deviceAuthorizor(userId string, c *gin.Context) bool {
+	if userId == "device" {
+		return true
+	}
+	return false
+}
+
 func Start() {
 	db, err := initDatabase()
 
@@ -345,21 +446,17 @@ func Start() {
 	}
 	defer db.Close()
 
-	router := gin.Default()
-	router.GET("/api/v1/clients", func(c *gin.Context) {
-		// XXX add authentication
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		clientList, err := ListClients(db)
-		if err != nil {
-			c.JSON(http.StatusBadRequest,
-					gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK,
-				gin.H{"active_clients": clientList})
-	})
+	authMiddleware, err := initAuthMiddleware(db)
+	if (err != nil) {
+		ctx.WithError(err).Error("failed to initialise authMiddlewareDevice")
+		return
+	}
 
-	router.POST("/api/v1/register", func(c *gin.Context) {
+	router := gin.Default()
+	v1 := router.Group("/api/v1")
+
+	v1.POST("/login", authMiddleware.LoginHandler)
+	v1.POST("/register", func(c *gin.Context) {
 		var registerReq ClientData
 		err := c.BindJSON(&registerReq)
 		if (err != nil) {
@@ -380,40 +477,61 @@ func Start() {
 		return
 	})
 
-	// XXX do we also want to support a PATCH method?
-	router.PUT("/api/v1/update/:client_id", func(c *gin.Context) {
-		var updateReq ClientData
-		clientID := c.Param("client_id")
-		err := c.BindJSON(&updateReq)
-		if (err != nil) {
-			ctx.WithError(err).Error("invalid request")
-			c.JSON(http.StatusBadRequest,
-					gin.H{"error": "invalid request"})
-			return
-		}
-		isRegistered, err := IsClientRegistered(db, clientID)
-		if (err != nil) {
-			ctx.WithError(err).Error("failed to learn if client is registered")
-			c.JSON(http.StatusBadRequest,
-					gin.H{"error": err.Error()})
-			return
-		}
-		if (isRegistered == false) {
-			c.JSON(http.StatusNotFound,
-					gin.H{"error": "client is not registered"})
-			return
-		}
+	admin := v1.Group("/admin")
+	admin.Use(authMiddleware.MiddlewareFunc(adminAuthorizor))
+	{
+		admin.GET("/clients", func(c *gin.Context) {
+			// XXX add authentication
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+			clientList, err := ListClients(db)
+			if err != nil {
+				c.JSON(http.StatusBadRequest,
+						gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK,
+					gin.H{"active_clients": clientList})
+		})
+	}
 
-		err = Update(db, clientID, updateReq)
-		if (err != nil) {
-			ctx.WithError(err).Error("failed to update")
-			c.JSON(http.StatusBadRequest,
-					gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK,
-				gin.H{"status": "ok"})
-	})
+	device := v1.Group("/")
+	device.Use(authMiddleware.MiddlewareFunc(deviceAuthorizor))
+	{
+		// XXX do we also want to support a PATCH method?
+		device.PUT("/update/:client_id", func(c *gin.Context) {
+			var updateReq ClientData
+			clientID := c.Param("client_id")
+			err := c.BindJSON(&updateReq)
+			if (err != nil) {
+				ctx.WithError(err).Error("invalid request")
+				c.JSON(http.StatusBadRequest,
+						gin.H{"error": "invalid request"})
+				return
+			}
+			isRegistered, err := IsClientRegistered(db, clientID)
+			if (err != nil) {
+				ctx.WithError(err).Error("failed to learn if client is registered")
+				c.JSON(http.StatusBadRequest,
+						gin.H{"error": err.Error()})
+				return
+			}
+			if (isRegistered == false) {
+				c.JSON(http.StatusNotFound,
+						gin.H{"error": "client is not registered"})
+				return
+			}
+
+			err = Update(db, clientID, updateReq)
+			if (err != nil) {
+				ctx.WithError(err).Error("failed to update")
+				c.JSON(http.StatusBadRequest,
+						gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK,
+					gin.H{"status": "ok"})
+		})
+	}
 
 	Addr := fmt.Sprintf("%s:%d", viper.GetString("api.address"),
 								viper.GetInt("api.port"))
