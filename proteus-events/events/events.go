@@ -48,6 +48,7 @@ type Task struct {
 	Id			string `json:"id"`
 	TestName	string `json:"test_name" binding:"required"`
 	Arguments	interface{} `json:"arguments"`
+	State		string
 }
 
 type JobData struct {
@@ -194,30 +195,40 @@ func ListJobs(db *sqlx.DB) ([]JobData, error) {
 }
 
 var ErrTaskNotFound = errors.New("task not found")
+var ErrAccessDenied = errors.New("access denied")
+var ErrInconsistentState = errors.New("task already accepted")
 
-func GetTask(tID string, db *sqlx.DB) (Task, error) {
+func GetTask(tID string, uID string, db *sqlx.DB) (Task, error) {
 	var (
 		err error
+		probeId string
 		taskArgs types.JSONText
 	)
 	task := Task{}
 	query := fmt.Sprintf(`SELECT
 		id,
+		probe_id,
 		test_name,
-		arguments
+		arguments,
+		state
 		FROM %s
 		WHERE id = $1`,
 		pq.QuoteIdentifier(viper.GetString("database.tasks-table")))
 	err = db.QueryRow(query, tID).Scan(
 		&task.Id,
+		&probeId,
 		&task.TestName,
-		&taskArgs)
+		&taskArgs,
+		&task.State)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return task, ErrTaskNotFound
 		}
 		ctx.WithError(err).Error("failed to get task")
 		return task, err
+	}
+	if probeId != uID {
+		return task, ErrAccessDenied
 	}
 	err = taskArgs.Unmarshal(&task.Arguments)
 	if err != nil {
@@ -239,6 +250,7 @@ func GetTasksForUser(uID string, since string,
 		arguments
 		FROM %s
 		WHERE
+		state = 'ready' AND
 		probe_id = $1 AND creation_time >= $2`,
 		pq.QuoteIdentifier(viper.GetString("database.tasks-table")))
 
@@ -271,6 +283,43 @@ func GetTasksForUser(uID string, since string,
 	return tasks, nil
 }
 
+func SetTaskState(tID string, uID string,
+					state string, validStates []string,
+					updateTimeCol string,
+					db *sqlx.DB) (error) {
+	var err error
+	task, err := GetTask(tID, uID, db)
+	if err != nil {
+		return err
+	}
+	stateConsistent := false
+	for _, s := range validStates {
+		if task.State == s {
+			stateConsistent = true
+			break
+		}
+	}
+	if !stateConsistent {
+		return ErrInconsistentState
+	}
+	//if task.State != "ready" && task.State != "notified" {
+
+	query := fmt.Sprintf(`UPDATE %s SET
+		state = $2,
+		%s = $3,
+		last_updated = $3
+		WHERE id = $1`,
+		pq.QuoteIdentifier(viper.GetString("database.tasks-table")),
+		updateTimeCol)
+
+	_, err = db.Exec(query, tID, state, time.Now().UTC())
+	if err != nil {
+		ctx.WithError(err).Error("failed to get task")
+		return err
+	}
+	return nil
+}
+
 func Start() {
 	db, err := initDatabase()
 
@@ -295,6 +344,7 @@ func Start() {
 	admin.Use(authMiddleware.MiddlewareFunc(jwt.AdminAuthorizor))
 	{
 		admin.GET("/jobs", func(c *gin.Context) {
+			// XXX do this in a middleware
 			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 			jobList, err := ListJobs(db)
 			if err != nil {
@@ -323,7 +373,7 @@ func Start() {
 			}
 
 			c.JSON(http.StatusOK,
-					gin.H{"job_id": jobID})
+					gin.H{"id": jobID})
 			return
 		})
 	}
@@ -342,7 +392,7 @@ func Start() {
 			}
 			tasks, err := GetTasksForUser(userId, since, db)
 			if err != nil {
-				c.JSON(http.StatusBadRequest,
+				c.JSON(http.StatusInternalServerError,
 						gin.H{"error": "server side error"})
 				return
 			}
@@ -352,13 +402,22 @@ func Start() {
 
 		device.GET("/task/:task_id", func(c *gin.Context) {
 			taskID := c.Param("task_id")
-			task, err := GetTask(taskID, db)
+			userId := c.MustGet("userID").(string)
+			task, err := GetTask(taskID, userId, db)
 			if err != nil {
+				if err == ErrAccessDenied {
+					c.JSON(http.StatusUnauthorized,
+							gin.H{"error": "access denied"})
+					return
+				}
 				if err == ErrTaskNotFound {
+					// XXX is it a concern that a user this way can enumerate
+					// tasks of other users?
+					// I don't think it's a security issue, but it's worth
+					// thinking about...
 					c.JSON(http.StatusNotFound,
 							gin.H{"error": "task not found"})
 					return
-
 				}
 				c.JSON(http.StatusBadRequest,
 						gin.H{"error": "invalid request"})
@@ -371,10 +430,94 @@ func Start() {
 			return
 		})
 		device.POST("/task/:task_id/accept", func(c *gin.Context) {
+			taskID := c.Param("task_id")
+			userId := c.MustGet("userID").(string)
+			err := SetTaskState(taskID,
+								userId,
+								"accepted",
+								[]string{"ready", "notified"},
+								"accept_time",
+								db)
+			if err != nil {
+				if err == ErrInconsistentState {
+					c.JSON(http.StatusBadRequest,
+							gin.H{"error": "task already accepted"})
+					return
+				}
+				if err == ErrAccessDenied {
+					c.JSON(http.StatusUnauthorized,
+							gin.H{"error": "access denied"})
+					return
+				}
+				if err == ErrTaskNotFound {
+					c.JSON(http.StatusNotFound,
+							gin.H{"error": "task not found"})
+					return
+				}
+			}
+			c.JSON(http.StatusOK,
+					gin.H{"status": "accepted"})
+			return
 		})
-		device.POST("/task/:task_id/progress", func(c *gin.Context) {
+		device.POST("/task/:task_id/reject", func(c *gin.Context) {
+			taskID := c.Param("task_id")
+			userId := c.MustGet("userID").(string)
+			err := SetTaskState(taskID,
+								userId,
+								"rejected",
+								[]string{"ready", "notified", "accepted"},
+								"done_time",
+								db)
+			if err != nil {
+				if err == ErrInconsistentState {
+					c.JSON(http.StatusBadRequest,
+							gin.H{"error": "task already done"})
+					return
+				}
+				if err == ErrAccessDenied {
+					c.JSON(http.StatusUnauthorized,
+							gin.H{"error": "access denied"})
+					return
+				}
+				if err == ErrTaskNotFound {
+					c.JSON(http.StatusNotFound,
+							gin.H{"error": "task not found"})
+					return
+				}
+			}
+			c.JSON(http.StatusOK,
+					gin.H{"status": "rejected"})
+			return
 		})
 		device.POST("/task/:task_id/done", func(c *gin.Context) {
+			taskID := c.Param("task_id")
+			userId := c.MustGet("userID").(string)
+			err := SetTaskState(taskID,
+								userId,
+								"done",
+								[]string{"accepted"},
+								"done_time",
+								db)
+			if err != nil {
+				if err == ErrInconsistentState {
+					c.JSON(http.StatusBadRequest,
+							gin.H{"error": "task already done"})
+					return
+				}
+				if err == ErrAccessDenied {
+					c.JSON(http.StatusUnauthorized,
+							gin.H{"error": "access denied"})
+					return
+				}
+				if err == ErrTaskNotFound {
+					c.JSON(http.StatusNotFound,
+							gin.H{"error": "task not found"})
+					return
+				}
+			}
+			c.JSON(http.StatusOK,
+					gin.H{"status": "done"})
+			return
 		})
 	}
 
