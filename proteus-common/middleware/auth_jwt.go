@@ -19,7 +19,12 @@ import (
 
 // This is taken from:
 // https://github.com/appleboy/gin-jwt/blob/master/auth_jwt.go
+// with some minor changes.
 
+type Account struct {
+	Username string
+	Role string
+}
 // GinJWTMiddleware provides a Json-Web-Token authentication implementation. On failure, a 401 HTTP response
 // is returned. On success, the wrapped middleware is called, and the userID is made available as
 // c.Get("userID").(string).
@@ -48,7 +53,7 @@ type GinJWTMiddleware struct {
 	// Callback function that should perform the authentication of the user based on userID and
 	// password. Must return true on success, false on failure. Required.
 	// Option return user id, if so, user id will be stored in Claim Array.
-	Authenticator func(userID string, password string, c *gin.Context) (string, bool)
+	Authenticator func(userID string, password string, c *gin.Context) (Account, bool)
 
 	// Callback function that will be called during login.
 	// Using this function it is possible to add additional payload data to the webtoken.
@@ -62,7 +67,7 @@ type GinJWTMiddleware struct {
 	Unauthorized func(*gin.Context, int, string)
 
 	// Set the identity handler function
-	IdentityHandler func(jwt.MapClaims) string
+	IdentityHandler func(jwt.MapClaims) Account
 
 	// TokenLookup is a string in the form of "<source>:<name>" that is used
 	// to extract token from the request.
@@ -83,7 +88,7 @@ type GinJWTMiddleware struct {
 // Authorizator structure
 // Callback function that should perform the authorization of the authenticated user. Called
 // only after an authentication success. Must return true on success, false on failure.
-type Authorizator func(userID string, c *gin.Context) bool
+type Authorizator func(account Account, c *gin.Context) bool
 
 // Login form structure.
 type Login struct {
@@ -125,8 +130,11 @@ func (mw *GinJWTMiddleware) MiddlewareInit() error {
 	}
 
 	if mw.IdentityHandler == nil {
-		mw.IdentityHandler = func(claims jwt.MapClaims) string {
-			return claims["id"].(string)
+		mw.IdentityHandler = func(claims jwt.MapClaims) Account {
+			return Account{
+				Username: claims["id"].(string),
+				Role: claims["role"].(string),
+			}
 		}
 	}
 
@@ -166,11 +174,11 @@ func (mw *GinJWTMiddleware) middlewareImpl(auth Authorizator, c *gin.Context) {
 
 	claims := token.Claims.(jwt.MapClaims)
 
-	id := mw.IdentityHandler(claims)
+	account := mw.IdentityHandler(claims)
 	c.Set("JWT_PAYLOAD", claims)
-	c.Set("userID", id)
+	c.Set("userID", account.Username)
 
-	if !auth(id, c) {
+	if !auth(account, c) {
 		mw.unauthorized(c, http.StatusForbidden, "You don't have permission to access.")
 		return
 	}
@@ -198,7 +206,7 @@ func (mw *GinJWTMiddleware) LoginHandler(c *gin.Context) {
 		return
 	}
 
-	userID, ok := mw.Authenticator(loginVals.Username, loginVals.Password, c)
+	account, ok := mw.Authenticator(loginVals.Username, loginVals.Password, c)
 
 	if !ok {
 		mw.unauthorized(c, http.StatusUnauthorized, "Incorrect Username / Password")
@@ -215,12 +223,9 @@ func (mw *GinJWTMiddleware) LoginHandler(c *gin.Context) {
 		}
 	}
 
-	if userID == "" {
-		userID = loginVals.Username
-	}
-
 	expire := mw.TimeFunc().Add(mw.Timeout)
-	claims["id"] = userID
+	claims["id"] = account.Username
+	claims["role"] = account.Role
 	claims["exp"] = expire.Unix()
 	claims["orig_iat"] = mw.TimeFunc().Unix()
 
@@ -392,11 +397,12 @@ func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 		Key:        []byte(viper.GetString("auth.jwt-token")),
 		Timeout:    time.Hour,
 		MaxRefresh: time.Hour,
-		Authenticator: func(userId string, password string, c *gin.Context) (string, bool) {
+		Authenticator: func(userId string, password string, c *gin.Context) (Account, bool) {
 			var (
 				passwordHash string
-				role string
+				account Account
 			)
+			account.Username = userId
 			// XXX set the last_login value
 			query := fmt.Sprintf(`SELECT
 							password_hash, role
@@ -404,18 +410,18 @@ func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 						pq.QuoteIdentifier(viper.GetString("database.accounts-table")))
 			err := db.QueryRow(query, userId).Scan(
 				&passwordHash,
-				&role)
+				&account.Role)
 			if err != nil {
 				if err == sql.ErrNoRows {
-					return role, false
+					return account, false
 				}
-				return role, false
+				return account, false
 			}
 			err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
 			if err != nil {
-				return role, false
+				return account, false
 			}
-			return role, true
+			return account, true
 		},
 		Unauthorized: func(c *gin.Context, code int, message string) {
 			c.JSON(code, gin.H{
@@ -429,15 +435,15 @@ func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 	}, nil
 }
 
-func AdminAuthorizor(userId string, c *gin.Context) bool {
-	if userId == "admin" {
+func AdminAuthorizor(account Account, c *gin.Context) bool {
+	if account.Role == "admin" {
 		return true
 	}
 	return false
 }
 
-func DeviceAuthorizor(userId string, c *gin.Context) bool {
-	if userId == "device" {
+func DeviceAuthorizor(account Account, c *gin.Context) bool {
+	if account.Role == "device" {
 		return true
 	}
 	return false
