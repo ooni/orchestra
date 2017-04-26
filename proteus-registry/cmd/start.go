@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/hellais/proteus/proteus-registry/registry"
+	"github.com/thetorproject/proteus/proteus-registry/registry"
 )
 
 // startCmd represents the start command

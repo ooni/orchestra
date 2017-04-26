@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/hellais/proteus/proteus-notify/notify"
+	"github.com/thetorproject/proteus/proteus-notify/notify"
 )
 
 var startCmd = &cobra.Command{

@@ -1,6 +1,6 @@
 package main
 
-import "github.com/hellais/proteus/proteus-registry/cmd"
+import "github.com/thetorproject/proteus/proteus-registry/cmd"
 
 func main() {
 	cmd.Execute()
