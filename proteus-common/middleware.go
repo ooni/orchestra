@@ -44,11 +44,6 @@ type GinJWTMiddleware struct {
 	// Option return user id, if so, user id will be stored in Claim Array.
 	Authenticator func(userID string, password string, c *gin.Context) (string, bool)
 
-	// Callback function that should perform the authorization of the authenticated user. Called
-	// only after an authentication success. Must return true on success, false on failure.
-	// Optional, default to success.
-	Authorizator func(userID string, c *gin.Context) bool
-
 	// Callback function that will be called during login.
 	// Using this function it is possible to add additional payload data to the webtoken.
 	// The data is then made available during requests via c.Get("JWT_PAYLOAD").
@@ -78,6 +73,11 @@ type GinJWTMiddleware struct {
 	// TimeFunc provides the current time. You can override it to use another time value. This is useful for testing or if your server uses a different time zone than your tokens.
 	TimeFunc func() time.Time
 }
+
+// Authorizator structure
+// Callback function that should perform the authorization of the authenticated user. Called
+// only after an authentication success. Must return true on success, false on failure.
+type Authorizator func(userID string, c *gin.Context) bool
 
 // Login form structure.
 type Login struct {
@@ -109,12 +109,6 @@ func (mw *GinJWTMiddleware) MiddlewareInit() error {
 		mw.TokenHeadName = "Bearer"
 	}
 
-	if mw.Authorizator == nil {
-		mw.Authorizator = func(userID string, c *gin.Context) bool {
-			return true
-		}
-	}
-
 	if mw.Unauthorized == nil {
 		mw.Unauthorized = func(c *gin.Context, code int, message string) {
 			c.JSON(code, gin.H{
@@ -142,7 +136,7 @@ func (mw *GinJWTMiddleware) MiddlewareInit() error {
 }
 
 // MiddlewareFunc makes GinJWTMiddleware implement the Middleware interface.
-func (mw *GinJWTMiddleware) MiddlewareFunc() gin.HandlerFunc {
+func (mw *GinJWTMiddleware) MiddlewareFunc(auth Authorizator) gin.HandlerFunc {
 	if err := mw.MiddlewareInit(); err != nil {
 		return func(c *gin.Context) {
 			mw.unauthorized(c, http.StatusInternalServerError, err.Error())
@@ -151,12 +145,12 @@ func (mw *GinJWTMiddleware) MiddlewareFunc() gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
-		mw.middlewareImpl(c)
+		mw.middlewareImpl(auth, c)
 		return
 	}
 }
 
-func (mw *GinJWTMiddleware) middlewareImpl(c *gin.Context) {
+func (mw *GinJWTMiddleware) middlewareImpl(auth Authorizator, c *gin.Context) {
 	token, err := mw.parseToken(c)
 
 	if err != nil {
@@ -170,7 +164,7 @@ func (mw *GinJWTMiddleware) middlewareImpl(c *gin.Context) {
 	c.Set("JWT_PAYLOAD", claims)
 	c.Set("userID", id)
 
-	if !mw.Authorizator(id, c) {
+	if !auth(id, c) {
 		mw.unauthorized(c, http.StatusForbidden, "You don't have permission to access.")
 		return
 	}
