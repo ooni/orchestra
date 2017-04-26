@@ -1,3 +1,4 @@
-node_modules/
 .next/
+.idea/
+node_modules/
 wip/
