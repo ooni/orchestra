@@ -9,13 +9,14 @@ import (
 	"time"
 	"sync"
 
+	"github.com/thetorproject/proteus/proteus-common/middleware"
 	"github.com/apex/log"
 	"github.com/satori/go.uuid"
 	"github.com/lib/pq"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
 	"github.com/spf13/viper"
-	"gopkg.in/gin-gonic/gin.v1"
+	"github.com/gin-gonic/gin"
 	"github.com/facebookgo/grace/gracehttp"
 )
 
@@ -44,6 +45,7 @@ type URLTestArg struct {
 }
 
 type Task struct {
+	Id			string `json:"id"`
 	TestName	string `json:"test_name" binding:"required"`
 	Arguments	interface{} `json:"arguments"`
 }
@@ -200,12 +202,14 @@ func GetTask(tID string, db *sqlx.DB) (Task, error) {
 	)
 	task := Task{}
 	query := fmt.Sprintf(`SELECT
+		id,
 		test_name,
 		arguments
 		FROM %s
 		WHERE id = $1`,
 		pq.QuoteIdentifier(viper.GetString("database.tasks-table")))
 	err = db.QueryRow(query, tID).Scan(
+		&task.Id,
 		&task.TestName,
 		&taskArgs)
 	if err != nil {
@@ -223,6 +227,50 @@ func GetTask(tID string, db *sqlx.DB) (Task, error) {
 	return task, nil
 }
 
+func GetTasksForUser(uID string, since string,
+						db *sqlx.DB) ([]Task, error) {
+	var (
+		err error
+		tasks []Task
+	)
+	query := fmt.Sprintf(`SELECT
+		id,
+		test_name,
+		arguments
+		FROM %s
+		WHERE
+		probe_id = $1 AND creation_time >= $2`,
+		pq.QuoteIdentifier(viper.GetString("database.tasks-table")))
+
+	rows, err := db.Query(query, uID, since)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return tasks, nil
+		}
+		ctx.WithError(err).Error("failed to get task list")
+		return tasks, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			taskArgs types.JSONText
+			task Task
+		)
+		rows.Scan(&task.Id, &task.TestName, &taskArgs)
+		if err != nil {
+			ctx.WithError(err).Error("failed to get task")
+			return tasks, err
+		}
+		err = taskArgs.Unmarshal(&task.Arguments)
+		if err != nil {
+			ctx.WithError(err).Error("failed to unmarshal json")
+			return tasks, err
+		}
+		tasks = append(tasks, task)
+	}
+	return tasks, nil
+}
+
 func Start() {
 	db, err := initDatabase()
 
@@ -232,71 +280,103 @@ func Start() {
 	}
 	defer db.Close()
 
+	authMiddleware, err := jwt.InitAuthMiddleware(db)
+	if (err != nil) {
+		ctx.WithError(err).Error("failed to initialise authMiddlewareDevice")
+		return
+	}
+
 	scheduler := NewScheduler(db)
 
 	router := gin.Default()
-	router.GET("/api/v1/task/:task_id", func(c *gin.Context) {
-		taskID := c.Param("task_id")
-		task, err := GetTask(taskID, db)
-		if err != nil {
-			if err == ErrTaskNotFound {
-				c.JSON(http.StatusNotFound,
-						gin.H{"error": "task not found"})
+	v1 := router.Group("/api/v1")
+
+	admin := v1.Group("/admin")
+	admin.Use(authMiddleware.MiddlewareFunc(jwt.AdminAuthorizor))
+	{
+		admin.GET("/jobs", func(c *gin.Context) {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+			jobList, err := ListJobs(db)
+			if err != nil {
+				c.JSON(http.StatusBadRequest,
+						gin.H{"error": err.Error()})
 				return
-
 			}
-			c.JSON(http.StatusBadRequest,
-					gin.H{"error": "invalid request"})
-			return
-		}
-		c.JSON(http.StatusOK,
-				gin.H{"id": taskID,
-					"test_name": task.TestName,
-					"arguments": task.Arguments})
-		return
-	})
-	router.POST("/api/v1/task/:task_id/accept", func(c *gin.Context) {
-	})
-	router.POST("/api/v1/task/:task_id/progress", func(c *gin.Context) {
-	})
-	router.POST("/api/v1/task/:task_id/done", func(c *gin.Context) {
-	})
+			c.JSON(http.StatusOK,
+					gin.H{"jobs": jobList})
+		})
+		admin.POST("/job", func(c *gin.Context) {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+			var jobData JobData
+			err := c.BindJSON(&jobData)
+			if err != nil {
+				ctx.WithError(err).Error("invalid request")
+				c.JSON(http.StatusBadRequest,
+						gin.H{"error": "invalid request"})
+				return
+			}
+			jobID, err := AddJob(db, jobData, scheduler)
+			if (err != nil) {
+				c.JSON(http.StatusBadRequest,
+						gin.H{"error": err.Error()})
+				return
+			}
 
-	router.GET("/api/v1/jobs", func(c *gin.Context) {
-		// XXX add authentication
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		jobList, err := ListJobs(db)
-		if err != nil {
-			c.JSON(http.StatusBadRequest,
-					gin.H{"error": err.Error()})
+			c.JSON(http.StatusOK,
+					gin.H{"job_id": jobID})
 			return
-		}
-		c.JSON(http.StatusOK,
-				gin.H{"jobs": jobList})
-	})
+		})
+	}
 
-	router.POST("/api/v1/job", func(c *gin.Context) {
-		// XXX add authentication
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		var jobData JobData
-		err := c.BindJSON(&jobData)
-		if err != nil {
-			ctx.WithError(err).Error("invalid request")
-			c.JSON(http.StatusBadRequest,
-					gin.H{"error": "invalid request"})
-			return
-		}
-		jobID, err := AddJob(db, jobData, scheduler)	
-		if (err != nil) {
-			c.JSON(http.StatusBadRequest,
-					gin.H{"error": err.Error()})
-			return
-		}
+	device := v1.Group("/")
+	device.Use(authMiddleware.MiddlewareFunc(jwt.DeviceAuthorizor))
+	{
+		device.GET("/tasks", func(c *gin.Context) {
+			userId := c.MustGet("userID").(string)
+			since := c.DefaultQuery("since", "2016-10-20T10:30:00Z")
+			_, err := time.Parse(ISOUTCTimeLayout, since)
+			if err != nil {
+				c.JSON(http.StatusBadRequest,
+						gin.H{"error": "invalid since specified"})
+				return
+			}
+			tasks, err := GetTasksForUser(userId, since, db)
+			if err != nil {
+				c.JSON(http.StatusBadRequest,
+						gin.H{"error": "server side error"})
+				return
+			}
+			c.JSON(http.StatusOK,
+					gin.H{"tasks": tasks})
+		})
 
-		c.JSON(http.StatusOK,
-				gin.H{"job_id": jobID})
-		return
-	})
+		device.GET("/task/:task_id", func(c *gin.Context) {
+			taskID := c.Param("task_id")
+			task, err := GetTask(taskID, db)
+			if err != nil {
+				if err == ErrTaskNotFound {
+					c.JSON(http.StatusNotFound,
+							gin.H{"error": "task not found"})
+					return
+
+				}
+				c.JSON(http.StatusBadRequest,
+						gin.H{"error": "invalid request"})
+				return
+			}
+			c.JSON(http.StatusOK,
+					gin.H{"id": task.Id,
+						"test_name": task.TestName,
+						"arguments": task.Arguments})
+			return
+		})
+		device.POST("/task/:task_id/accept", func(c *gin.Context) {
+		})
+		device.POST("/task/:task_id/progress", func(c *gin.Context) {
+		})
+		device.POST("/task/:task_id/done", func(c *gin.Context) {
+		})
+	}
 
 	Addr := fmt.Sprintf("%s:%d", viper.GetString("api.address"),
 								viper.GetInt("api.port"))

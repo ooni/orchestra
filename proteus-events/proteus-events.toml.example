@@ -2,6 +2,9 @@
 environment = "development"
 log-level = "debug"
 
+[auth]
+jwt-secret = "CHANGEME (must be in sync amongst all instances using JWT)"
+
 [api]
 port = 8082
 address = "127.0.0.1"
@@ -12,3 +15,4 @@ active-probes-table = "active_probes"
 probe-updates-table = "probe_updates"
 jobs-table = "jobs"
 tasks-table = "tasks"
+accounts-table = "accounts"
