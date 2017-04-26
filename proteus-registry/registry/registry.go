@@ -6,8 +6,9 @@ import (
 	"errors"
 	"net/http"
 	"database/sql"
-
-	"github.com/thetorproject/proteus/proteus-common"
+	
+	"github.com/jmoiron/sqlx"
+	"github.com/thetorproject/proteus/proteus-common/middleware"
 	"github.com/apex/log"
 	"github.com/satori/go.uuid"
 	"github.com/lib/pq"
@@ -21,8 +22,8 @@ var ctx = log.WithFields(log.Fields{
 	"cmd": "registry",
 })
 
-func initDatabase() (*sql.DB, error) {
-	db, err := sql.Open("postgres", viper.GetString("database.url"))
+func initDatabase() (*sqlx.DB, error) {
+	db, err := sqlx.Open("postgres", viper.GetString("database.url"))
 	if err != nil {
 		ctx.Error("failed to open database")
 		return nil, err
@@ -50,7 +51,7 @@ type ClientData struct {
 	Password string `json:"password"`
 }
 
-func IsClientRegistered(db *sql.DB, clientID string) (bool, error) {
+func IsClientRegistered(db *sqlx.DB, clientID string) (bool, error) {
 	var found string
 	query := fmt.Sprintf(`SELECT id FROM %s WHERE id = $1`,
 				pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
@@ -64,7 +65,7 @@ func IsClientRegistered(db *sql.DB, clientID string) (bool, error) {
 	return true, nil
 }
 
-func Update(db *sql.DB, clientID string, req ClientData) (error) {
+func Update(db *sqlx.DB, clientID string, req ClientData) (error) {
 	tx, err := db.Begin()
 	if err != nil {
 		ctx.WithError(err).Error("failed to open transaction")
@@ -166,7 +167,7 @@ func Update(db *sql.DB, clientID string, req ClientData) (error) {
 }
 
 
-func Register(db *sql.DB, req ClientData) (string, error) {
+func Register(db *sqlx.DB, req ClientData) (string, error) {
 	if ((req.Platform == "ios" || req.Platform == "android") && req.Token == "") {
 		return "", errors.New("missing device token")
 	}
@@ -336,7 +337,7 @@ type ActiveClient struct {
 }
 
 
-func ListClients(db *sql.DB) ([]ActiveClient, error) {
+func ListClients(db *sqlx.DB) ([]ActiveClient, error) {
 	var activeClients []ActiveClient
 	query := fmt.Sprintf(`SELECT
 			id, creation_time,
@@ -380,63 +381,6 @@ func ListClients(db *sql.DB) ([]ActiveClient, error) {
 	return activeClients, nil
 }
 
-func initAuthMiddleware(db *sql.DB) (*middleware.GinJWTMiddleware, error) {
-	return &middleware.GinJWTMiddleware{
-		Realm:      "proteus registry",
-		Key:        []byte(viper.GetString("auth.jwt-token")),
-		Timeout:    time.Hour,
-		MaxRefresh: time.Hour,
-		Authenticator: func(userId string, password string, c *gin.Context) (string, bool) {
-			var (
-				passwordHash string
-				role string
-			)
-			query := fmt.Sprintf(`SELECT
-							password_hash, role
-							FROM %s WHERE username = $1`,
-						pq.QuoteIdentifier(viper.GetString("database.accounts-table")))
-			err := db.QueryRow(query, userId).Scan(
-				&passwordHash,
-				&role)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					return role, false
-				}
-				ctx.WithError(err).Error("failed to lookup password")
-				return role, false
-			}
-			err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
-			if err != nil {
-				return role, false
-			}
-			return role, true
-		},
-		Unauthorized: func(c *gin.Context, code int, message string) {
-			c.JSON(code, gin.H{
-				"code":    code,
-				"message": message,
-			})
-		},
-		TokenLookup: "header:Authorization",
-		TokenHeadName: "Bearer",
-		TimeFunc: time.Now,
-	}, nil
-}
-
-func adminAuthorizor(userId string, c *gin.Context) bool {
-	if userId == "admin" {
-		return true
-	}
-	return false
-}
-
-func deviceAuthorizor(userId string, c *gin.Context) bool {
-	if userId == "device" {
-		return true
-	}
-	return false
-}
-
 func Start() {
 	db, err := initDatabase()
 
@@ -446,7 +390,7 @@ func Start() {
 	}
 	defer db.Close()
 
-	authMiddleware, err := initAuthMiddleware(db)
+	authMiddleware, err := jwt.InitAuthMiddleware(db)
 	if (err != nil) {
 		ctx.WithError(err).Error("failed to initialise authMiddlewareDevice")
 		return
@@ -478,7 +422,7 @@ func Start() {
 	})
 
 	admin := v1.Group("/admin")
-	admin.Use(authMiddleware.MiddlewareFunc(adminAuthorizor))
+	admin.Use(authMiddleware.MiddlewareFunc(jwt.AdminAuthorizor))
 	{
 		admin.GET("/clients", func(c *gin.Context) {
 			// XXX add authentication
@@ -495,7 +439,7 @@ func Start() {
 	}
 
 	device := v1.Group("/")
-	device.Use(authMiddleware.MiddlewareFunc(deviceAuthorizor))
+	device.Use(authMiddleware.MiddlewareFunc(jwt.DeviceAuthorizor))
 	{
 		// XXX do we also want to support a PATCH method?
 		device.PUT("/update/:client_id", func(c *gin.Context) {

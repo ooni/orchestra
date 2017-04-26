@@ -1,13 +1,19 @@
-package middleware
+package jwt
 
 import (
 	"errors"
-	"net/http"
 	"strings"
 	"time"
+	"fmt"
+	"net/http"
+	"database/sql"
 
+	"github.com/lib/pq"
+	"github.com/jmoiron/sqlx"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 	"gopkg.in/dgrijalva/jwt-go.v3"
+	"golang.org/x/crypto/bcrypt"
 )
 
 
@@ -378,4 +384,61 @@ func (mw *GinJWTMiddleware) unauthorized(c *gin.Context, code int, message strin
 	mw.Unauthorized(c, code, message)
 
 	return
+}
+
+func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
+	return &GinJWTMiddleware{
+		Realm:      "proteus",
+		Key:        []byte(viper.GetString("auth.jwt-token")),
+		Timeout:    time.Hour,
+		MaxRefresh: time.Hour,
+		Authenticator: func(userId string, password string, c *gin.Context) (string, bool) {
+			var (
+				passwordHash string
+				role string
+			)
+			// XXX set the last_login value
+			query := fmt.Sprintf(`SELECT
+							password_hash, role
+							FROM %s WHERE username = $1`,
+						pq.QuoteIdentifier(viper.GetString("database.accounts-table")))
+			err := db.QueryRow(query, userId).Scan(
+				&passwordHash,
+				&role)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					return role, false
+				}
+				return role, false
+			}
+			err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
+			if err != nil {
+				return role, false
+			}
+			return role, true
+		},
+		Unauthorized: func(c *gin.Context, code int, message string) {
+			c.JSON(code, gin.H{
+				"code":    code,
+				"message": message,
+			})
+		},
+		TokenLookup: "header:Authorization",
+		TokenHeadName: "Bearer",
+		TimeFunc: time.Now,
+	}, nil
+}
+
+func AdminAuthorizor(userId string, c *gin.Context) bool {
+	if userId == "admin" {
+		return true
+	}
+	return false
+}
+
+func DeviceAuthorizor(userId string, c *gin.Context) bool {
+	if userId == "device" {
+		return true
+	}
+	return false
 }
