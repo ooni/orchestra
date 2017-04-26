@@ -1,6 +1,7 @@
 [core]
 environment = "development"
 log-level = "debug"
+notify-url = "http://localhost:8081"
 
 [auth]
 jwt-secret = "TESTING"

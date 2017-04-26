@@ -1,11 +1,14 @@
 package events
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"net/http"
+	"net/url"
 	_ "os/signal"
 	"sync"
 	_ "syscall"
@@ -232,6 +235,60 @@ func (j *Job) WaitAndRun(jDB *JobDB) {
 	j.jobTimer = time.AfterFunc(waitDuration, jobRun)
 }
 
+// XXX this is duplicated in proteus-notify
+type NotifyReq struct {
+	ClientIDs []string `json:"client_ids"`
+	Event map[string]interface {} `json:"event"`
+}
+
+func TaskNotify(clientID string, taskID string, jDB *JobDB) error {
+	path, _ := url.Parse("/api/v1/notify")
+	baseUrl, err := url.Parse(viper.GetString("core.notify-url"))
+	if err != nil {
+		ctx.WithError(err).Error("invalid base url")
+		return err
+	}
+	notifyReq := NotifyReq{
+		ClientIDs: []string{clientID},
+		Event: map[string]interface{}{
+			"type": "run_task",
+			"task_id": taskID,
+		},
+	}
+	jsonStr, err := json.Marshal(notifyReq)
+	if err != nil {
+		ctx.WithError(err).Error("failed to marshal data")
+		return err
+	}
+	u := baseUrl.ResolveReference(path)
+	req, err := http.NewRequest("POST",
+								u.String(),
+								bytes.NewBuffer(jsonStr))
+    req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		ctx.WithError(err).Error("http request failed")
+		return err
+	}
+	defer resp.Body.Close()
+	// XXX do we also want to check the body?
+	if resp.StatusCode != 200 {
+		return errors.New("http request returned invalid status code")
+	}
+	err = SetTaskState(taskID,
+						clientID,
+						"notified",
+						[]string{"ready"},
+						"notification_time",
+						jDB.db)
+	if err != nil {
+		ctx.WithError(err).Error("failed to update task state")
+		return err
+	}
+	return nil
+}
+
 func (j *Job) Run(jDB *JobDB) {
 	j.lock.Lock()
 	defer j.lock.Unlock()
@@ -248,6 +305,11 @@ func (j *Job) Run(jDB *JobDB) {
 		// In here shall go logic to connect to notification server and notify
 		// them of the task
 		ctx.Debugf("notifying %s of %s", t.ClientID, t.TaskID)
+		err := TaskNotify(t.ClientID, t.TaskID, jDB)
+		if err != nil {
+			ctx.WithError(err).Errorf("failed to notify %s of %s",
+										t.ClientID, t.TaskID)
+		}
 	}
 
 	ctx.Debugf("successfully ran at %s", lastRunAt)
