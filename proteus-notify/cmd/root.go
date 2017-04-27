@@ -39,7 +39,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /etc/proteus-notify.toml)")
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /etc/proteus/proteus-notify.toml)")
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info", "Set the log level")
 	RootCmd.PersistentFlags().StringP("db-url", "", "", "Set the url of the postgres database (ex. postgres://username:password@host/dbname?sslmode=verify-full)")
 	viper.BindPFlag("database.url", RootCmd.PersistentFlags().Lookup("db-url"))
