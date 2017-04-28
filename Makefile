@@ -2,6 +2,7 @@ PACKAGE = github.com/thetorproject/proteus
 COMMIT_HASH = `git rev-parse --short HEAD 2>/dev/null`
 BUILD_DATE = `date +%FT%T%z`
 LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common.CommitHash=${COMMIT_HASH} -X ${PACKAGE}/proteus-common.BuildDate=${BUILD_DATE}"
+NOGI_LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common.BuildDate=${BUILD_DATE}"
 
 .PHONY: vendor build build-events build-notify build-registry
 
@@ -16,4 +17,7 @@ build-notify:
 build-registry:
 	go build ${LDFLAGS} -o bin/proteus-registry proteus-registry/main.go
 
-build: build-events build-registry build-notify
+proteus: vendor build-events build-registry build-notify
+
+proteus-no-gitinfo: LDFLAGS = ${NOGI_LDFLAGS}
+proteus-no-gitinfo: vendor proteus
