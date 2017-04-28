@@ -1,3 +1,8 @@
+PACKAGE = github.com/thetorproject/proteus
+COMMIT_HASH = `git rev-parse --short HEAD 2>/dev/null`
+BUILD_DATE = `date +%FT%T%z`
+LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common/common.CommitHash=${COMMIT_HASH} -X ${PACKAGE}/proteus-common/common.BuildDate=${BUILD_DATE}"
+
 .PHONY: vendor build build-events build-notify build-registry
 
 vendor:
@@ -5,10 +10,10 @@ vendor:
 	govendor sync proteus
 
 build-events:
-	go build -o bin/proteus-events proteus-events/main.go
+	go build ${LDFLAGS} -o bin/proteus-events proteus-events/main.go
 build-notify:
-	go build -o bin/proteus-notify proteus-notify/main.go
+	go build ${LDFLAGS} -o bin/proteus-notify proteus-notify/main.go
 build-registry:
-	go build -o bin/proteus-registry proteus-registry/main.go
+	go build ${LDFLAGS} -o bin/proteus-registry proteus-registry/main.go
 
 build: build-events build-registry build-notify

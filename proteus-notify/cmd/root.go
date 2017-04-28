@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/thetorproject/proteus/proteus-common/cmd"
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
 
@@ -30,6 +31,7 @@ var RootCmd = &cobra.Command{
 }
 
 func Execute() {
+	RootCmd.AddCommand(cmd.VersionCmd)
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(-1)
@@ -54,10 +56,6 @@ func init() {
 }
 
 func initConfig() {
-	if cfgFile != "" { // enable ability to specify config file via flag
-		viper.SetConfigFile(cfgFile)
-	}
-
 	viper.SetConfigName("proteus-notify")
 	viper.AddConfigPath("/etc/proteus/")
 	viper.AddConfigPath(".")
@@ -65,13 +63,13 @@ func initConfig() {
 
 	replacer := strings.NewReplacer("-", "_") // Allows us to defined keys with -, but set them in via env variables with _
 	viper.SetEnvKeyReplacer(replacer)
-
-	err := viper.ReadInConfig()
-	if err != nil {
-		ctx.WithError(err).Error("failed to read config file")
-		panic(err)
+	if cfgFile != "" { // enable ability to specify config file via flag
+		viper.SetConfigFile(cfgFile)
 	}
-	ctx.Infof("using config file:", viper.ConfigFileUsed())
+
+	if err := viper.ReadInConfig(); err == nil {
+		ctx.Infof("using config file: %s", viper.ConfigFileUsed())
+	}
 
 	log.SetHandler(cli.Default)
 	level, err := log.ParseLevel(logLevel)
