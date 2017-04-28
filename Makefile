@@ -1,7 +1,7 @@
 PACKAGE = github.com/thetorproject/proteus
 COMMIT_HASH = `git rev-parse --short HEAD 2>/dev/null`
 BUILD_DATE = `date +%FT%T%z`
-LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common/common.CommitHash=${COMMIT_HASH} -X ${PACKAGE}/proteus-common/common.BuildDate=${BUILD_DATE}"
+LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common.CommitHash=${COMMIT_HASH} -X ${PACKAGE}/proteus-common.BuildDate=${BUILD_DATE}"
 
 .PHONY: vendor build build-events build-notify build-registry
 
