@@ -197,7 +197,7 @@ func (mw *GinJWTMiddleware) LoginHandler(c *gin.Context) {
 	var loginVals Login
 
 	if c.BindJSON(&loginVals) != nil {
-		mw.unauthorized(c, http.StatusBadRequest, "Missing Username or Password")
+		mw.unauthorized(c, http.StatusBadRequest, "missing-username-password")
 		return
 	}
 
@@ -209,7 +209,7 @@ func (mw *GinJWTMiddleware) LoginHandler(c *gin.Context) {
 	account, ok := mw.Authenticator(loginVals.Username, loginVals.Password, c)
 
 	if !ok {
-		mw.unauthorized(c, http.StatusUnauthorized, "Incorrect Username / Password")
+		mw.unauthorized(c, http.StatusUnauthorized, "wrong-username-password")
 		return
 	}
 
@@ -426,7 +426,7 @@ func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 		Unauthorized: func(c *gin.Context, code int, message string) {
 			c.JSON(code, gin.H{
 				"code":    code,
-				"message": message,
+				"error": message,
 			})
 		},
 		TokenLookup: "header:Authorization",

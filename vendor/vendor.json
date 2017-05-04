@@ -57,28 +57,28 @@
 			"revisionTime": "2016-11-02T19:13:10Z"
 		},
 		{
-			"checksumSHA1": "RsNwOto8G8aXIiRrlFn4dtU9q/g=",
+			"checksumSHA1": "bvHZOqZm2Gl0XkMh4oOB8iZ7geQ=",
 			"path": "github.com/gin-gonic/gin",
-			"revision": "e2212d40c62a98b388a5eb48ecbdcf88534688ba",
-			"revisionTime": "2016-12-04T22:13:08Z"
+			"revision": "d5b353c5d5a560322e6d96121c814115562501f7",
+			"revisionTime": "2017-04-28T10:59:23Z"
 		},
 		{
 			"checksumSHA1": "UsILDoIB2S7ra+w2fMdb85mX3HM=",
 			"path": "github.com/gin-gonic/gin/binding",
-			"revision": "e2212d40c62a98b388a5eb48ecbdcf88534688ba",
-			"revisionTime": "2016-12-04T22:13:08Z"
+			"revision": "d5b353c5d5a560322e6d96121c814115562501f7",
+			"revisionTime": "2017-04-28T10:59:23Z"
 		},
 		{
 			"checksumSHA1": "PHv9FNb7YavJWtAHcY6ZgXmkmHs=",
 			"path": "github.com/gin-gonic/gin/render",
-			"revision": "e2212d40c62a98b388a5eb48ecbdcf88534688ba",
-			"revisionTime": "2016-12-04T22:13:08Z"
+			"revision": "d5b353c5d5a560322e6d96121c814115562501f7",
+			"revisionTime": "2017-04-28T10:59:23Z"
 		},
 		{
 			"checksumSHA1": "kBeNcaKk56FguvPSUCEaH6AxpRc=",
 			"path": "github.com/golang/protobuf/proto",
-			"revision": "69b215d01a5606c843240eab4937eab3acee6530",
-			"revisionTime": "2017-02-17T23:44:32Z"
+			"revision": "18c9bb3261723cd5401db4d0c9fbc5c3b6c70fe8",
+			"revisionTime": "2017-04-27T21:32:20Z"
 		},
 		{
 			"checksumSHA1": "Ok3Csn6Voou7pQT6Dv2mkwpqFtw=",
@@ -153,6 +153,10 @@
 			"revisionTime": "2017-04-12T18:12:59Z"
 		},
 		{
+			"path": "github.com/kardianos/osext",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "FZem1OXCd+ogu1yeG11GMlGiGVA=",
 			"path": "github.com/lib/pq",
 			"revision": "ba5d4f7a35561e22fbdf7a39aa0070f4d460cfc0",
@@ -177,10 +181,10 @@
 			"revisionTime": "2016-01-26T18:01:36Z"
 		},
 		{
-			"checksumSHA1": "Jyv1TH1YHrCVewmVE8FgSh1+92s=",
+			"checksumSHA1": "U6lX43KDDlNOn+Z0Yyww+ZzHfFo=",
 			"path": "github.com/mattn/go-isatty",
-			"revision": "dda3de49cbfcec471bd7a70e6cc01fcc3ff90109",
-			"revisionTime": "2017-02-16T23:59:08Z"
+			"revision": "fc9e8d8ef48496124e79ae0df75490096eccf6fe",
+			"revisionTime": "2017-03-22T23:44:13Z"
 		},
 		{
 			"checksumSHA1": "wTMmmuol+KHkz9EwVKaOjd2O4cs=",
@@ -299,8 +303,8 @@
 		{
 			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
 			"path": "golang.org/x/net/context",
-			"revision": "6b27048ae5e6ad1ef927e72e437531493de612fe",
-			"revisionTime": "2017-02-17T08:49:01Z"
+			"revision": "feeb485667d1fdabe727840fe00adc22431bc86e",
+			"revisionTime": "2017-05-02T17:39:58Z"
 		},
 		{
 			"checksumSHA1": "LC+mzxnIrUS9Kr4s7shpY+A9J2o=",
@@ -327,10 +331,10 @@
 			"revisionTime": "2017-02-17T08:49:01Z"
 		},
 		{
-			"checksumSHA1": "uTQtOqR0ePMMcvuvAIksiIZxhqU=",
+			"checksumSHA1": "oS0UZOGWVVsVciOQ8nZJ582mFF8=",
 			"path": "golang.org/x/sys/unix",
-			"revision": "7a6e5648d140666db5d920909e082ca00a87ba2c",
-			"revisionTime": "2017-02-01T04:15:14Z"
+			"revision": "9ccfe848b9db8435a24c424abbc07a921adf1df5",
+			"revisionTime": "2017-04-27T03:54:25Z"
 		},
 		{
 			"checksumSHA1": "ziMb9+ANGRJSSIuxYdRbA+cDRBQ=",
@@ -351,6 +355,12 @@
 			"revisionTime": "2016-06-16T19:15:56Z"
 		},
 		{
+			"checksumSHA1": "898hHXEIWfscNt2k3+ViOG06Z0I=",
+			"path": "gopkg.in/gin-contrib/cors.v1",
+			"revision": "cf4846e6a636a76237a28d9286f163c132e841bc",
+			"revisionTime": "2017-03-18T12:53:40Z"
+		},
+		{
 			"checksumSHA1": "hT+7DPyl8tQ96kUXW3Sr5o0Pcj0=",
 			"path": "gopkg.in/gin-gonic/gin.v1",
 			"revision": "e2212d40c62a98b388a5eb48ecbdcf88534688ba",
@@ -363,10 +373,10 @@
 			"revisionTime": "2016-07-18T13:41:25Z"
 		},
 		{
-			"checksumSHA1": "QpWY2ygzClg3Bw+GHjD7yXlcTxw=",
+			"checksumSHA1": "fALlQNY1fM99NesfLJ50KguWsio=",
 			"path": "gopkg.in/yaml.v2",
-			"revision": "4c78c975fe7c825c6d1466c42be594d1d6f3aba6",
-			"revisionTime": "2017-01-25T14:37:19Z"
+			"revision": "cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b",
+			"revisionTime": "2017-04-07T17:21:22Z"
 		}
 	],
 	"rootPath": "github.com/thetorproject/proteus"
