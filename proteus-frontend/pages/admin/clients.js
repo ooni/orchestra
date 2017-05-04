@@ -14,13 +14,14 @@ import {
   TableCell
 } from 'material-ui/Table'
 
+import Page from '../../components/page'
 import Layout from '../../components/layout'
 
 // XXX protect this with some auth
-export default class AdminClients extends React.Component {
+export default class AdminClients extends Page {
 
   static async getInitialProps () {
-    let req = axios.create({baseURL: REGISTRY_URL})
+    let req = axios.create({baseURL: process.env.REGISTRY_URL})
     const res = await req.get('/api/v1/clients')
     return { clients: res.data }
   }
