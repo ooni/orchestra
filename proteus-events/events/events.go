@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/gin-gonic/gin"
 	"github.com/facebookgo/grace/gracehttp"
+	"gopkg.in/gin-contrib/cors.v1"
 )
 
 var ctx = log.WithFields(log.Fields{
@@ -336,7 +337,11 @@ func Start() {
 
 	scheduler := NewScheduler(db)
 
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowAllOrigins = true
+
 	router := gin.Default()
+	router.Use(cors.New(corsConfig))
 	v1 := router.Group("/api/v1")
 
 	admin := v1.Group("/admin")
