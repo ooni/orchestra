@@ -15,25 +15,23 @@ var (
 var proteusInfo *ProteusInfo
 
 type ProteusVersion struct {
-	// Major and minor
-	Number	float32
+	Major	int
+	Minor	int
 	Patch	int
 	Suffix	string
 }
 
 func (v ProteusVersion) String() string {
-	return proteusVersion(v.Number, v.Patch, v.Suffix)
+	return proteusVersion(v.Major, v.Minor, v.Patch, v.Suffix)
 }
 
-func proteusVersion(version float32, patchVersion int, suffix string) string {
-	if patchVersion > 0 {
-		return fmt.Sprintf("%.2f.%d%s", version, patchVersion, suffix)
-	}
-	return fmt.Sprintf("%.2f%s", version, suffix)
+func proteusVersion(major int, minor int, patchVersion int, suffix string) string {
+	return fmt.Sprintf("%d.%d.%d%s", major, minor, patchVersion, suffix)
 }
 
 var CurrentProteusVersion = ProteusVersion{
-	Number: 0.1,
+	Major: 0,
+	Minor: 1,
 	Patch: 0,
 	Suffix:	"-dev",
 }
