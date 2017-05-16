@@ -5,6 +5,11 @@ process.env.NODE_ENV = process.env.NODE_ENV || 'production'
 process.env.PORT = process.env.PORT || 3000
 
 const dev = process.env.NODE_ENV !== 'production'
+if (dev === true) {
+  process.env.REGISTRY_URL = process.env.REGISTRY_URL || "http://127.0.0.1:8080"
+  process.env.EVENTS_URL = process.env.EVENTS_URL || "http://127.0.0.1:8082"
+}
+
 const app = next({ dir: '.', dev })
 const handle = app.getRequestHandler()
 

@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"crypto/subtle"
 	"errors"
 	"strings"
 	"time"
@@ -20,6 +21,12 @@ import (
 // This is taken from:
 // https://github.com/appleboy/gin-jwt/blob/master/auth_jwt.go
 // with some minor changes.
+
+type ProteusClaims struct {
+	Role string `json:"role"`
+	User string `json:"user"`
+	jwt.StandardClaims
+}
 
 type Account struct {
 	Username string
@@ -58,16 +65,12 @@ type GinJWTMiddleware struct {
 	// Callback function that will be called during login.
 	// Using this function it is possible to add additional payload data to the webtoken.
 	// The data is then made available during requests via c.Get("JWT_PAYLOAD").
-	// Note that the payload is not encrypted.
-	// The attributes mentioned on jwt.io can't be used as keys for the map.
-	// Optional, by default no additional data will be set.
-	PayloadFunc func(userID string) map[string]interface{}
 
 	// User can define own Unauthorized func.
 	Unauthorized func(*gin.Context, int, string)
 
 	// Set the identity handler function
-	IdentityHandler func(jwt.MapClaims) Account
+	IdentityHandler func(*ProteusClaims) Account
 
 	// TokenLookup is a string in the form of "<source>:<name>" that is used
 	// to extract token from the request.
@@ -130,10 +133,10 @@ func (mw *GinJWTMiddleware) MiddlewareInit() error {
 	}
 
 	if mw.IdentityHandler == nil {
-		mw.IdentityHandler = func(claims jwt.MapClaims) Account {
+		mw.IdentityHandler = func(claims *ProteusClaims) Account {
 			return Account{
-				Username: claims["id"].(string),
-				Role: claims["role"].(string),
+				Username: claims.User,
+				Role: claims.Role,
 			}
 		}
 	}
@@ -172,7 +175,7 @@ func (mw *GinJWTMiddleware) middlewareImpl(auth Authorizator, c *gin.Context) {
 		return
 	}
 
-	claims := token.Claims.(jwt.MapClaims)
+	claims := token.Claims.(*ProteusClaims)
 
 	account := mw.IdentityHandler(claims)
 	c.Set("JWT_PAYLOAD", claims)
@@ -214,20 +217,16 @@ func (mw *GinJWTMiddleware) LoginHandler(c *gin.Context) {
 	}
 
 	// Create the token
-	token := jwt.New(jwt.GetSigningMethod(mw.SigningAlgorithm))
-	claims := token.Claims.(jwt.MapClaims)
-
-	if mw.PayloadFunc != nil {
-		for key, value := range mw.PayloadFunc(loginVals.Username) {
-			claims[key] = value
-		}
-	}
-
 	expire := mw.TimeFunc().Add(mw.Timeout)
-	claims["id"] = account.Username
-	claims["role"] = account.Role
-	claims["exp"] = expire.Unix()
-	claims["orig_iat"] = mw.TimeFunc().Unix()
+	claims := ProteusClaims{
+		Role: account.Role,
+		User: account.Username,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expire.Unix(),
+			IssuedAt: mw.TimeFunc().Unix(),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.GetSigningMethod(mw.SigningAlgorithm), claims)
 
 	tokenString, err := token.SignedString(mw.Key)
 
@@ -247,9 +246,9 @@ func (mw *GinJWTMiddleware) LoginHandler(c *gin.Context) {
 // Reply will be of the form {"token": "TOKEN"}.
 func (mw *GinJWTMiddleware) RefreshHandler(c *gin.Context) {
 	token, _ := mw.parseToken(c)
-	claims := token.Claims.(jwt.MapClaims)
+	claims := token.Claims.(*ProteusClaims)
 
-	origIat := int64(claims["orig_iat"].(float64))
+	origIat := int64(claims.StandardClaims.IssuedAt)
 
 	if origIat < mw.TimeFunc().Add(-mw.MaxRefresh).Unix() {
 		mw.unauthorized(c, http.StatusUnauthorized, "Token is expired.")
@@ -257,17 +256,16 @@ func (mw *GinJWTMiddleware) RefreshHandler(c *gin.Context) {
 	}
 
 	// Create the token
-	newToken := jwt.New(jwt.GetSigningMethod(mw.SigningAlgorithm))
-	newClaims := newToken.Claims.(jwt.MapClaims)
-
-	for key := range claims {
-		newClaims[key] = claims[key]
-	}
-
 	expire := mw.TimeFunc().Add(mw.Timeout)
-	newClaims["id"] = claims["id"]
-	newClaims["exp"] = expire.Unix()
-	newClaims["orig_iat"] = origIat
+	newClaims := ProteusClaims{
+		Role: claims.Role,
+		User: claims.User,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expire.Unix(),
+			IssuedAt: origIat,
+		},
+	}
+	newToken := jwt.NewWithClaims(jwt.GetSigningMethod(mw.SigningAlgorithm), newClaims)
 
 	tokenString, err := newToken.SignedString(mw.Key)
 
@@ -296,19 +294,17 @@ func ExtractClaims(c *gin.Context) jwt.MapClaims {
 }
 
 // TokenGenerator handler that clients can use to get a jwt token.
-func (mw *GinJWTMiddleware) TokenGenerator(userID string) string {
-	token := jwt.New(jwt.GetSigningMethod(mw.SigningAlgorithm))
-	claims := token.Claims.(jwt.MapClaims)
-
-	if mw.PayloadFunc != nil {
-		for key, value := range mw.PayloadFunc(userID) {
-			claims[key] = value
-		}
+func (mw *GinJWTMiddleware) TokenGenerator(userID string, role string) string {
+	// Create the token
+	claims := ProteusClaims{
+		Role: userID,
+		User: role,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt:  mw.TimeFunc().Add(mw.Timeout).Unix(),
+			IssuedAt: mw.TimeFunc().Unix(),
+		},
 	}
-
-	claims["id"] = userID
-	claims["exp"] = mw.TimeFunc().Add(mw.Timeout).Unix()
-	claims["orig_iat"] = mw.TimeFunc().Unix()
+	token := jwt.NewWithClaims(jwt.GetSigningMethod(mw.SigningAlgorithm), claims)
 
 	tokenString, _ := token.SignedString(mw.Key)
 
@@ -368,7 +364,8 @@ func (mw *GinJWTMiddleware) parseToken(c *gin.Context) (*jwt.Token, error) {
 		return nil, err
 	}
 
-	return jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+	return jwt.ParseWithClaims(token, &ProteusClaims{},
+								func(token *jwt.Token) (interface{}, error) {
 		if jwt.GetSigningMethod(mw.SigningAlgorithm) != token.Method {
 			return nil, errors.New("invalid signing algorithm")
 		}
@@ -393,7 +390,7 @@ func (mw *GinJWTMiddleware) unauthorized(c *gin.Context, code int, message strin
 
 func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 	return &GinJWTMiddleware{
-		Realm:      "proteus",
+		Realm:      "Proteus Realm",
 		Key:        []byte(viper.GetString("auth.jwt-token")),
 		Timeout:    time.Hour,
 		MaxRefresh: time.Hour,
@@ -403,6 +400,17 @@ func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 				account Account
 			)
 			account.Username = userId
+			if (account.Username == "admin") {
+				if viper.IsSet("auth.admin-password") == false {
+					return account, false
+				}
+				adminPassword := []byte(viper.GetString("auth.admin-password"))
+				if (subtle.ConstantTimeCompare([]byte(password), adminPassword) == 1) {
+					account.Role = "admin"
+					return account, true
+				}
+				return account, false
+			}
 			// XXX set the last_login value
 			query := fmt.Sprintf(`SELECT
 							password_hash, role

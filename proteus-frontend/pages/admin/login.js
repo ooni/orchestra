@@ -1,4 +1,3 @@
-import Page from '../../components/page'
 import Session from '../../components/session'
 import Layout from '../../components/layout'
 
@@ -7,7 +6,7 @@ import TextField from 'material-ui/TextField'
 
 import { Flex, Box, Grid } from 'reflexbox'
 
-export default class AdminLogin extends Page {
+export default class AdminLogin extends React.Component {
 
   constructor(props) {
     super(props)

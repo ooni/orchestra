@@ -1,5 +1,6 @@
 import React from 'react'
 import Head from 'next/head'
+import Router from 'next/router'
 
 import Select from 'react-select'
 
@@ -13,6 +14,7 @@ import Slider from 'material-ui/Slider'
 import TextField from 'material-ui/TextField'
 
 import Layout from '../../components/layout'
+import Session from '../../components/session'
 
 import { Flex, Box, Grid } from 'reflexbox'
 
@@ -63,9 +65,10 @@ class DesignatorSlider extends React.Component {
           onChange={this.onChange}
         />
         <TextField
-        style={{width: 20}}
-        value={this.state.value}
-        onChange={this.onChange}
+          name={`unit-${this.props.unit}`}
+          style={{width: 20}}
+          value={this.state.value}
+          onChange={this.onChange}
         />
       </div>
     )
@@ -152,11 +155,111 @@ const RepeatString = ({duration, repeatCount}) => {
           if (value > 1) {
             unitName += 's'
           }
-          return <span>{value} {unitName} </span>
+          return <span key={unit.key}>{value} {unitName} </span>
         }
       })}
     </div>
   )
+}
+
+class JobCreateConfirm extends React.Component {
+  static propTypes = {
+    startTime: React.PropTypes.object,
+    startDate: React.PropTypes.object,
+    duration: React.PropTypes.object,
+    repeatCount: React.PropTypes.number,
+    globalCategories: React.PropTypes.array,
+    countryCategories: React.PropTypes.array,
+    selectedTest: React.PropTypes.object,
+    targetCountries: React.PropTypes.array,
+    targetPlatforms: React.PropTypes.array,
+    urls: React.PropTypes.string,
+    comment: React.PropTypes.string
+  }
+
+  constructor(props) {
+    super(props)
+  }
+
+  render() {
+    const {
+      startTime,
+      startDate,
+      duration,
+      repeatCount,
+      globalCategories,
+      countryCategories,
+      selectedTest,
+      targetCountries,
+      targetPlatforms,
+      urls,
+      comment
+    } = this.props
+
+    return (
+      <div>
+        <h2>Periodic job summary</h2>
+
+        <h3>Job comment</h3>
+        <p>{comment.toString()}</p>
+
+        <h3>Start time</h3>
+        <p>{startTime.toString()} - {startDate.toString()}</p>
+
+        <h3>Duration</h3>
+        <div>{RepeatString({duration, repeatCount})}</div>
+
+        <h3>globalCategories</h3>
+        <ul>
+        {globalCategories.map((category, key) => {
+          return (
+            <li>{category.label} ({category.value})</li>
+          )
+        })}
+        </ul>
+
+        <h3>country categories</h3>
+        <ul>
+        {countryCategories.map((category, key) => {
+          return (
+            <li>{category.label} ({category.value})</li>
+          )
+        })}
+        </ul>
+
+        <h3>selectedTest</h3>
+        <p>{selectedTest.label}</p>
+
+        <h3>targetCountries</h3>
+        <ul>
+        {targetCountries.map((country, key) => {
+          return (
+            <li>{country.label} ({country.value})</li>
+          )
+        })}
+        </ul>
+
+        <h3>targetPlatforms</h3>
+        <ul>
+        {targetPlatforms.map((platform, key) => {
+          return (
+            <li>{platform.label}</li>
+          )
+        })}
+        </ul>
+
+        <h3>urls</h3>
+        <p>{urls.toString()}</p>
+
+        <style jsx>{`
+        h2, h3, p, ul, div {
+          margin-bottom: 16px;
+        }
+        `}</style>
+
+      </div>
+    )
+  }
 }
 
 export default class AdminJobs extends React.Component {
@@ -176,7 +279,8 @@ export default class AdminJobs extends React.Component {
       urls: '',
       inputSelectorOpen: false,
       submitted: false,
-      comment: ''
+      comment: '',
+      session: new Session()
     }
 
     this.onCountryCategoryChange = this.onCountryCategoryChange.bind(this)
@@ -189,30 +293,34 @@ export default class AdminJobs extends React.Component {
     this.onURLsChange = this.onURLsChange.bind(this)
     this.onCommentChange = this.onCommentChange.bind(this)
     this.onSubmit = this.onSubmit.bind(this)
+    this.onEdit = this.onEdit.bind(this)
+    this.onAdd = this.onAdd.bind(this)
   }
 
-  static async getInitialProps () {
-		// XXX get this from lists API serve
+  static async getInitialProps ({req, res}) {
+    // XXX get these from an API call
     const cat_codes = require('../../static/category-codes.json')
-    let categories = []
+    const countries_alpha2 = require('../../static/countries-alpha2.json')
+
+    let props = {}
+    props.categories = []
     for (let code in cat_codes) {
-      categories.push({ 'value': code, 'label': cat_codes[code] })
+      props.categories.push({ 'value': code, 'label': cat_codes[code] })
     }
 
-    let tests = [
+    props.tests = [
       { 'value': 'web_connectivity', 'label': 'Web Connectivity' },
       { 'value': 'http_invalid_request_line', 'label': 'HTTP Invalid Request Line' },
       { 'value': 'http_header_field_manipulation', 'label': 'HTTP Header Field Manipulation' }
     ]
 
-    const countries_alpha2 = require('../../static/countries-alpha2.json')
-    let countries = []
+    props.countries = []
     for (let alpha2 in countries_alpha2) {
-      countries.push({ 'value': alpha2, 'label': countries_alpha2[alpha2] })
+      props.countries.push({ 'value': alpha2, 'label': countries_alpha2[alpha2] })
     }
-    countries.sort((a, b) => (+(a.label > b.label) || +(a.label === b.label) - 1))
+    props.countries.sort((a, b) => (+(a.label > b.label) || +(a.label === b.label) - 1))
 
-    let platforms = [
+    props.platforms = [
       { 'value': 'any', 'label': 'any' },
       { 'value': 'android', 'label': 'Android' },
       { 'value': 'ios', 'label': 'iOS' },
@@ -220,8 +328,13 @@ export default class AdminJobs extends React.Component {
       { 'value': 'linux', 'label': 'Linux' },
       { 'value': 'lepidopter', 'label': 'Lepidopter' }
     ]
+    return props
+  }
 
-    return { categories, tests, countries, platforms }
+  componentDidMount() {
+    if (this.state.session.isValid() === false) {
+      Router.push('/admin/login')
+    }
   }
 
   onCommentChange (value) {
@@ -271,6 +384,18 @@ export default class AdminJobs extends React.Component {
     })
   }
 
+  onEdit () {
+    this.setState({
+      submitted: false
+    })
+  }
+
+  onAdd () {
+    this.setState({
+      submitted: false
+    })
+  }
+
   render () {
     const {
       submitted,
@@ -286,6 +411,7 @@ export default class AdminJobs extends React.Component {
       comment
     } = this.state
 
+
     return (
       <Layout>
         <Head>
@@ -295,40 +421,35 @@ export default class AdminJobs extends React.Component {
           <link href="/static/vendor/react-select.css" rel="stylesheet" />
         </Head>
 
-        {submitted && <div>
-          <h2>Periodic job summary</h2>
-
-          <h3>Start time</h3>
-          <p>{startTime.toString()} - {startDate.toString()}</p>
-
-          <h3>Repeat count</h3>
-          <p>{repeatCount.toString()}</p>
-
-          <h3>globalCategories</h3>
-          <p>{globalCategories.toString()}</p>
-
-          <h3>country categories</h3>
-          <p>{countryCategories.toString()}</p>
-
-          <h3>selectedTest</h3>
-          <p>{selectedTest.toString()}</p>
-
-          <h3>targetCountries</h3>
-          <p>{targetCountries.toString()}</p>
-
-          <h3>targetPlatforms</h3>
-          <p>{targetPlatforms.toString()}</p>
-
-          <h3>duration</h3>
-          <p>{duration.toString()}</p>
-
-          <h3>urls</h3>
-          <p>{urls.toString()}</p>
-
-          <h3>comment</h3>
-          <p>{comment.toString()}</p>
-
-        </div>}
+        {submitted &&
+          <div>
+            <JobCreateConfirm
+              startTime={this.state.startTime}
+              startDate={this.state.startDate}
+              duration={this.state.duration}
+              repeatCount={this.state.repeatCount}
+              duration={this.state.duration}
+              globalCategories={this.state.globalCategories}
+              countryCategories={this.state.countryCategories}
+              selectedTest={this.state.selectedTest}
+              targetCountries={this.state.targetCountries}
+              targetPlatforms={this.state.targetPlatforms}
+              urls={this.state.urls}
+              comment={this.state.comment}
+            />
+          <Flex>
+            <Box px={2}>
+            <RaisedButton
+              onTouchTap={this.onEdit}
+              label='Edit'/>
+            </Box>
+            <Box>
+            <RaisedButton
+              onTouchTap={this.onAdd}
+              label='Add'/>
+            </Box>
+          </Flex>
+          </div>}
         {!submitted && <div className='scheduled-jobs'>
           <h1>Add periodic job</h1>
           <div>
@@ -358,6 +479,7 @@ export default class AdminJobs extends React.Component {
                   hintText={`http://example.com/one\nhttp://example.com/two`}
                   floatingLabelText='URLs'
                   multiLine={true}
+                  name="urls"
                   value={this.state.urls}
                   onChange={(event, value) => this.onURLsChange(value)}
                   rows={3}
@@ -440,6 +562,7 @@ export default class AdminJobs extends React.Component {
               />
               <TextField
                 style={{width: 20, float: 'left'}}
+                name='repeat-count'
                 value={this.state.repeatCount}
                 onChange={(event, value) => {this.onRepeatChange(value)}}
               />
@@ -498,6 +621,7 @@ export default class AdminJobs extends React.Component {
             <Grid col={6} px={2}>
             <TextField
               hintText='make it something descriptive'
+              name='task-comment'
               floatingLabelText='Task comment'
               value={this.state.comment}
               onChange={(event, value) => this.onCommentChange(value)}

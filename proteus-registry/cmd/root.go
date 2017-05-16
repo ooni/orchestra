@@ -61,12 +61,15 @@ func initConfig() {
 
 	replacer := strings.NewReplacer("-", "_") // Allows us to defined keys with -, but set them in via env variables with _
 	viper.SetEnvKeyReplacer(replacer)
+
 	if cfgFile != "" { // enable ability to specify config file via flag
 		viper.SetConfigFile(cfgFile)
 	}
 
 	if err := viper.ReadInConfig(); err == nil {
 		ctx.Infof("using config file: %s", viper.ConfigFileUsed())
+	} else {
+		ctx.WithError(err).Errorf("using default configuration")
 	}
 
 	log.SetHandler(cli.Default)

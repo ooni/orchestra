@@ -39,7 +39,7 @@ type ClientData struct {
 
 	SoftwareName string `json:"software_name" binding:"required"`
 	SoftwareVersion string `json:"software_version" binding:"required"`
-	SupportedTests []string `json:"supported_tests"`
+	SupportedTests []string `json:"supported_tests" binding:"required"`
 
 	NetworkType string `json:"network_type"`
 	AvailableBandwidth string `json:"available_bandwidth"`
@@ -399,11 +399,12 @@ func Start() {
 
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowAllOrigins = true
+	corsConfig.AllowHeaders = []string{"Origin","Content-Length","Content-Type","Authorization"}
 
 	router := gin.Default()
 	router.Use(cors.New(corsConfig))
-	v1 := router.Group("/api/v1")
 
+	v1 := router.Group("/api/v1")
 	v1.POST("/login", authMiddleware.LoginHandler)
 	v1.POST("/register", func(c *gin.Context) {
 		var registerReq ClientData
@@ -430,8 +431,6 @@ func Start() {
 	admin.Use(authMiddleware.MiddlewareFunc(jwt.AdminAuthorizor))
 	{
 		admin.GET("/clients", func(c *gin.Context) {
-			// XXX add authentication
-			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 			clientList, err := ListClients(db)
 			if err != nil {
 				c.JSON(http.StatusBadRequest,

@@ -1,38 +1,35 @@
+import axios from 'axios'
+
 export default class Session {
 
-  constructor({req} = {}) {
+  constructor() {
     this._session = {}
-    try {
-      if (req) {
-        // Server-side logic
-        this._session = {}
-      } else {
-        this._session = this._getLocalStore('session')
-      }
-    } catch (err) {
-      // fallthrough
-      return
-    }
+    this.isValid = this.isValid.bind(this)
+    this.createRequest = this.createRequest.bind(this)
+    this.login = this.login.bind(this)
+    this.getSession()
   }
 
   isValid() {
-    if (this._session && Object.keys(this._session).length > 0 && this._session.expires && this._session.expires - Date.now() >= 0) {
+    if (this._session && Object.keys(this._session).length > 0 && this._session.expire && this._session.expire - Date.now() >= 0) {
       return true
     }
     return false
   }
 
-  async getSession() {
-    if (typeof window === 'undefined') {
-      return new Promise(resolve => {
-        resolve(this._session)
-      })
+  createRequest(config = {}) {
+    config.headers = {
+      'Authorization': `Bearer ${this._session.token}`
     }
+    console.log('creating with config', config)
+    return axios.create(config)
+  }
 
+  getSession() {
+    if (typeof window === 'undefined') {
+      return
+    }
     this._session = this._getLocalStore('session')
-    return new Promise(resolve => {
-      resolve(this._session)
-    })
   }
 
   async login(username, password) {
@@ -64,10 +61,13 @@ export default class Session {
   }
 
   _getLocalStore(name) {
+    let session = {}
     try {
-      return JSON.parse(localStorage.getItem(name))
+      session = JSON.parse(localStorage.getItem(name))
+      session.expire = new Date(session.expire)
+      return session
     } catch (err) {
-      return null
+      return session
     }
   }
 

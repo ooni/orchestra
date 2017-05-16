@@ -3,6 +3,7 @@ import moment from 'moment'
 
 import React from 'react'
 import Head from 'next/head'
+import Router from 'next/router'
 
 import {
   Table,
@@ -14,16 +15,30 @@ import {
   TableCell
 } from 'material-ui/Table'
 
-import Page from '../../components/page'
+import Session from '../../components/session'
 import Layout from '../../components/layout'
 
-// XXX protect this with some auth
-export default class AdminClients extends Page {
+export default class AdminClients extends React.Component {
 
-  static async getInitialProps () {
-    let req = axios.create({baseURL: process.env.REGISTRY_URL})
-    const res = await req.get('/api/v1/clients')
-    return { clients: res.data }
+  constructor (props) {
+    super(props)
+    this.state = {
+      session: new Session(),
+      clients: {}
+    }
+  }
+
+  componentDidMount() {
+    if (this.state.session.isValid() === false) {
+      Router.push('/admin/login')
+      return
+    }
+    let req = this.state.session.createRequest({baseURL: process.env.REGISTRY_URL})
+    req.get('/api/v1/admin/clients')
+      .then((res) => {
+        console.log(res.data)
+        this.setState({clients: res.data})
+      })
   }
 
   render () {
@@ -61,7 +76,7 @@ export default class AdminClients extends Page {
             </TableRow>
           </TableHeader>
 					<TableBody>
-          {this.props.clients['active_clients'].map((d) => {
+          {this.state.clients['active_clients'] && this.state.clients['active_clients'].map((d) => {
             return (
 							<TableRow key={d.client_id}>
 								<TableRowColumn>{d.client_id}</TableRowColumn>
