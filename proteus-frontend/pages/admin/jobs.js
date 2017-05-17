@@ -12,6 +12,9 @@ import DatePicker from 'material-ui/DatePicker'
 import TimePicker from 'material-ui/TimePicker'
 import Slider from 'material-ui/Slider'
 import TextField from 'material-ui/TextField'
+import {Card, CardActions, CardTitle, CardText} from 'material-ui/Card'
+
+import moment from 'moment'
 
 import Layout from '../../components/layout'
 import Session from '../../components/session'
@@ -162,10 +165,33 @@ const RepeatString = ({duration, repeatCount}) => {
   )
 }
 
+const ToScheduleString = ({duration, startMoment, repeatCount}) => {
+  let mDuration,
+    scheduleString = 'R'
+
+  if (repeatCount > 0) {
+    scheduleString += repeatCount
+  }
+  scheduleString += '/'
+  scheduleString += startMoment.toISOString()
+  scheduleString += '/'
+  console.log("converting", duration)
+  mDuration = moment.duration({
+    seconds: duration.s,
+    minutes: duration.m,
+    hours: duration.h,
+    days: duration.D,
+    weeks: duration.W,
+    months: duration.M,
+    years: duration.Y
+  })
+  scheduleString += mDuration.toISOString()
+  return scheduleString
+}
+
 class JobCreateConfirm extends React.Component {
   static propTypes = {
-    startTime: React.PropTypes.object,
-    startDate: React.PropTypes.object,
+    startMoment: React.PropTypes.object,
     duration: React.PropTypes.object,
     repeatCount: React.PropTypes.number,
     globalCategories: React.PropTypes.array,
@@ -183,8 +209,7 @@ class JobCreateConfirm extends React.Component {
 
   render() {
     const {
-      startTime,
-      startDate,
+      startMoment,
       duration,
       repeatCount,
       globalCategories,
@@ -198,22 +223,27 @@ class JobCreateConfirm extends React.Component {
 
     return (
       <div>
-        <h2>Periodic job summary</h2>
+        <CardTitle title="Periodic job summary" />
+        <CardText>
 
         <h3>Job comment</h3>
         <p>{comment.toString()}</p>
 
         <h3>Start time</h3>
-        <p>{startTime.toString()} - {startDate.toString()}</p>
+        <p>{startMoment.calendar()} ({startMoment.toString()})</p>
 
         <h3>Duration</h3>
-        <div>{RepeatString({duration, repeatCount})}</div>
+        <div>{RepeatString({duration, repeatCount})} ({ToScheduleString({
+                      duration: duration,
+                      startMoment: startMoment,
+                      repeatCount: repeatCount
+                  })})</div>
 
         <h3>globalCategories</h3>
         <ul>
         {globalCategories.map((category, key) => {
           return (
-            <li>{category.label} ({category.value})</li>
+            <li key={key}>{category.label} ({category.value})</li>
           )
         })}
         </ul>
@@ -222,7 +252,7 @@ class JobCreateConfirm extends React.Component {
         <ul>
         {countryCategories.map((category, key) => {
           return (
-            <li>{category.label} ({category.value})</li>
+            <li key={key}>{category.label} ({category.value})</li>
           )
         })}
         </ul>
@@ -234,7 +264,7 @@ class JobCreateConfirm extends React.Component {
         <ul>
         {targetCountries.map((country, key) => {
           return (
-            <li>{country.label} ({country.value})</li>
+            <li key={key}>{country.label} ({country.value})</li>
           )
         })}
         </ul>
@@ -243,13 +273,14 @@ class JobCreateConfirm extends React.Component {
         <ul>
         {targetPlatforms.map((platform, key) => {
           return (
-            <li>{platform.label}</li>
+            <li key={key}>{platform.label}</li>
           )
         })}
         </ul>
 
         <h3>urls</h3>
         <p>{urls.toString()}</p>
+        </CardText>
 
         <style jsx>{`
         h2, h3, p, ul, div {
@@ -269,6 +300,7 @@ export default class AdminJobs extends React.Component {
     this.state = {
       startDate: null,
       startTime: null,
+      startMoment: moment(),
       repeatCount: 0,
       globalCategories: [],
       countryCategories: [],
@@ -280,7 +312,8 @@ export default class AdminJobs extends React.Component {
       inputSelectorOpen: false,
       submitted: false,
       comment: '',
-      session: new Session()
+      session: new Session(),
+      finalized: null
     }
 
     this.onCountryCategoryChange = this.onCountryCategoryChange.bind(this)
@@ -391,8 +424,47 @@ export default class AdminJobs extends React.Component {
   }
 
   onAdd () {
-    this.setState({
-      submitted: false
+    let req = this.state.session.createRequest({baseURL: process.env.EVENTS_URL})
+    let task_arguments = {}
+    let platforms = this.state.targetPlatforms.map((platform) => (platform.value))
+    if (platforms.indexOf('any') !== -1) {
+      platforms = []
+    }
+    if (this.state.selectedTest == 'web_connectivity') {
+      task_arguments['global_categories'] = this.state.globalCategories.map((category) => (category.value))
+      task_arguments['country_categories'] = this.state.countryCategories.map((category) => (category.value))
+    }
+    req.post('/api/v1/admin/job', {
+      'schedule': ToScheduleString({
+                      duration: this.state.duration,
+                      startMoment: this.state.startMoment,
+                      repeatCount: this.state.repeatCount
+                  }),
+      // XXX we currently don't set this
+      'delay': 0,
+      'comment': this.state.comment,
+      'task': {
+        'test_name': this.state.selectedTest.value,
+        'arguments': task_arguments,
+      },
+      'target': {
+        'countries': this.state.targetCountries.map((country) => (country.value)),
+        'platforms': platforms
+      }
+    }).then((res) => {
+      this.setState({
+        finalized: {
+          error: null
+        },
+        submitted: true
+      })
+    }).catch((err) => {
+      this.setState({
+        finalized: {
+          error: err
+        },
+        submitted: true
+      })
     })
   }
 
@@ -400,6 +472,7 @@ export default class AdminJobs extends React.Component {
     const {
       submitted,
       startDate, startTime,
+      startMoment,
       repeatCount,
       globalCategories,
       countryCategories,
@@ -408,7 +481,8 @@ export default class AdminJobs extends React.Component {
       targetPlatforms,
       duration,
       urls,
-      comment
+      comment,
+      finalized
     } = this.state
 
 
@@ -416,225 +490,267 @@ export default class AdminJobs extends React.Component {
       <Layout>
         <Head>
           <title>Jobs - OONI Proteus</title>
-          <link href="/static/vendor/_datepicker.css" rel="stylesheet" />
-          <link href="/static/vendor/timepicker.css" rel="stylesheet" />
           <link href="/static/vendor/react-select.css" rel="stylesheet" />
         </Head>
 
-        {submitted &&
-          <div>
-            <JobCreateConfirm
-              startTime={this.state.startTime}
-              startDate={this.state.startDate}
-              duration={this.state.duration}
-              repeatCount={this.state.repeatCount}
-              duration={this.state.duration}
-              globalCategories={this.state.globalCategories}
-              countryCategories={this.state.countryCategories}
-              selectedTest={this.state.selectedTest}
-              targetCountries={this.state.targetCountries}
-              targetPlatforms={this.state.targetPlatforms}
-              urls={this.state.urls}
-              comment={this.state.comment}
-            />
-          <Flex>
-            <Box px={2}>
-            <RaisedButton
-              onTouchTap={this.onEdit}
-              label='Edit'/>
-            </Box>
-            <Box>
-            <RaisedButton
-              onTouchTap={this.onAdd}
-              label='Add'/>
-            </Box>
-          </Flex>
-          </div>}
-        {!submitted && <div className='scheduled-jobs'>
-          <h1>Add periodic job</h1>
-          <div>
-
-          <div className='section'>
-            <h2>Experiment</h2>
-
-            <Grid col={2} px={2}>
-            <div className='option'>
-              <span className='option-name'>
-                Test
-              </span>
-              <Select
-                name='test'
-                options={this.props.tests}
-                value={this.state.selectedTest}
-                onChange={this.onTestChange}
+        <div>
+          <div className='container'>
+            {submitted &&
+              <Card>
+              <JobCreateConfirm
+                startMoment={this.state.startMoment}
+                duration={this.state.duration}
+                repeatCount={this.state.repeatCount}
+                duration={this.state.duration}
+                globalCategories={this.state.globalCategories}
+                countryCategories={this.state.countryCategories}
+                selectedTest={this.state.selectedTest}
+                targetCountries={this.state.targetCountries}
+                targetPlatforms={this.state.targetPlatforms}
+                urls={this.state.urls}
+                comment={this.state.comment}
               />
-            </div>
-            </Grid>
-
-            {this.state.inputSelectorOpen
-            && <div className='input-selector'>
-
-              <Grid col={3} px={2}>
-                <TextField
-                  hintText={`http://example.com/one\nhttp://example.com/two`}
-                  floatingLabelText='URLs'
-                  multiLine={true}
-                  name="urls"
-                  value={this.state.urls}
-                  onChange={(event, value) => this.onURLsChange(value)}
-                  rows={3}
-                />
-              </Grid>
-
-              <Grid col={3} px={2}>
-                <div className='option'>
-                  <span className='option-name'>
-                    Global Categories
-                  </span>
-                  <Select
-                    multi
-                    name='global-categories'
-                    options={this.props.categories}
-                    value={this.state.globalCategories}
-                    onChange={this.onGlobalCategoryChange}
-                  />
+              {!finalized &&
+                <CardActions>
+                <RaisedButton
+                  onTouchTap={this.onEdit}
+                  label='Edit'/>
+                <RaisedButton
+                  onTouchTap={this.onAdd}
+                  label='Add'/>
+                </CardActions>
+              }
+              {finalized && finalized.error === null &&
+                <p>Job created!</p>}
+              {finalized && finalized.error !== null &&
+                <div>
+                <p>Job creation failed: {finalized.error.toString()}</p>
+                <CardActions>
+                <RaisedButton
+                  onTouchTap={this.onEdit}
+                  label='Edit'/>
+                <RaisedButton
+                  onTouchTap={this.onAdd}
+                  label='Retry'/>
+                </CardActions>
                 </div>
-              </Grid>
-
-              <Grid col={3} px={2}>
-                <div className='option'>
-                  <span className='option-name'>
-                    Country Categories
-                  </span>
-
-                  <Select
-                    multi
-                    name='country-categories'
-                    value={this.state.countryCategories}
-                    onChange={this.onCountryCategoryChange}
-                    options={this.props.categories}
-                  />
-                </div>
-              </Grid>
-            </div>}
-
+              }
+              </Card>
+            }
           </div>
+          {!submitted &&
+          <div className='scheduled-jobs container'>
+            <h1>Add periodic job</h1>
+            <div>
 
-          <div className='section'>
-            <h2>Schedule</h2>
-            <Flex>
-            <Box px={2}>
+            <div className='section'>
+              <h2>Experiment</h2>
+
+              <Grid col={2} px={2}>
               <div className='option'>
                 <span className='option-name'>
-                  Start on
+                  Test
                 </span>
-
-                <DatePicker
-                  floatingLabelText="Start date"
-                  autoOk={true}
-                  value={this.state.startDate}
-                  onChange={(event, startDate) => { this.setState({ startDate })} }
+                <Select
+                  name='test'
+                  options={this.props.tests}
+                  value={this.state.selectedTest}
+                  onChange={this.onTestChange}
                 />
-                <TimePicker
-                  format="24hr"
-                  value={this.state.startTime}
-                  hintText="Start time"
-                  onChange={(event, startTime) => { this.setState({ startTime })} }
-                />
-
               </div>
-            </Box>
+              </Grid>
 
-            <Box px={2}>
-            <div className='option'>
-              <span className='option-name'>
-                Repeat
-              </span>
-              <RepeatString duration={this.state.duration} repeatCount={this.state.repeatCount} />
-              <DurationPicker onChange={this.onDurationChange} />
-              <Checkbox
-                label="Repeat forever"
-                checked={this.state.repeatCount === 0}
-                onCheck={(event, isInputChecked) => {
-                  if (isInputChecked === true) this.onRepeatChange(0)
-                  else this.onRepeatChange(1)
-                }}
-              />
+              {this.state.inputSelectorOpen
+              && <div className='input-selector'>
+
+                <Grid col={3} px={2}>
+                  <TextField
+                    hintText={`http://example.com/one\nhttp://example.com/two`}
+                    floatingLabelText='URLs'
+                    multiLine={true}
+                    name="urls"
+                    value={this.state.urls}
+                    onChange={(event, value) => this.onURLsChange(value)}
+                    rows={3}
+                  />
+                </Grid>
+
+                <Grid col={3} px={2}>
+                  <div className='option'>
+                    <span className='option-name'>
+                      Global Categories
+                    </span>
+                    <Select
+                      multi
+                      name='global-categories'
+                      options={this.props.categories}
+                      value={this.state.globalCategories}
+                      onChange={this.onGlobalCategoryChange}
+                    />
+                  </div>
+                </Grid>
+
+                <Grid col={3} px={2}>
+                  <div className='option'>
+                    <span className='option-name'>
+                      Country Categories
+                    </span>
+
+                    <Select
+                      multi
+                      name='country-categories'
+                      value={this.state.countryCategories}
+                      onChange={this.onCountryCategoryChange}
+                      options={this.props.categories}
+                    />
+                  </div>
+                </Grid>
+              </div>}
+
+            </div>
+
+            <div className='section'>
+              <h2>Schedule</h2>
+              <Flex>
+              <Box px={2}>
+                <div className='option'>
+                  <span className='option-name'>
+                    Start on
+                  </span>
+
+                  <DatePicker
+                    floatingLabelText="Start date"
+                    autoOk={true}
+                    value={this.state.startDate}
+                    onChange={(event, startDate) => {
+                      let startMoment = this.state.startMoment.clone()
+                      // XXX is it correct to use UTC here?
+                      startMoment.set({
+                        year: startDate.getUTCFullYear(),
+                        month: startDate.getUTCMonth(),
+                        date: startDate.getUTCDate(),
+                      })
+                      this.setState({ startMoment })
+                      this.setState({ startDate })
+                    }}
+                  />
+                  <TimePicker
+                    format="24hr"
+                    value={this.state.startTime}
+                    hintText="Start time"
+                    onChange={(event, startTime) => {
+                      let startMoment = this.state.startMoment.clone()
+                      // XXX is it correct to use UTC here?
+                      startMoment.set({
+                        hour: startTime.getUTCHours(),
+                        minute: startTime.getUTCMinutes(),
+                        second: startTime.getUTCSeconds(),
+                      })
+                      this.setState({ startMoment })
+                      this.setState({ startTime })
+                    }}
+                  />
+
+                </div>
+              </Box>
+
+              <Box px={2}>
+              <div className='option'>
+                <span className='option-name'>
+                  Repeat
+                </span>
+                <RepeatString duration={this.state.duration} repeatCount={this.state.repeatCount} />
+                <DurationPicker onChange={this.onDurationChange} />
+                <Checkbox
+                  label="Repeat forever"
+                  checked={this.state.repeatCount === 0}
+                  onCheck={(event, isInputChecked) => {
+                    if (isInputChecked === true) this.onRepeatChange(0)
+                    else this.onRepeatChange(1)
+                  }}
+                />
+                <TextField
+                  style={{width: 20, float: 'left'}}
+                  name='repeat-count'
+                  value={this.state.repeatCount}
+                  onChange={(event, value) => {this.onRepeatChange(value)}}
+                />
+                <Slider
+                  style={{width: 100, float: 'left', marginLeft: 20}}
+                  min={1}
+                  max={99}
+                  step={1}
+                  disabled={this.state.repeatCount === 0}
+                  value={this.state.repeatCount}
+                  defaultValue={1}
+                  onChange={(event, value) => {this.onRepeatChange(value)}}
+                />
+              </div>
+              </Box>
+              </Flex>
+
+            </div>
+
+            <div className='section'>
+              <h2>Target</h2>
+              <Grid col={3} px={2}>
+              <div className='option'>
+                <span className='option-name'>
+                  Country
+                </span>
+                <Select
+                  multi
+                  name='target-country'
+                  options={this.props.countries}
+                  value={this.state.targetCountries}
+                  onChange={this.onTargetCountryChange}
+                />
+              </div>
+              </Grid>
+
+              <Grid col={3} px={2}>
+              <div className='option'>
+                <span className='option-name'>
+                  Platform
+                </span>
+                <Select
+                  multi
+                  name='target-platform'
+                  options={this.props.platforms}
+                  value={this.state.targetPlatforms}
+                  onChange={this.onTargetPlatformChange}
+                />
+              </div>
+              </Grid>
+
+            </div>
+
+            <div className='section'>
+              <h2>Submit</h2>
+              <Grid col={6} px={2}>
               <TextField
-                style={{width: 20, float: 'left'}}
-                name='repeat-count'
-                value={this.state.repeatCount}
-                onChange={(event, value) => {this.onRepeatChange(value)}}
+                hintText='make it something descriptive'
+                name='task-comment'
+                floatingLabelText='Task comment'
+                value={this.state.comment}
+                onChange={(event, value) => this.onCommentChange(value)}
               />
-              <Slider
-                style={{width: 100, float: 'left', marginLeft: 20}}
-                min={1}
-                max={99}
-                step={1}
-                disabled={this.state.repeatCount === 0}
-                value={this.state.repeatCount}
-                defaultValue={1}
-                onChange={(event, value) => {this.onRepeatChange(value)}}
-              />
+              <RaisedButton
+                onTouchTap={this.onSubmit}
+                label='Add' style={{marginLeft: 20}}/>
+              </Grid>
+
             </div>
-            </Box>
-            </Flex>
 
           </div>
-
-          <div className='section'>
-            <h2>Target</h2>
-            <Grid col={3} px={2}>
-            <div className='option'>
-              <span className='option-name'>
-                Country
-              </span>
-              <Select
-                multi
-                name='target-country'
-                options={this.props.countries}
-                value={this.state.targetCountries}
-                onChange={this.onTargetCountryChange}
-              />
-            </div>
-            </Grid>
-
-            <Grid col={3} px={2}>
-            <div className='option'>
-              <span className='option-name'>
-                Platform
-              </span>
-              <Select
-                multi
-                name='target-platform'
-                options={this.props.platforms}
-                value={this.state.targetPlatforms}
-                onChange={this.onTargetPlatformChange}
-              />
-            </div>
-            </Grid>
-
-          </div>
-
-          <div className='section'>
-            <h2>Submit</h2>
-            <Grid col={6} px={2}>
-            <TextField
-              hintText='make it something descriptive'
-              name='task-comment'
-              floatingLabelText='Task comment'
-              value={this.state.comment}
-              onChange={(event, value) => this.onCommentChange(value)}
-            />
-            <RaisedButton
-              onTouchTap={this.onSubmit}
-              label='Add' style={{marginLeft: 20}}/>
-            </Grid>
-
-          </div>
-
-          </div>
+          </div>}
           <style jsx>{`
+          .container {
+            max-width: 1024px;
+            padding-left: 20px;
+            padding-right: 20px;
+            margin: auto;
+          }
           .section {
             padding: 20px;
           }
@@ -654,7 +770,7 @@ export default class AdminJobs extends React.Component {
             min-height: 100px;
           }
           `}</style>
-        </div>}
+        </div>
       </Layout>
     )
   }
