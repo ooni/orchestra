@@ -329,7 +329,7 @@ func Start() {
 	}
 	defer db.Close()
 
-	authMiddleware, err := jwt.InitAuthMiddleware(db)
+	authMiddleware, err := proteus_mw.InitAuthMiddleware(db)
 	if (err != nil) {
 		ctx.WithError(err).Error("failed to initialise authMiddlewareDevice")
 		return
@@ -337,20 +337,16 @@ func Start() {
 
 	scheduler := NewScheduler(db)
 
-	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowAllOrigins = true
-
 	router := gin.Default()
-	router.Use(cors.New(corsConfig))
+	router.Use(cors.New(proteus_mw.CorsConfig()))
 	v1 := router.Group("/api/v1")
 
 	admin := v1.Group("/admin")
 	// XXX CRITICAL temporarily disabled for debug
-	//admin.Use(authMiddleware.MiddlewareFunc(jwt.AdminAuthorizor))
+	//admin.Use(authMiddleware.MiddlewareFunc(proteus_mw.AdminAuthorizor))
 	{
 		admin.GET("/jobs", func(c *gin.Context) {
 			// XXX do this in a middleware
-			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 			jobList, err := ListJobs(db)
 			if err != nil {
 				c.JSON(http.StatusBadRequest,
@@ -361,7 +357,6 @@ func Start() {
 					gin.H{"jobs": jobList})
 		})
 		admin.POST("/job", func(c *gin.Context) {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 			var jobData JobData
 			err := c.BindJSON(&jobData)
 			if err != nil {
@@ -384,7 +379,7 @@ func Start() {
 	}
 
 	device := v1.Group("/")
-	device.Use(authMiddleware.MiddlewareFunc(jwt.DeviceAuthorizor))
+	device.Use(authMiddleware.MiddlewareFunc(proteus_mw.DeviceAuthorizor))
 	{
 		device.GET("/tasks", func(c *gin.Context) {
 			userId := c.MustGet("userID").(string)

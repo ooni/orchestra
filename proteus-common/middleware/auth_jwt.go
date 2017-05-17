@@ -1,4 +1,4 @@
-package jwt
+package proteus_mw
 
 import (
 	"crypto/subtle"
