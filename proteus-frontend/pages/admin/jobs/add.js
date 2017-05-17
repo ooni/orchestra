@@ -16,8 +16,8 @@ import {Card, CardActions, CardTitle, CardText} from 'material-ui/Card'
 
 import moment from 'moment'
 
-import Layout from '../../components/layout'
-import Session from '../../components/session'
+import Layout from '../../../components/layout'
+import Session from '../../../components/session'
 
 import { Flex, Box, Grid } from 'reflexbox'
 
@@ -293,7 +293,7 @@ class JobCreateConfirm extends React.Component {
   }
 }
 
-export default class AdminJobs extends React.Component {
+export default class AdminJobsAdd extends React.Component {
 
   constructor (props) {
     super(props)
@@ -332,8 +332,8 @@ export default class AdminJobs extends React.Component {
 
   static async getInitialProps ({req, res}) {
     // XXX get these from an API call
-    const cat_codes = require('../../static/category-codes.json')
-    const countries_alpha2 = require('../../static/countries-alpha2.json')
+    const cat_codes = require('../../../static/category-codes.json')
+    const countries_alpha2 = require('../../../static/countries-alpha2.json')
 
     let props = {}
     props.categories = []

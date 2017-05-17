@@ -53,6 +53,7 @@ type Task struct {
 }
 
 type JobData struct {
+	Id				string `json:"id"`
 	Schedule		string `json:"schedule" binding:"required"`
 	Delay			int64 `json:"delay"`
 	Comment			string `json:"comment" binding:"required"`
@@ -75,7 +76,7 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 		return "", err
 	}
 
-	var jobID = uuid.NewV4().String()
+	jd.Id = uuid.NewV4().String()
 	{
 		query := fmt.Sprintf(`INSERT INTO %s (
 			id, comment,
@@ -113,7 +114,7 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 			ctx.WithError(err).Error("failed to serialise task arguments")
 			return "", err
 		}
-		_, err = stmt.Exec(jobID, jd.Comment,
+		_, err = stmt.Exec(jd.Id, jd.Comment,
 							jd.Schedule, jd.Delay,
 							pq.Array(jd.Target.Countries),
 							pq.Array(jd.Target.Platforms),
@@ -135,7 +136,7 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 		return "", err
 	}
 	j := Job{
-		Id: jobID,
+		Id: jd.Id,
 		Comment: jd.Comment,
 		Schedule: schedule,
 		Delay: jd.Delay,
@@ -146,7 +147,7 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 	}
 	go s.RunJob(&j)
 
-	return jobID, nil
+	return jd.Id, nil
 }
 
 func ListJobs(db *sqlx.DB) ([]JobData, error) {
@@ -174,11 +175,12 @@ func ListJobs(db *sqlx.DB) ([]JobData, error) {
 			jd JobData
 			taskArgs types.JSONText
 		)
-		err := rows.Scan(&jd.Comment,
+		err := rows.Scan(&jd.Id,
+						&jd.Comment,
 						&jd.Schedule,
 						&jd.Delay,
-						&jd.Target.Countries,
-						&jd.Target.Platforms,
+						pq.Array(&jd.Target.Countries),
+						pq.Array(&jd.Target.Platforms),
 						&jd.Task.TestName,
 						&taskArgs)
 		if err != nil {
