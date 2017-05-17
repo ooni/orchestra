@@ -7,12 +7,16 @@ import Select from 'react-select'
 import Immutable from 'immutable'
 
 import RaisedButton from 'material-ui/RaisedButton'
+import FlatButton from 'material-ui/FlatButton'
 import Checkbox from 'material-ui/Checkbox'
 import DatePicker from 'material-ui/DatePicker'
 import TimePicker from 'material-ui/TimePicker'
 import Slider from 'material-ui/Slider'
 import TextField from 'material-ui/TextField'
-import {Card, CardActions, CardTitle, CardText} from 'material-ui/Card'
+import { Card, CardActions, CardHeader, CardTitle, CardText } from 'material-ui/Card'
+import { List, ListItem } from 'material-ui/List'
+import Divider from 'material-ui/Divider'
+
 import Chip from 'material-ui/Chip'
 import Avatar from 'material-ui/Avatar'
 
@@ -45,35 +49,45 @@ class JobCard extends React.Component {
     } = this.props
     return (
       <Card style={{marginBottom: '20px'}}>
-        <CardTitle title={comment}/>
-        <CardText>
-          <p><strong>Creation Time:</strong> {creationTime}</p>
+        <CardHeader
+          title={comment}
+          subtitle={task.test_name}
+          actAsExpander={true}
+          showExpandableButton={true} />
+        <CardActions>
+           <FlatButton label="Delete" onTouchTap={() => {alert('I do nothing')}}/>
+           <FlatButton label="Edit" onTouchTap={() => {alert('I do nothing')}}/>
+        </CardActions>
+        <CardText expandable={true}>
+          <List>
+            <ListItem
+                primaryText={schedule}
+                secondaryText="Schedule"/>
 
-          <p><strong>Delay:</strong> {delay}</p>
+            <ListItem
+                primaryText={''+delay}
+                secondaryText="Delay"/>
 
-          {/*<p><strong>Id:</strong> {id}</p> */}
+            <ListItem
+                primaryText={creationTime}
+                secondaryText="Creation time"/>
 
-          <p><strong>Schedule:</strong> {schedule}</p>
 
-          <div style={{display: 'flex', flexWrap: 'wrap'}}><strong>Target Countries:</strong> 
-          {target.countries.map((country) => {
-            return (
-              <Chip style={{margin: 4}}>
-                <Avatar>{country}</Avatar>
-                country name
-              </Chip>
-            )
-          })}
-          </div>
+            <ListItem
+                primaryText={task.test_name}
+                secondaryText="Test name"/>
+            <ListItem
+                primaryText={JSON.stringify(task.arguments)}
+                secondaryText="Test arguments"/>
 
-          <p>
-          <strong>Test Name: </strong>
-          {task.test_name}
-          </p>
-          <p>
-          <strong>Arguments: </strong>
-          {JSON.stringify(task.arguments)}
-          </p>
+            <ListItem
+                primaryText={target.countries.join(',')}
+                secondaryText="Target countries"/>
+            <ListItem
+                primaryText={target.platforms.join(',')}
+                secondaryText="Target platforms"/>
+          </List>
+
         </CardText>
       </Card>
     )
@@ -124,13 +138,14 @@ export default class AdminJobsIndex extends React.Component {
 
         <div>
           <div className='container'>
+            <h1 style={{marginBottom: 20}}>Currently scheduled jobs</h1>
             {jobList.map((job) => {
               return (
                 <Grid col={6} px={2}>
                 <JobCard
                   key={job.id}
                   comment={job.comment}
-                  creationTime={job.creationTime}
+                  creationTime={job.creation_time}
                   delay={job.delay}
                   id={job.id}
                   schedule={job.schedule}

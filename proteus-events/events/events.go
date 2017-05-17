@@ -157,6 +157,7 @@ func ListJobs(db *sqlx.DB) ([]JobData, error) {
 	)
 	query := fmt.Sprintf(`SELECT
 		id, comment,
+		creation_time,
 		schedule, delay,
 		target_countries,
 		target_platforms,
@@ -177,6 +178,7 @@ func ListJobs(db *sqlx.DB) ([]JobData, error) {
 		)
 		err := rows.Scan(&jd.Id,
 						&jd.Comment,
+						&jd.CreationTime,
 						&jd.Schedule,
 						&jd.Delay,
 						pq.Array(&jd.Target.Countries),
