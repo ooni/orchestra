@@ -365,9 +365,7 @@ export default class AdminJobsAdd extends React.Component {
   }
 
   componentDidMount() {
-    if (this.state.session.isValid() === false) {
-      Router.push('/admin/login')
-    }
+    this.state.session.redirectIfInvalid()
   }
 
   onCommentChange (value) {
@@ -412,6 +410,7 @@ export default class AdminJobsAdd extends React.Component {
   }
 
   onSubmit () {
+    Router.push('/admin/jobs')
     this.setState({
       submitted: true
     })
@@ -487,7 +486,7 @@ export default class AdminJobsAdd extends React.Component {
 
 
     return (
-      <Layout>
+      <Layout title="Add Jobs">
         <Head>
           <title>Jobs - OONI Proteus</title>
           <link href="/static/vendor/react-select.css" rel="stylesheet" />
@@ -540,7 +539,6 @@ export default class AdminJobsAdd extends React.Component {
           </div>
           {!submitted &&
           <div className='scheduled-jobs container'>
-            <h1>Add periodic job</h1>
             <div>
 
             <div className='section'>

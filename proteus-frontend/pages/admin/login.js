@@ -1,3 +1,5 @@
+import Router from 'next/router'
+
 import Session from '../../components/session'
 import Layout from '../../components/layout'
 
@@ -12,7 +14,8 @@ export default class AdminLogin extends React.Component {
     super(props)
     this.state = {
       username: '',
-      password: ''
+      password: '',
+      error: null
     }
     this.onSubmit = this.onSubmit.bind(this)
     this.onUsernameChange = this.onUsernameChange.bind(this)
@@ -31,18 +34,34 @@ export default class AdminLogin extends React.Component {
     const session = new Session()
     session.login(this.state.username, this.state.password)
       .then(() => {
-        console.log('logged in...')
+        let redirectPath = '/'
+        this.setState({
+          error: null
+        })
+        if (Router.query.from !== null) {
+          redirectPath = Router.query['from']
+        }
+        Router.push(redirectPath)
       })
       .catch(err => {
-        console.log('failed to login...')
-        console.log(err)
+        this.setState({
+          error: {
+            'message': 'Failed to login',
+            'debug_error': err
+          }
+        })
       })
   }
 
   render() {
+    const {
+      error
+    } = this.state
+
     return (
       <Layout>
-        <div>
+        <div className='container'>
+          {error !== null && <p>{error.message}</p>}
           <Grid col={3} px={2}>
             <TextField
               hintText={`your username`}
@@ -65,6 +84,14 @@ export default class AdminLogin extends React.Component {
           <RaisedButton
             onTouchTap={this.onSubmit}
             label='Login' style={{marginLeft: 20}}/>
+          <style jsx>{`
+            .container {
+              max-width: 1024px;
+              padding-left: 20px;
+              padding-right: 20px;
+              margin: auto;
+            }
+          `}</style>
         </div>
       </Layout>
     )

@@ -1,6 +1,5 @@
 import React from 'react'
 import Head from 'next/head'
-import Router from 'next/router'
 
 import Select from 'react-select'
 
@@ -15,7 +14,8 @@ import Slider from 'material-ui/Slider'
 import TextField from 'material-ui/TextField'
 import { Card, CardActions, CardHeader, CardTitle, CardText } from 'material-ui/Card'
 import { List, ListItem } from 'material-ui/List'
-import Divider from 'material-ui/Divider'
+import FloatingActionButton from 'material-ui/FloatingActionButton'
+import ContentAdd from 'material-ui/svg-icons/content/add'
 
 import Chip from 'material-ui/Chip'
 import Avatar from 'material-ui/Avatar'
@@ -29,6 +29,7 @@ import { Flex, Box, Grid } from 'reflexbox'
 
 class JobCard extends React.Component {
   static propTypes = {
+    onDelete: React.PropTypes.func,
     comment: React.PropTypes.string,
     creationTime: React.PropTypes.string,
     delay: React.PropTypes.number,
@@ -37,6 +38,7 @@ class JobCard extends React.Component {
     target: React.PropTypes.object,
     task: React.PropTypes.object
   }
+
   render () {
     const {
       comment,
@@ -45,8 +47,17 @@ class JobCard extends React.Component {
       id,
       schedule,
       target,
-      task
+      task,
+      onDelete
     } = this.props
+    let targetCountries = 'ANY',
+        targetPlatforms = 'ANY'
+    if (target.countries.length > 0) {
+      targetCountries = target.countries.join(',')
+    }
+    if (target.platforms.length > 0) {
+      targetPlatforms = target.platforms.join(',')
+    }
     return (
       <Card style={{marginBottom: '20px'}}>
         <CardHeader
@@ -55,7 +66,7 @@ class JobCard extends React.Component {
           actAsExpander={true}
           showExpandableButton={true} />
         <CardActions>
-           <FlatButton label="Delete" onTouchTap={() => {alert('I do nothing')}}/>
+           <FlatButton label="Delete" onTouchTap={() => {onDelete(id)}}/>
            <FlatButton label="Edit" onTouchTap={() => {alert('I do nothing')}}/>
         </CardActions>
         <CardText expandable={true}>
@@ -81,10 +92,10 @@ class JobCard extends React.Component {
                 secondaryText="Test arguments"/>
 
             <ListItem
-                primaryText={target.countries.join(',')}
+                primaryText={targetCountries}
                 secondaryText="Target countries"/>
             <ListItem
-                primaryText={target.platforms.join(',')}
+                primaryText={targetPlatforms}
                 secondaryText="Target platforms"/>
           </List>
 
@@ -103,17 +114,30 @@ export default class AdminJobsIndex extends React.Component {
       error: null,
       session: new Session()
     }
+    this.onDelete = this.onDelete.bind(this)
+  }
+
+  onDelete (jobId) {
+    let req = this.state.session.createRequest({baseURL: process.env.EVENTS_URL})
+    req.delete(`/api/v1/admin/job/${jobId}`)
+      .then((res) => {
+        const newJobList = this.state.jobList.filter((job) => (job.id !== jobId))
+        this.setState({
+          jobList: newJobList
+        })
+      })
+      .catch((err) => {
+        // XXX handle errors
+      })
   }
 
   componentDidMount() {
-    if (this.state.session.isValid() === false) {
-      Router.push('/admin/login?from="'+Router.route+'"')
+    if (this.state.session.redirectIfInvalid()) {
       return
     }
     let req = this.state.session.createRequest({baseURL: process.env.EVENTS_URL})
     req.get('/api/v1/admin/jobs')
       .then((res) => {
-        console.log(res.data)
         this.setState({
           jobList: res.data.jobs,
           error: null
@@ -131,19 +155,19 @@ export default class AdminJobsIndex extends React.Component {
     } = this.state
 
     return (
-      <Layout>
+      <Layout title="Jobs">
         <Head>
           <title>Jobs - OONI Proteus</title>
         </Head>
 
         <div>
           <div className='container'>
-            <h1 style={{marginBottom: 20}}>Currently scheduled jobs</h1>
             {jobList.map((job) => {
               return (
                 <Grid col={6} px={2}>
                 <JobCard
                   key={job.id}
+                  onDelete={this.onDelete}
                   comment={job.comment}
                   creationTime={job.creation_time}
                   delay={job.delay}
@@ -154,6 +178,11 @@ export default class AdminJobsIndex extends React.Component {
                 </Grid>
               )
             })}
+            <div className='actions'>
+              <FloatingActionButton href='/admin/jobs/add'>
+                <ContentAdd />
+              </FloatingActionButton>
+            </div>
           </div>
           <style jsx>{`
           .container {

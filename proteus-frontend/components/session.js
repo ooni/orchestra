@@ -1,3 +1,4 @@
+import Router from 'next/router'
 import axios from 'axios'
 
 export default class Session {
@@ -7,11 +8,23 @@ export default class Session {
     this.isValid = this.isValid.bind(this)
     this.createRequest = this.createRequest.bind(this)
     this.login = this.login.bind(this)
+    this.redirectIfInvalid = this.redirectIfInvalid.bind(this)
     this.getSession()
   }
 
   isValid() {
     if (this._session && Object.keys(this._session).length > 0 && this._session.expire && this._session.expire - Date.now() >= 0) {
+      return true
+    }
+    return false
+  }
+
+  redirectIfInvalid () {
+    if (this.isValid() === false) {
+      Router.push({
+        pathname: '/admin/login',
+        query: { 'from': Router.pathname}
+      })
       return true
     }
     return false

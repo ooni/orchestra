@@ -199,6 +199,28 @@ func ListJobs(db *sqlx.DB) ([]JobData, error) {
 	return currentJobs, nil
 }
 
+var ErrJobNotFound = errors.New("job not found")
+
+func DeleteJob(jobID string, db *sqlx.DB) (error) {
+	// XXX we should actually never delete the job in the database (or at least
+	// not immediately), because there could be some task referencing the job
+	// that will fail to be run.  We should therefore maybe change the schema
+	// to take this into account or handling this when listing tasks.
+	query := fmt.Sprintf(`DELETE FROM %s
+		WHERE id = $1`,
+		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
+	_, err := db.Exec(query, jobID)
+	if err != nil {
+		// XXX I am not actually sure this is the correct error
+		if err == sql.ErrNoRows {
+			return ErrJobNotFound
+		}
+		ctx.WithError(err).Error("failed delete job")
+		return err
+	}
+	return nil
+}
+
 var ErrTaskNotFound = errors.New("task not found")
 var ErrAccessDenied = errors.New("access denied")
 var ErrInconsistentState = errors.New("task already accepted")
@@ -346,11 +368,9 @@ func Start() {
 	v1 := router.Group("/api/v1")
 
 	admin := v1.Group("/admin")
-	// XXX CRITICAL temporarily disabled for debug
-	//admin.Use(authMiddleware.MiddlewareFunc(proteus_mw.AdminAuthorizor))
+	admin.Use(authMiddleware.MiddlewareFunc(proteus_mw.AdminAuthorizor))
 	{
 		admin.GET("/jobs", func(c *gin.Context) {
-			// XXX do this in a middleware
 			jobList, err := ListJobs(db)
 			if err != nil {
 				c.JSON(http.StatusBadRequest,
@@ -379,6 +399,22 @@ func Start() {
 			c.JSON(http.StatusOK,
 					gin.H{"id": jobID})
 			return
+		})
+		admin.DELETE("/job/:job_id", func(c *gin.Context) {
+			jobID := c.Param("job_id")
+			err := DeleteJob(jobID, db)
+			if err != nil {
+				if err == ErrJobNotFound {
+					c.JSON(http.StatusNotFound,
+							gin.H{"error": "job not found"})
+					return
+				}
+				c.JSON(http.StatusBadRequest,
+						gin.H{"error": "server side error"})
+				return
+			}
+			c.JSON(http.StatusOK,
+					gin.H{"status": "deleted"})
 		})
 	}
 
