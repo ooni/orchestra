@@ -1,4 +1,9 @@
-CREATE TABLE probe_updates
+-- +migrate Down
+DROP TABLE IF EXISTS probe_updates;
+
+-- +migrate Up
+-- +migrate StatementBegin
+CREATE TABLE IF NOT EXISTS probe_updates
 (
     id UUID PRIMARY KEY NOT NULL,
     update_time TIMESTAMP WITH TIME ZONE,
@@ -16,3 +21,4 @@ CREATE TABLE probe_updates
     update_type VARCHAR,
     client_id UUID
 );
+-- +migrate StatementEnd

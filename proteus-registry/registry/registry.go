@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"database/sql"
 	
-	"github.com/jmoiron/sqlx"
 	"github.com/thetorproject/proteus/proteus-common/middleware"
+
+	"github.com/jmoiron/sqlx"
 	"github.com/apex/log"
 	"github.com/satori/go.uuid"
+	"github.com/rubenv/sql-migrate"
 	"github.com/lib/pq"
 	"github.com/spf13/viper"
 	"github.com/gin-gonic/gin"
@@ -382,6 +384,20 @@ func ListClients(db *sqlx.DB) ([]ActiveClient, error) {
 	return activeClients, nil
 }
 
+func runMigrations(db *sqlx.DB) (error) {
+	migrations := &migrate.AssetMigrationSource{
+		Asset: Asset,
+		AssetDir: AssetDir,
+		Dir: "data/migrations",
+	}
+	n, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
+	if err != nil {
+		return err
+	}
+	ctx.Infof("performed %d migrations", n)
+	return nil
+}
+
 func Start() {
 	db, err := initDatabase()
 
@@ -390,6 +406,11 @@ func Start() {
 		return
 	}
 	defer db.Close()
+	err = runMigrations(db)
+	if (err != nil) {
+		ctx.WithError(err).Error("failed to run DB migration")
+		return
+	}
 
 	authMiddleware, err := proteus_mw.InitAuthMiddleware(db)
 	if (err != nil) {

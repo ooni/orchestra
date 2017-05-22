@@ -1,4 +1,9 @@
-CREATE TABLE active_probes
+-- +migrate Drop
+DROP TABLE IF EXISTS active_probes;
+
+-- +migrate Up
+-- +migrate StatementBegin
+CREATE TABLE IF NOT EXISTS active_probes
 (
     id UUID PRIMARY KEY NOT NULL,
     creation_time TIMESTAMP WITH TIME ZONE,
@@ -15,4 +20,5 @@ CREATE TABLE active_probes
     probe_id VARCHAR,
     last_updated TIMESTAMP WITH TIME ZONE
 );
-CREATE UNIQUE INDEX registered_probes_id_uindex ON active_probes (id);
+CREATE UNIQUE INDEX IF NOT EXISTS registered_probes_id_uindex ON active_probes (id);
+-- +migrate StatementEnd
