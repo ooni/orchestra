@@ -1,5 +1,16 @@
-CREATE TYPE TASK_STATE AS ENUM ('ready', 'notified', 'accepted', 'rejected', 'done');
-CREATE TABLE public.tasks
+-- +migrate Down
+DROP TABLE IF exists tasks;
+
+-- +migrate Up
+-- +migrate StatementBegin
+DO $$
+    BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_state') THEN
+    CREATE TYPE TASK_STATE AS ENUM ('ready', 'notified', 'accepted', 'rejected', 'done');
+    END IF;
+END$$;
+
+CREATE TABLE IF NOT EXISTS tasks
 (
     id UUID NOT NULL,
     probe_id UUID,
@@ -13,4 +24,5 @@ CREATE TABLE public.tasks
     accept_time TIMESTAMP WITH TIME ZONE,
     done_time TIMESTAMP WITH TIME ZONE,
     last_updated TIMESTAMP WITH TIME ZONE
-)
+);
+-- +migrate StatementEnd

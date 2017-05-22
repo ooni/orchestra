@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/thetorproject/proteus/proteus-common/cmd"
+	"github.com/thetorproject/proteus/proteus-events/events"
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
 
@@ -26,7 +27,7 @@ var ctx = log.WithFields(log.Fields{
 var RootCmd = &cobra.Command{
 	Use:   "proteus-events",
 	Short: "I receive events to propagate to probes",
-	Long: `Is responsible for receiving events via the admin interface and triggering notifications via proteus-notify`,
+	Long: events.LongDescription,
 }
 
 func Execute() {

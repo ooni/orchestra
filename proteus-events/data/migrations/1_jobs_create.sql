@@ -1,4 +1,8 @@
-CREATE TABLE jobs
+-- +migrate Down
+DROP TABLE IF EXISTS jobs;
+
+-- +migrate Up
+CREATE TABLE IF NOT EXISTS jobs
 (
     id UUID PRIMARY KEY NOT NULL,
     comment VARCHAR,

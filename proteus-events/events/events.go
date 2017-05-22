@@ -5,13 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
 	"time"
+	_ "strings"
 	"sync"
 
 	"github.com/thetorproject/proteus/proteus-common/middleware"
+
+	"github.com/gin-contrib/multitemplate"
 	"github.com/apex/log"
 	"github.com/satori/go.uuid"
+	"github.com/rubenv/sql-migrate"
 	"github.com/lib/pq"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
@@ -59,6 +64,7 @@ type JobData struct {
 	Comment			string `json:"comment" binding:"required"`
 	Task			Task `json:"task"`
 	Target			Target `json:"target"`
+	State			string `json:"state"`
 
 	CreationTime	time.Time `json:"creation_time"`
 }
@@ -88,7 +94,8 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 			creation_time,
 			times_run,
 			next_run_at,
-			is_done
+			is_done,
+			state
 		) VALUES (
 			$1, $2,
 			$3, $4,
@@ -99,7 +106,8 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 			$9,
 			$10,
 			$11,
-			$12)`,
+			$12,
+			$13)`,
 		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
 
 		stmt, err := tx.Prepare(query)
@@ -123,7 +131,8 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 							time.Now().UTC(),
 							0,
 							schedule.StartTime,
-							false)
+							false,
+							"active")
 		if err != nil {
 			tx.Rollback()
 			ctx.WithError(err).Error("failed to insert into jobs table")
@@ -150,7 +159,7 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 	return jd.Id, nil
 }
 
-func ListJobs(db *sqlx.DB) ([]JobData, error) {
+func ListJobs(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
 	// XXX this can probably be unified with JobDB.GetAll()
 	var (
 		currentJobs []JobData
@@ -162,9 +171,13 @@ func ListJobs(db *sqlx.DB) ([]JobData, error) {
 		target_countries,
 		target_platforms,
 		task_test_name,
-		task_arguments
+		task_arguments,
+		state
 		FROM %s`,
 		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
+	if showDeleted == false {
+		query += " WHERE state = 'active'"
+	}
 	rows, err := db.Query(query)
 	if err != nil {
 		ctx.WithError(err).Error("failed to list jobs")
@@ -184,7 +197,8 @@ func ListJobs(db *sqlx.DB) ([]JobData, error) {
 						pq.Array(&jd.Target.Countries),
 						pq.Array(&jd.Target.Platforms),
 						&jd.Task.TestName,
-						&taskArgs)
+						&taskArgs,
+						&jd.State)
 		if err != nil {
 			ctx.WithError(err).Error("failed to iterate over jobs")
 			return currentJobs, err
@@ -202,14 +216,11 @@ func ListJobs(db *sqlx.DB) ([]JobData, error) {
 var ErrJobNotFound = errors.New("job not found")
 
 func DeleteJob(jobID string, db *sqlx.DB) (error) {
-	// XXX we should actually never delete the job in the database (or at least
-	// not immediately), because there could be some task referencing the job
-	// that will fail to be run.  We should therefore maybe change the schema
-	// to take this into account or handling this when listing tasks.
-	query := fmt.Sprintf(`DELETE FROM %s
+	query := fmt.Sprintf(`UPDATE %s SET
+		state = $2,
 		WHERE id = $1`,
 		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
-	_, err := db.Exec(query, jobID)
+	_, err := db.Exec(query, jobID, "deleted")
 	if err != nil {
 		// XXX I am not actually sure this is the correct error
 		if err == sql.ErrNoRows {
@@ -346,14 +357,50 @@ func SetTaskState(tID string, uID string,
 	return nil
 }
 
+func runMigrations(db *sqlx.DB) (error) {
+	migrations := &migrate.AssetMigrationSource{
+		Asset: Asset,
+		AssetDir: AssetDir,
+		Dir: "data/migrations",
+	}
+	n, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
+	if err != nil {
+		return err
+	}
+	ctx.Infof("performed %d migrations", n)
+	return nil
+}
+
+func loadTemplates(list ...string) multitemplate.Render {
+    r := multitemplate.New()
+    for _, x := range list {
+        templateString, err := Asset("data/templates/" + x)
+        if err != nil {
+			ctx.WithError(err).Error("failed to load template")
+        }
+
+        tmplMessage, err := template.New(x).Parse(string(templateString))
+        if err != nil {
+			ctx.WithError(err).Error("failed to parse template")
+        }
+        r.Add(x, tmplMessage)
+    }
+    return r
+}
+
 func Start() {
 	db, err := initDatabase()
-
 	if (err != nil) {
 		ctx.WithError(err).Error("failed to connect to DB")
 		return
 	}
 	defer db.Close()
+
+	err = runMigrations(db)
+	if (err != nil) {
+		ctx.WithError(err).Error("failed to run DB migration")
+		return
+	}
 
 	authMiddleware, err := proteus_mw.InitAuthMiddleware(db)
 	if (err != nil) {
@@ -365,13 +412,21 @@ func Start() {
 
 	router := gin.Default()
 	router.Use(cors.New(proteus_mw.CorsConfig()))
+	router.HTMLRender = loadTemplates("home.tmpl")
+	router.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "home.tmpl", gin.H{
+			"title": "proteus-events",
+			"componentName": "proteus-events",
+			"componentDescription": LongDescription,
+		})
+	})
 	v1 := router.Group("/api/v1")
 
 	admin := v1.Group("/admin")
 	admin.Use(authMiddleware.MiddlewareFunc(proteus_mw.AdminAuthorizor))
 	{
 		admin.GET("/jobs", func(c *gin.Context) {
-			jobList, err := ListJobs(db)
+			jobList, err := ListJobs(db, true)
 			if err != nil {
 				c.JSON(http.StatusBadRequest,
 						gin.H{"error": err.Error()})

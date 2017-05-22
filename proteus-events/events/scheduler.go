@@ -412,7 +412,8 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 		times_run,
 		next_run_at,
 		is_done
-		FROM %s`,
+		FROM %s
+		WHERE state = 'active'`,
 		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
 	rows, err := db.db.Query(query)
 	if err != nil {
@@ -473,6 +474,9 @@ func (s *Scheduler) RunJob(j *Job) {
 
 func (s *Scheduler) Start() {
 	ctx.Debug("starting scheduler")
+	// XXX currently when jobs are deleted the allJobs list will not be
+	// updated. We should find a way to check this and stop triggering a job in
+	// case it gets deleted.
 	allJobs, err := s.jobDB.GetAll()
 	if err != nil {
 		ctx.WithError(err).Error("failed to list all jobs")
