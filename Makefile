@@ -4,13 +4,21 @@ COMMIT_HASH = `git rev-parse --short HEAD 2>/dev/null`
 BUILD_DATE = `date +%FT%T%z`
 LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common.CommitHash=${COMMIT_HASH} -X ${PACKAGE}/proteus-common.BuildDate=${BUILD_DATE}"
 NOGI_LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common.BuildDate=${BUILD_DATE}"
-ARCH_LIST="linux/amd64 darwin/amd64 linux/386"
+ARCH_LIST=linux/amd64 darwin/amd64 linux/386
+TOOL_LIST=registry events notify
 RELEASE_OSARCH = -osarch ${ARCH_LIST}
 OUTPUT_SUFFIX = "${VERSION}.{{.OS}}-{{.Arch}}/{{.Dir}}"
 
 vendor:
 	go get github.com/kardianos/govendor
 	govendor sync proteus
+
+vendor-fetch:
+	govendor fetch +external
+
+bindata:
+	go get -u github.com/jteeuwen/go-bindata/...
+	for tool in ${TOOL_LIST};do go-bindata -prefix proteus-$$tool/ -o proteus-$$tool/$$tool/bindata.go -pkg $$tool proteus-$$tool/data/...;done
 
 build-events:
 	go build ${LDFLAGS} -o bin/proteus-events proteus-events/main.go
@@ -31,6 +39,6 @@ release:
 	gox ${NOGI_LDFLAGS} ${RELEASE_OSARCH} -output dist/proteus-events-${OUTPUT_SUFFIX} ./proteus-events
 	gox ${NOGI_LDFLAGS} ${RELEASE_OSARCH} -output dist/proteus-notify-${OUTPUT_SUFFIX} ./proteus-notify
 	gox ${NOGI_LDFLAGS} ${RELEASE_OSARCH} -output dist/proteus-registry-${OUTPUT_SUFFIX} ./proteus-registry
-	for tool in registry events notify;do for x in "${ARCH_LIST}";do ARCH=$$(echo $$x | sed "s/\//-/");cp LICENSE dist/proteus-$$tool-${VERSION}.$$ARCH/;tar -cvf dist/proteus-$$tool-${VERSION}.$$ARCH.tar.gz -C ./dist/ proteus-$$tool-${VERSION}.$$ARCH/;done;done
+	for tool in ${TOOL_LIST};do for x in ${ARCH_LIST};do ARCH=$$(echo $$x | sed "s/\//-/");cp LICENSE dist/proteus-$$tool-${VERSION}.$$ARCH/;tar -cvf dist/proteus-$$tool-${VERSION}.$$ARCH.tar.gz -C ./dist/ proteus-$$tool-${VERSION}.$$ARCH/;done;done
 
-.PHONY: vendor build build-events build-notify build-registry release
+.PHONY: vendor build build-events build-notify build-registry release bindata
