@@ -57,6 +57,12 @@
 			"revisionTime": "2016-11-02T19:13:10Z"
 		},
 		{
+			"checksumSHA1": "a2qvrN7YE4YmOpx+wmxCvCwl4os=",
+			"path": "github.com/gin-contrib/multitemplate",
+			"revision": "7d1ec4f2119934983b106718265783fc48a38b77",
+			"revisionTime": "2017-03-19T07:00:17Z"
+		},
+		{
 			"checksumSHA1": "bvHZOqZm2Gl0XkMh4oOB8iZ7geQ=",
 			"path": "github.com/gin-gonic/gin",
 			"revision": "d5b353c5d5a560322e6d96121c814115562501f7",
@@ -157,16 +163,16 @@
 			"revision": ""
 		},
 		{
-			"checksumSHA1": "FZem1OXCd+ogu1yeG11GMlGiGVA=",
+			"checksumSHA1": "uTUsjF7bymOuKvXbW2BpkK/w4Vg=",
 			"path": "github.com/lib/pq",
-			"revision": "ba5d4f7a35561e22fbdf7a39aa0070f4d460cfc0",
-			"revisionTime": "2017-02-13T22:10:49Z"
+			"revision": "2704adc878c21e1329f46f6e56a1c387d788ff94",
+			"revisionTime": "2017-03-24T20:46:54Z"
 		},
 		{
-			"checksumSHA1": "xppHi82MLqVx1eyQmbhTesAEjx8=",
+			"checksumSHA1": "Gk3jTNQ5uGDUE0WMJFWcYz9PMps=",
 			"path": "github.com/lib/pq/oid",
-			"revision": "ba5d4f7a35561e22fbdf7a39aa0070f4d460cfc0",
-			"revisionTime": "2017-02-13T22:10:49Z"
+			"revision": "2704adc878c21e1329f46f6e56a1c387d788ff94",
+			"revisionTime": "2017-03-24T20:46:54Z"
 		},
 		{
 			"checksumSHA1": "KR72MpmwQRMYJuK0BHi2RWgGU2o=",
@@ -209,6 +215,18 @@
 			"path": "github.com/pkg/errors",
 			"revision": "248dadf4e9068a0b3e79f02ed0a610d935de5302",
 			"revisionTime": "2016-10-29T09:36:37Z"
+		},
+		{
+			"checksumSHA1": "1KDFLS1I8NVIjtryjoB9r8AkHBI=",
+			"path": "github.com/rubenv/sql-migrate",
+			"revision": "38004e7a77f2b350ea8467038dca66073d907725",
+			"revisionTime": "2017-03-30T05:00:58Z"
+		},
+		{
+			"checksumSHA1": "b5/0BjuWPTLR3Tgx2zVpCuQlU7w=",
+			"path": "github.com/rubenv/sql-migrate/sqlparse",
+			"revision": "38004e7a77f2b350ea8467038dca66073d907725",
+			"revisionTime": "2017-03-30T05:00:58Z"
 		},
 		{
 			"checksumSHA1": "zmC8/3V4ls53DJlNTKDZwPSC/dA=",
@@ -371,6 +389,12 @@
 			"path": "gopkg.in/go-playground/validator.v8",
 			"revision": "5f57d2222ad794d0dffb07e664ea05e2ee07d60c",
 			"revisionTime": "2016-07-18T13:41:25Z"
+		},
+		{
+			"checksumSHA1": "xunNOgG8P6Xh4SM+LPQ1zMDXa8Q=",
+			"path": "gopkg.in/gorp.v1",
+			"revision": "c87af80f3cc5036b55b83d77171e156791085e2e",
+			"revisionTime": "2015-02-04T08:55:30Z"
 		},
 		{
 			"checksumSHA1": "fALlQNY1fM99NesfLJ50KguWsio=",
