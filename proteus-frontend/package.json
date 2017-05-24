@@ -1,14 +1,16 @@
 {
   "name": "proteus-frontend",
-  "version": "1.0.0",
+  "author": "",
+  "license": "BSD-2-Clause",
+  "version": "0.1.0-dev",
   "dependencies": {
     "axios": "^0.15.3",
     "dotenv": "^4.0.0",
     "express": "^4.14.0",
     "immutable": "^3.8.1",
-    "material-ui": "^0.17.0",
+    "material-ui": "^0.17.4",
     "moment": "^2.17.1",
-    "next": "^2.3.0",
+    "next": "^2.4.0",
     "react": "^15.4.2",
     "react-addons-shallow-compare": "^15.4.2",
     "react-dom": "^15.4.2",
@@ -23,8 +25,7 @@
   "scripts": {
     "dev": "NODE_ENV=development node index.js",
     "build": "next build",
+    "export": "next export",
     "start": "node index.js"
-  },
-  "author": "",
-  "license": "BSD"
+  }
 }
