@@ -67,6 +67,7 @@ To register a probe a the following HTTPS request is issued:
   "platform": "android",
   "software_name": "ooniprobe-android",
   "software_version": "0.1.1",
+  "software_language": "IT",
   "supported_tests": ["tcp_connect", "web_connectivity"],
   "network_type": "wifi",
   "available_bandwidth": "100",

@@ -20,6 +20,8 @@ bindata:
 	go get -u github.com/jteeuwen/go-bindata/...
 	for tool in ${TOOL_LIST};do go-bindata -prefix proteus-$$tool/ -o proteus-$$tool/$$tool/bindata.go -pkg $$tool proteus-$$tool/data/...;done
 
+build-all: build-events build-notify build-registry
+
 build-events:
 	go build ${LDFLAGS} -o bin/proteus-events proteus-events/main.go
 build-notify:
@@ -32,7 +34,7 @@ proteus: vendor build-events build-registry build-notify
 proteus-no-gitinfo: LDFLAGS = ${NOGI_LDFLAGS}
 proteus-no-gitinfo: vendor proteus
 
-release:
+release: bindata
 	go get github.com/mitchellh/gox
 	mkdir -p ./dist
 	rm -rf ./dist/*
@@ -41,4 +43,4 @@ release:
 	gox ${NOGI_LDFLAGS} ${RELEASE_OSARCH} -output dist/proteus-registry-${OUTPUT_SUFFIX} ./proteus-registry
 	for tool in ${TOOL_LIST};do for x in ${ARCH_LIST};do ARCH=$$(echo $$x | sed "s/\//-/");cp LICENSE dist/proteus-$$tool-${VERSION}.$$ARCH/;tar -cvf dist/proteus-$$tool-${VERSION}.$$ARCH.tar.gz -C ./dist/ proteus-$$tool-${VERSION}.$$ARCH/;done;done
 
-.PHONY: vendor build build-events build-notify build-registry release bindata
+.PHONY: vendor build build-events build-notify build-registry release bindata build-all

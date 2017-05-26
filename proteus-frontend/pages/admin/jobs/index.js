@@ -34,6 +34,7 @@ class JobCard extends React.Component {
     creationTime: React.PropTypes.string,
     delay: React.PropTypes.number,
     id: React.PropTypes.string,
+    state: React.PropTypes.string,
     schedule: React.PropTypes.string,
     target: React.PropTypes.object,
     task: React.PropTypes.object
@@ -41,6 +42,7 @@ class JobCard extends React.Component {
 
   render () {
     const {
+      state,
       comment,
       creationTime,
       delay,
@@ -58,15 +60,19 @@ class JobCard extends React.Component {
     if (target.platforms.length > 0) {
       targetPlatforms = target.platforms.join(',')
     }
+    let subtitle = task.test_name
+    if (state === 'deleted') {
+      subtitle = `[DELETED] ${subtitle}`
+    }
     return (
       <Card style={{marginBottom: '20px'}}>
         <CardHeader
           title={comment}
-          subtitle={task.test_name}
+          subtitle={subtitle}
           actAsExpander={true}
           showExpandableButton={true} />
         <CardActions>
-           <FlatButton label="Delete" onTouchTap={() => {onDelete(id)}}/>
+          {state !== 'deleted' && <FlatButton label="Delete" onTouchTap={() => {onDelete(id)}}/>}
            <FlatButton label="Edit" onTouchTap={() => {alert('I do nothing')}}/>
         </CardActions>
         <CardText expandable={true}>
@@ -173,6 +179,7 @@ export default class AdminJobsIndex extends React.Component {
                   delay={job.delay}
                   id={job.id}
                   schedule={job.schedule}
+                  state={job.state}
                   target={job.target}
                   task={job.task} />
                 </Grid>
@@ -190,6 +197,9 @@ export default class AdminJobsIndex extends React.Component {
             padding-left: 20px;
             padding-right: 20px;
             margin: auto;
+          }
+          .actions {
+            float: right;
           }
           `}</style>
         </div>

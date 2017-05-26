@@ -172,7 +172,7 @@ func ListJobs(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
 		target_platforms,
 		task_test_name,
 		task_arguments,
-		state
+		COALESCE(state, 'active') AS state
 		FROM %s`,
 		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
 	if showDeleted == false {
@@ -217,7 +217,7 @@ var ErrJobNotFound = errors.New("job not found")
 
 func DeleteJob(jobID string, db *sqlx.DB) (error) {
 	query := fmt.Sprintf(`UPDATE %s SET
-		state = $2,
+		state = $2
 		WHERE id = $1`,
 		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
 	_, err := db.Exec(query, jobID, "deleted")
@@ -248,7 +248,7 @@ func GetTask(tID string, uID string, db *sqlx.DB) (Task, error) {
 		probe_id,
 		test_name,
 		arguments,
-		state
+		COALESCE(state, 'active')
 		FROM %s
 		WHERE id = $1`,
 		pq.QuoteIdentifier(viper.GetString("database.tasks-table")))
