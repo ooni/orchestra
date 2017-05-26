@@ -6,7 +6,7 @@ LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common.CommitHash=${COMMIT_HASH} -X ${
 NOGI_LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common.BuildDate=${BUILD_DATE}"
 ARCH_LIST=linux/amd64 darwin/amd64 linux/386
 TOOL_LIST=registry events notify
-RELEASE_OSARCH = -osarch ${ARCH_LIST}
+RELEASE_OSARCH = -osarch "${ARCH_LIST}"
 OUTPUT_SUFFIX = "${VERSION}.{{.OS}}-{{.Arch}}/{{.Dir}}"
 
 vendor:

@@ -86,7 +86,7 @@ func dataMigrations1_jobs_createSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/migrations/1_jobs_create.sql", size: 415, mode: os.FileMode(420), modTime: time.Unix(1495466256, 0)}
+	info := bindataFileInfo{name: "data/migrations/1_jobs_create.sql", size: 415, mode: os.FileMode(420), modTime: time.Unix(1495831185, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -106,7 +106,7 @@ func dataMigrations1_tasks_createSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/migrations/1_tasks_create.sql", size: 711, mode: os.FileMode(420), modTime: time.Unix(1495466491, 0)}
+	info := bindataFileInfo{name: "data/migrations/1_tasks_create.sql", size: 711, mode: os.FileMode(420), modTime: time.Unix(1495831185, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -126,7 +126,7 @@ func dataMigrations2_add_jobs_stateSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/migrations/2_add_jobs_state.sql", size: 320, mode: os.FileMode(420), modTime: time.Unix(1495466028, 0)}
+	info := bindataFileInfo{name: "data/migrations/2_add_jobs_state.sql", size: 320, mode: os.FileMode(420), modTime: time.Unix(1495831185, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -146,7 +146,7 @@ func dataTemplatesHomeTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/templates/home.tmpl", size: 1264, mode: os.FileMode(420), modTime: time.Unix(1494926330, 0)}
+	info := bindataFileInfo{name: "data/templates/home.tmpl", size: 1264, mode: os.FileMode(420), modTime: time.Unix(1495831185, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

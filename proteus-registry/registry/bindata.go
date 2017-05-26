@@ -86,7 +86,7 @@ func dataMigrations1_accounts_createSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/migrations/1_accounts_create.sql", size: 627, mode: os.FileMode(420), modTime: time.Unix(1495468068, 0)}
+	info := bindataFileInfo{name: "data/migrations/1_accounts_create.sql", size: 627, mode: os.FileMode(420), modTime: time.Unix(1495831185, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -106,7 +106,7 @@ func dataMigrations1_active_probes_createSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/migrations/1_active_probes_create.sql", size: 665, mode: os.FileMode(420), modTime: time.Unix(1495468124, 0)}
+	info := bindataFileInfo{name: "data/migrations/1_active_probes_create.sql", size: 665, mode: os.FileMode(420), modTime: time.Unix(1495831185, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -126,7 +126,7 @@ func dataMigrations1_probe_updates_createSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/migrations/1_probe_updates_create.sql", size: 580, mode: os.FileMode(420), modTime: time.Unix(1495468179, 0)}
+	info := bindataFileInfo{name: "data/migrations/1_probe_updates_create.sql", size: 580, mode: os.FileMode(420), modTime: time.Unix(1495831185, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -146,7 +146,7 @@ func dataTemplatesHomeTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/templates/home.tmpl", size: 1378, mode: os.FileMode(420), modTime: time.Unix(1494926431, 0)}
+	info := bindataFileInfo{name: "data/templates/home.tmpl", size: 1378, mode: os.FileMode(420), modTime: time.Unix(1495831185, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
