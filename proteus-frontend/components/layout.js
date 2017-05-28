@@ -18,6 +18,8 @@ import Head from 'next/head'
 
 import './tapEvents'
 
+import pkgJson from '../package.json'
+
 export default class extends React.Component {
 
   static propTypes = {
@@ -89,7 +91,7 @@ export default class extends React.Component {
         </div>
         <footer>
           <div className='footer-content'>
-          OONI Proteus v0.0.0
+          OONI Proteus {pkgJson['version']}
           </div>
         </footer>
         <style jsx>{`

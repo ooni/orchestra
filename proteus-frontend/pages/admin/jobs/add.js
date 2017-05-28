@@ -410,7 +410,6 @@ export default class AdminJobsAdd extends React.Component {
   }
 
   onSubmit () {
-    Router.push('/admin/jobs')
     this.setState({
       submitted: true
     })
@@ -457,6 +456,7 @@ export default class AdminJobsAdd extends React.Component {
         },
         submitted: true
       })
+      Router.push('/admin/jobs')
     }).catch((err) => {
       this.setState({
         finalized: {
