@@ -648,7 +648,9 @@ export default class AdminJobsAdd extends React.Component {
                       this.setState({ startTime })
                     }}
                   />
-
+                  <RaisedButton
+                    onTouchTap={() => {this.setState({startMoment: moment(new Date()), startTime: new Date(), startDate: new Date()})}}
+                    label='Now'/>
                 </div>
               </Box>
 
