@@ -14,5 +14,6 @@ CREATE TABLE IF NOT EXISTS jobs
     task_test_name VARCHAR,
     task_arguments JSONB,
     times_run INT,
-    next_run_at TIME WITH TIME ZONE
+    next_run_at TIME WITH TIME ZONE,
+    is_done BOOLEAN
 );

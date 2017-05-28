@@ -34,7 +34,7 @@ proteus: vendor build-events build-registry build-notify
 proteus-no-gitinfo: LDFLAGS = ${NOGI_LDFLAGS}
 proteus-no-gitinfo: vendor proteus
 
-release: bindata
+release:
 	go get github.com/mitchellh/gox
 	mkdir -p ./dist
 	rm -rf ./dist/*
