@@ -7,21 +7,21 @@ Probe Orcehstration System.
 
 **proteus-registry**
 
-Status: ~COMPLETE
+Status: BETA
 
 Is responsible for registering probes and keeping tabs on what their related
 metadata is.
 
 **proteus-notify**
 
-Status: ~COMPLETE
+Status: BETA
 
 Is responsible for dispatching notifications out to OPOS clients depending on
 the capabilities they support.
 
 **proteus-frontend**
 
-Status: WIP
+Status: BETA
 
 Is the frontend to:
 
@@ -33,7 +33,7 @@ Is the frontend to:
 
 **proteus-events**
 
-Status: ~90%
+Status: BETA
 
 Is responsible for receiving events via the admin interface and triggering
 notifications via **proteus-notify**.
