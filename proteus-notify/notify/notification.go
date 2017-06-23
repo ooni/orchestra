@@ -42,6 +42,7 @@ func InitApnsClient() error {
 		apnKeyPassword = viper.GetString("apn.key-password")
 		isProduction = viper.GetBool("apn.production")
 	)
+	ctx.Debugf("Using key path: %s", apnKeyPath)
 	ext := filepath.Ext(apnKeyPath)
 	switch ext {
 	case ".p12":
@@ -52,7 +53,7 @@ func InitApnsClient() error {
 		err = errors.New("wrong certificate key extension")
 	}
 	if err != nil {
-		ctx.WithError(err).Error("certificate error")
+		ctx.WithError(err).Errorf("certificate error (ext: %s)", ext)
 		return err
 	}
 
@@ -109,6 +110,7 @@ func PushToApn(req PushNotification) {
 		notification := MakeApnNotification(req)
 
 		for _, token := range req.Tokens {
+			ctx.Debugf("Sending APN notification to token \"%s\"", token)
 			if viper.GetString("core.environment") == "development" {
 				ctx.Infof("I would have sent a %s notification with token %s", req.Platform, token)
 				continue
@@ -191,6 +193,7 @@ func PushToFcm(req PushNotification) {
 		var toRetryTokens []string
 
 		notification := MakeFcmNotification(req)
+		ctx.Debugf("Sending a FCM notification")
 		if viper.GetString("core.environment") == "development" {
 			ctx.Infof("I would have sent a %s notification with token %v", req.Platform, req.Tokens)
 			isDone = true
@@ -199,6 +202,7 @@ func PushToFcm(req PushNotification) {
 
 		res, err := notification.Send()
 		if err == nil {
+			ctx.Debugf("SENT a FCM notification")
 			isDone = true
 			break
 		} else {

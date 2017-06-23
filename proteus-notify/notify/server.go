@@ -53,14 +53,14 @@ func MakeNotifications(db *sql.DB, req NotifyReq) ([]PushNotification, error) {
 	var notifications []PushNotification
 
 	androidNotification := PushNotification{
-		Topic:"ooni/orchestrate",
+		Topic:viper.GetString("fcm.topic"),
 		Priority:req.Priority,
 		Retry:5,
 		Platform:"android",
 	}
 	androidNotification.Data = req.Event
 	iosNotification := PushNotification{
-		Topic:"ooni/orchestrate",
+		Topic:viper.GetString("apn.topic"),
 		Priority:req.Priority,
 		Retry:5,
 		Platform:"ios",
