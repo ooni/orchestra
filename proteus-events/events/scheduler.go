@@ -173,7 +173,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 			message,
 			extra
 			FROM %s
-			WHERE task_no = $1`,
+			WHERE alert_no = $1`,
 		pq.QuoteIdentifier(viper.GetString("database.job-alerts-table")))
 		err = jDB.db.QueryRow(query, alertNo.Int64).Scan(
 			&ad.Message,

@@ -2,7 +2,7 @@ import React from 'react'
 import Head from 'next/head'
 import Router from 'next/router'
 
-import Select from 'react-select'
+import Autocomplete from 'react-toolbox/lib/autocomplete/Autocomplete'
 
 import Immutable from 'immutable'
 
@@ -188,13 +188,12 @@ class JobCreateConfirm extends React.Component {
     startMoment: React.PropTypes.object,
     duration: React.PropTypes.object,
     repeatCount: React.PropTypes.number,
-    globalCategories: React.PropTypes.array,
-    countryCategories: React.PropTypes.array,
-    selectedTest: React.PropTypes.object,
     targetCountries: React.PropTypes.array,
     targetPlatforms: React.PropTypes.array,
     urls: React.PropTypes.string,
-    comment: React.PropTypes.string
+    alertMessage: React.PropTypes.string,
+    href: React.PropTypes.string,
+    altHref: React.PropTypes.string
   }
 
   constructor(props) {
@@ -206,22 +205,35 @@ class JobCreateConfirm extends React.Component {
       startMoment,
       duration,
       repeatCount,
-      globalCategories,
-      countryCategories,
-      selectedTest,
+      alertMessage,
+      href,
+      altHref,
       targetCountries,
-      targetPlatforms,
-      urls,
-      comment
+      targetPlatforms
     } = this.props
+    console.log("Got properties", this.props)
 
     return (
       <div>
-        <CardTitle title="Periodic job summary" />
+        <CardTitle title="New Alert Summary" />
         <CardText>
 
-        <h3>Job comment</h3>
-        <p>{comment.toString()}</p>
+        <h3>Message</h3>
+        <p>{alertMessage}</p>
+
+
+        {href && <div>
+        <h3>Link</h3>
+        <p>Primary: {href}</p>
+        {altHref && <p>Alernatives:
+          <ul>
+          {altHref.split('\n').map((v) => {
+            return (<li>{v}</li>)
+            })
+          }
+          </ul>
+        </p>}
+        </div>}
 
         <h3>Start time</h3>
         <p>{startMoment.calendar()} ({startMoment.toString()})</p>
@@ -233,47 +245,24 @@ class JobCreateConfirm extends React.Component {
                       repeatCount: repeatCount
                   })})</div>
 
-        <h3>globalCategories</h3>
-        <ul>
-        {globalCategories.map((category, key) => {
-          return (
-            <li key={key}>{category.label} ({category.value})</li>
-          )
-        })}
-        </ul>
-
-        <h3>country categories</h3>
-        <ul>
-        {countryCategories.map((category, key) => {
-          return (
-            <li key={key}>{category.label} ({category.value})</li>
-          )
-        })}
-        </ul>
-
-        <h3>selectedTest</h3>
-        <p>{selectedTest.label}</p>
-
         <h3>targetCountries</h3>
         <ul>
-        {targetCountries.map((country, key) => {
+        {targetCountries.map((v) => {
           return (
-            <li key={key}>{country.label} ({country.value})</li>
+            <li key={v}>{v}</li>
           )
         })}
         </ul>
 
         <h3>targetPlatforms</h3>
         <ul>
-        {targetPlatforms.map((platform, key) => {
+        {targetPlatforms.map((v) => {
           return (
-            <li key={key}>{platform.label}</li>
+            <li key={v}>{v}</li>
           )
         })}
         </ul>
 
-        <h3>urls</h3>
-        <p>{urls.toString()}</p>
         </CardText>
 
         <style jsx>{`
@@ -296,13 +285,12 @@ export default class AdminJobsAdd extends React.Component {
       startTime: new Date(),
       startMoment: moment(),
       repeatCount: 0,
-      globalCategories: [],
-      countryCategories: [],
-      selectedTest: {},
+      alertMessage: '',
+      href: '',
+      altHref: '',
       targetCountries: [],
       targetPlatforms: [],
-      duration: {m: 10},
-      urls: '',
+      duration: {W: 1},
       inputSelectorOpen: false,
       submitted: false,
       comment: '',
@@ -310,18 +298,16 @@ export default class AdminJobsAdd extends React.Component {
       finalized: null
     }
 
-    this.onCountryCategoryChange = this.onCountryCategoryChange.bind(this)
-    this.onGlobalCategoryChange = this.onGlobalCategoryChange.bind(this)
-    this.onTestChange = this.onTestChange.bind(this)
     this.onTargetCountryChange = this.onTargetCountryChange.bind(this)
     this.onTargetPlatformChange = this.onTargetPlatformChange.bind(this)
     this.onDurationChange = this.onDurationChange.bind(this)
     this.onRepeatChange = this.onRepeatChange.bind(this)
-    this.onURLsChange = this.onURLsChange.bind(this)
-    this.onCommentChange = this.onCommentChange.bind(this)
     this.onSubmit = this.onSubmit.bind(this)
     this.onEdit = this.onEdit.bind(this)
     this.onAdd = this.onAdd.bind(this)
+    this.onMessageChange = this.onMessageChange.bind(this)
+    this.onHrefChange = this.onHrefChange.bind(this)
+    this.onAltHrefChange = this.onAltHrefChange.bind(this)
   }
 
   static async getInitialProps ({req, res}) {
@@ -330,31 +316,21 @@ export default class AdminJobsAdd extends React.Component {
     const countries_alpha2 = require('../../../static/countries-alpha2.json')
 
     let props = {}
-    props.categories = []
-    for (let code in cat_codes) {
-      props.categories.push({ 'value': code, 'label': cat_codes[code] })
+    props.countries = {
+      'any': 'All'
     }
-
-    props.tests = [
-      { 'value': 'web_connectivity', 'label': 'Web Connectivity' },
-      { 'value': 'http_invalid_request_line', 'label': 'HTTP Invalid Request Line' },
-      { 'value': 'http_header_field_manipulation', 'label': 'HTTP Header Field Manipulation' }
-    ]
-
-    props.countries = []
     for (let alpha2 in countries_alpha2) {
-      props.countries.push({ 'value': alpha2, 'label': countries_alpha2[alpha2] })
+      props.countries[alpha2] = countries_alpha2[alpha2]
     }
-    props.countries.sort((a, b) => (+(a.label > b.label) || +(a.label === b.label) - 1))
 
-    props.platforms = [
-      { 'value': 'any', 'label': 'any' },
-      { 'value': 'android', 'label': 'Android' },
-      { 'value': 'ios', 'label': 'iOS' },
-      { 'value': 'macos', 'label': 'macOS' },
-      { 'value': 'linux', 'label': 'Linux' },
-      { 'value': 'lepidopter', 'label': 'Lepidopter' }
-    ]
+    props.platforms = {
+      'any': 'All',
+      'android': 'Android',
+      'ios': 'iOS',
+      'linux': 'Linux',
+      'macos': 'macOS',
+      'lepidopter': 'Lepidopter'
+    }
     return props
   }
 
@@ -362,12 +338,14 @@ export default class AdminJobsAdd extends React.Component {
     this.state.session.redirectIfInvalid()
   }
 
-  onCommentChange (value) {
-    this.setState({ comment: value })
+  onMessageChange (value) {
+    this.setState({ alertMessage: value})
   }
-
-  onURLsChange (value) {
-    this.setState({ urls: value });
+  onHrefChange (value) {
+    this.setState({ href: value})
+  }
+  onAltHrefChange (value) {
+    this.setState({ altHref: value})
   }
 
   onDurationChange (value) {
@@ -378,29 +356,30 @@ export default class AdminJobsAdd extends React.Component {
     this.setState({ repeatCount: value });
   }
 
-  onCountryCategoryChange (value) {
-    this.setState({ countryCategories: value })
-  }
-
-  onGlobalCategoryChange (value) {
-    this.setState({ globalCategories: value })
-  }
-
   onTargetCountryChange (value) {
+    if (value.indexOf('any') != -1) {
+      if (this.state.targetCountries.indexOf('any') != -1) {
+        // If any was already there we remove it
+        value.pop('any')
+      } else {
+        // Otherwise we clear everything else
+        value = ['any']
+      }
+    }
     this.setState({ targetCountries: value })
   }
 
   onTargetPlatformChange (value) {
-    this.setState({ targetPlatforms: value })
-  }
-
-  onTestChange (value) {
-    if (value.value === 'web_connectivity') {
-      this.setState({ inputSelectorOpen: true })
-    } else {
-      this.setState({ inputSelectorOpen: false })
+    if (value.indexOf('any') != -1) {
+      if (this.state.targetPlatforms.indexOf('any') != -1) {
+        // If any was already there we remove it
+        value.pop('any')
+      } else {
+        // Otherwise we clear everything else
+        value = ['any']
+      }
     }
-    this.setState({ selectedTest: value })
+    this.setState({ targetPlatforms: value })
   }
 
   onSubmit () {
@@ -417,14 +396,25 @@ export default class AdminJobsAdd extends React.Component {
 
   onAdd () {
     let req = this.state.session.createRequest({baseURL: process.env.EVENTS_URL})
-    let task_arguments = {}
-    let platforms = this.state.targetPlatforms.map((platform) => (platform.value))
+    let alertExtra = {}
+    if (this.state.href != '') {
+      alertExtra['href'] = this.state.href
+      alertExtra['alt_hrefs'] = []
+      if (this.state.altHref != '') {
+        this.state.altHref.split("\n").forEach((v) => {
+          if (v != '') {
+            alertExtra['alt_hrefs'].push(v)
+          }
+        })
+      }
+    }
+    let platforms = this.state.targetPlatforms.slice()
     if (platforms.indexOf('any') !== -1) {
       platforms = []
     }
-    if (this.state.selectedTest == 'web_connectivity') {
-      task_arguments['global_categories'] = this.state.globalCategories.map((category) => (category.value))
-      task_arguments['country_categories'] = this.state.countryCategories.map((category) => (category.value))
+    let countries = this.state.targetCountries.slice()
+    if (countries.indexOf('any') !== -1) {
+      countries = []
     }
     req.post('/api/v1/admin/job', {
       'schedule': ToScheduleString({
@@ -434,13 +424,13 @@ export default class AdminJobsAdd extends React.Component {
                   }),
       // XXX we currently don't set this
       'delay': 0,
-      'comment': this.state.comment,
-      'task': {
-        'test_name': this.state.selectedTest.value,
-        'arguments': task_arguments,
+      'comment': this.state.alertMessage,
+      'alert': {
+        'message': this.state.alertMessage,
+        'extra': alertExtra,
       },
       'target': {
-        'countries': this.state.targetCountries.map((country) => (country.value)),
+        'countries': countries,
         'platforms': platforms
       }
     }).then((res) => {
@@ -468,26 +458,13 @@ export default class AdminJobsAdd extends React.Component {
       startTime,
       startMoment,
       repeatCount,
-      globalCategories,
-      countryCategories,
-      selectedTest,
+      alertMessage,
       targetCountries,
       targetPlatforms,
       duration,
-      urls,
-      comment,
       finalized
     } = this.state
 
-    return (
-      <Layout title="Add Jobs">
-        <Head>
-          <title>Jobs - OONI Proteus</title>
-          <link href="/static/vendor/react-select.css" rel="stylesheet" />
-        </Head>
-        <h2>Temporarily out of service!</h2>
-      </Layout>
-    )
 
     return (
       <Layout title="Add Jobs">
@@ -505,9 +482,11 @@ export default class AdminJobsAdd extends React.Component {
                 duration={this.state.duration}
                 repeatCount={this.state.repeatCount}
                 duration={this.state.duration}
-                globalCategories={this.state.globalCategories}
-                countryCategories={this.state.countryCategories}
-                selectedTest={this.state.selectedTest}
+
+                alertMessage={this.state.alertMessage}
+                href={this.state.href}
+                altHref={this.state.altHref}
+
                 targetCountries={this.state.targetCountries}
                 targetPlatforms={this.state.targetPlatforms}
                 urls={this.state.urls}
@@ -546,74 +525,56 @@ export default class AdminJobsAdd extends React.Component {
           {!submitted &&
           <div className='scheduled-jobs container'>
             <div>
+            <Card title="New Alert">
 
-            <div className='section'>
-              <h2>Experiment</h2>
+              <CardText>
+                <Input
+                  onChange={this.onMessageChange}
+                  label="message"
+                  type="text" />
+                <Input
+                  onChange={this.onHrefChange}
+                  label="href"
+                  type="text" />
+                <Input
+                  onChange={this.onAltHrefChange}
+                  label="alt hrefs"
+                  type="text" />
+              <hr/>
 
-              <Grid col={2} px={2}>
+              <h2>Target</h2>
+
+              <Grid col={3} px={2}>
               <div className='option'>
                 <span className='option-name'>
-                  Test
+                  Country
                 </span>
-                <Select
-                  name='test'
-                  options={this.props.tests}
-                  value={this.state.selectedTest}
-                  onChange={this.onTestChange}
-                />
+                <Autocomplete
+                  direction="down"
+                  selectedPosition="above"
+                  label="Choose countries"
+                  onChange={this.onTargetCountryChange}
+                  source={this.props.countries}
+                  value={this.state.targetCountries} />
               </div>
               </Grid>
 
-              {this.state.inputSelectorOpen
-              && <div className='input-selector'>
+              <Grid col={3} px={2}>
+              <div className='option'>
+                <span className='option-name'>
+                  Platform
+                </span>
+                <Autocomplete
+                  direction="down"
+                  selectedPosition="above"
+                  label="Choose platforms"
+                  onChange={this.onTargetPlatformChange}
+                  source={this.props.platforms}
+                  value={this.state.targetPlatforms} />
+              </div>
+              </Grid>
 
-                <Grid col={3} px={2}>
-                  <Input
-                    hint={`http://example.com/one\nhttp://example.com/two`}
-                    label='URLs'
-                    multiline
-                    name="urls"
-                    value={this.state.urls}
-                    onChange={this.onURLsChange}
-                    rows={3}
-                  />
-                </Grid>
-
-                <Grid col={3} px={2}>
-                  <div className='option'>
-                    <span className='option-name'>
-                      Global Categories
-                    </span>
-                    <Select
-                      multi
-                      name='global-categories'
-                      options={this.props.categories}
-                      value={this.state.globalCategories}
-                      onChange={this.onGlobalCategoryChange}
-                    />
-                  </div>
-                </Grid>
-
-                <Grid col={3} px={2}>
-                  <div className='option'>
-                    <span className='option-name'>
-                      Country Categories
-                    </span>
-
-                    <Select
-                      multi
-                      name='country-categories'
-                      value={this.state.countryCategories}
-                      onChange={this.onCountryCategoryChange}
-                      options={this.props.categories}
-                    />
-                  </div>
-                </Grid>
-              </div>}
-
-            </div>
-
-            <div className='section'>
+              <hr />
               <h2>Schedule</h2>
               <Flex>
               <Box px={2}>
@@ -703,75 +664,34 @@ export default class AdminJobsAdd extends React.Component {
               </Box>
               </Flex>
 
-            </div>
 
-            <div className='section'>
-              <h2>Target</h2>
-              <Grid col={3} px={2}>
-              <div className='option'>
-                <span className='option-name'>
-                  Country
-                </span>
-                <Select
-                  multi
-                  name='target-country'
-                  options={this.props.countries}
-                  value={this.state.targetCountries}
-                  onChange={this.onTargetCountryChange}
-                />
-              </div>
-              </Grid>
 
-              <Grid col={3} px={2}>
-              <div className='option'>
-                <span className='option-name'>
-                  Platform
-                </span>
-                <Select
-                  multi
-                  name='target-platform'
-                  options={this.props.platforms}
-                  value={this.state.targetPlatforms}
-                  onChange={this.onTargetPlatformChange}
-                />
-              </div>
-              </Grid>
-
-            </div>
-
-            <div className='section'>
-              <h2>Submit</h2>
-              <Grid col={6} px={2}>
-              <Input
-                hintText='make it something descriptive'
-                name='task-comment'
-                floatingLabelText='Task comment'
-                value={this.state.comment}
-                onChange={this.onCommentChange(value)}
-              />
-              <Button
-                raised
-                onClick={this.onSubmit}
-                label='Add' style={{marginLeft: 20}}/>
-              </Grid>
-
-            </div>
+              </CardText>
+              <CardActions>
+                <Button
+                  raised
+                  onClick={this.onSubmit}
+                  label='Add' style={{marginLeft: 20}} />
+              </CardActions>
+            </Card>
 
           </div>
           </div>}
           <style jsx>{`
           .container {
-            max-width: 1024px;
+            max-width: 900px;
             padding-left: 20px;
             padding-right: 20px;
             margin: auto;
           }
-          .section {
-            padding: 20px;
+          hr {
+            margin-top: 10px;
+            margin-bottom: 10px;
+            color: #ccccc;
           }
-          .section h2 {
-            padding-bottom: 20px;
+          h2 {
             font-weight: 100;
+            padding-bottom: 20px;
           }
           .option-name {
             display: block;
