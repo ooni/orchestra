@@ -15,7 +15,14 @@ import TextField from 'material-ui/TextField'
 import { Card, CardActions, CardHeader, CardTitle, CardText } from 'material-ui/Card'
 import { List, ListItem } from 'material-ui/List'
 import FloatingActionButton from 'material-ui/FloatingActionButton'
-import ContentAdd from 'material-ui/svg-icons/content/add'
+
+import IconAdd from 'material-ui/svg-icons/content/add'
+import IconClear from 'material-ui/svg-icons/content/clear'
+
+import IconMessage from 'material-ui/svg-icons/communication/message'
+import IconAssignment from 'material-ui/svg-icons/action/assignment'
+
+
 
 import Chip from 'material-ui/Chip'
 import Avatar from 'material-ui/Avatar'
@@ -64,10 +71,17 @@ class JobCard extends React.Component {
     if (state === 'deleted') {
       subtitle = `[DELETED] ${subtitle}`
     }
+    let cardAvatar
+    if (task) {
+      cardAvatar = <IconAssignment />
+    } else {
+      cardAvatar = <IconMessage />
+    }
     return (
       <Card style={{marginBottom: '20px'}}>
         <CardHeader
           title={comment}
+          avatar={cardAvatar}
           subtitle={subtitle}
           actAsExpander={true}
           showExpandableButton={true} />
@@ -118,9 +132,15 @@ export default class AdminJobsIndex extends React.Component {
     this.state = {
       jobList: [],
       error: null,
-      session: new Session()
+      session: new Session(),
+      actionButtonOpen: false
     }
     this.onDelete = this.onDelete.bind(this)
+    this.toggleAction = this.toggleAction.bind(this)
+  }
+
+  toggleAction () {
+    this.setState({actionButtonOpen: !this.state.actionButtonOpen})
   }
 
   onDelete (jobId) {
@@ -157,7 +177,8 @@ export default class AdminJobsIndex extends React.Component {
 
   render () {
     const {
-      jobList
+      jobList,
+      actionButtonOpen
     } = this.state
 
     return (
@@ -186,9 +207,25 @@ export default class AdminJobsIndex extends React.Component {
               )
             })}
             <div className='actions'>
-              <FloatingActionButton href='/admin/jobs/add'>
-                <ContentAdd />
-              </FloatingActionButton>
+              <Flex column>
+                {actionButtonOpen && <Box pt={2}>
+                  <FloatingActionButton secondary mini href='/admin/jobs/add_alert'>
+                    <IconMessage />
+                  </FloatingActionButton>
+                </Box>}
+                {actionButtonOpen && <Box pt={2}>
+                  <FloatingActionButton secondary mini href='/admin/jobs/add_task'>
+                    <IconAssignment />
+                  </FloatingActionButton>
+                </Box>}
+
+                <Box pt={2} onClick={() => this.toggleAction()}>
+                  <FloatingActionButton>
+                    {!actionButtonOpen && <IconAdd />}
+                    {actionButtonOpen && <IconClear />}
+                  </FloatingActionButton>
+                </Box>
+              </Flex>
             </div>
           </div>
           <style jsx>{`
@@ -197,9 +234,13 @@ export default class AdminJobsIndex extends React.Component {
             padding-left: 20px;
             padding-right: 20px;
             margin: auto;
+            position: relative;
+            min-height: 50vh;
           }
           .actions {
-            float: right;
+            position: absolute;
+            bottom: 0;
+            right: 0;
           }
           `}</style>
         </div>
