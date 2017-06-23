@@ -64,6 +64,8 @@ func initConfig() {
 
 	if err := viper.ReadInConfig(); err == nil {
 		ctx.Infof("using config file: %s", viper.ConfigFileUsed())
+	} else {
+		ctx.WithError(err).Errorf("failed to load config file")
 	}
 
 	log.SetHandler(cli.Default)

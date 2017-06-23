@@ -1,24 +1,20 @@
 import React from 'react'
 import Head from 'next/head'
-
+import Link from 'next/link'
 import Select from 'react-select'
 
 import Immutable from 'immutable'
 
-import RaisedButton from 'material-ui/RaisedButton'
-import FlatButton from 'material-ui/FlatButton'
-import Checkbox from 'material-ui/Checkbox'
-import DatePicker from 'material-ui/DatePicker'
-import TimePicker from 'material-ui/TimePicker'
-import Slider from 'material-ui/Slider'
-import TextField from 'material-ui/TextField'
-import { Card, CardActions, CardHeader, CardTitle, CardText } from 'material-ui/Card'
-import { List, ListItem } from 'material-ui/List'
-import FloatingActionButton from 'material-ui/FloatingActionButton'
-import ContentAdd from 'material-ui/svg-icons/content/add'
+import Avatar from 'react-toolbox/lib/avatar/Avatar'
+import Button from 'react-toolbox/lib/button/Button'
+import FontIcon from 'react-toolbox/lib/font_icon/FontIcon'
+import Card from 'react-toolbox/lib/card/Card'
+import CardActions from 'react-toolbox/lib/card/CardActions'
+import CardTitle from 'react-toolbox/lib/card/CardTitle'
+import CardText from 'react-toolbox/lib/card/CardText'
 
-import Chip from 'material-ui/Chip'
-import Avatar from 'material-ui/Avatar'
+import List from 'react-toolbox/lib/list/List'
+import ListItem from 'react-toolbox/lib/list/ListItem'
 
 import moment from 'moment'
 
@@ -40,6 +36,13 @@ class JobCard extends React.Component {
     task: React.PropTypes.object
   }
 
+  constructor (props) {
+    super(props)
+    this.state = {
+      isOpen: false
+    }
+  }
+
   render () {
     const {
       state,
@@ -50,8 +53,13 @@ class JobCard extends React.Component {
       schedule,
       target,
       task,
+      alertData,
       onDelete
     } = this.props
+    const {
+      isOpen
+    } = this.state
+
     let targetCountries = 'ANY',
         targetPlatforms = 'ANY'
     if (target.countries.length > 0) {
@@ -60,50 +68,75 @@ class JobCard extends React.Component {
     if (target.platforms.length > 0) {
       targetPlatforms = target.platforms.join(',')
     }
-    let subtitle = task.test_name
+    let subtitle
+    if (task) {
+      subtitle = task.test_name
+    }
     if (state === 'deleted') {
       subtitle = `[DELETED] ${subtitle}`
     }
+
+    let cardAvatarValue, cardAvatar
+    if (task) {
+      cardAvatarValue = 'assignment'
+    } else {
+      cardAvatarValue = 'message'
+    }
+    cardAvatar = <Avatar icon={cardAvatarValue} style={{paddingTop: '8px'}}/>
     return (
-      <Card style={{marginBottom: '20px'}}>
-        <CardHeader
+      <Card style={{position: 'relative'}}>
+        <div style={{position: 'absolute', right: 0}} onClick={() => {this.setState({isOpen: !this.state.isOpen})}}>
+          {isOpen && <Button icon='keyboard_arrow_up' />}
+          {!isOpen && <Button icon='keyboard_arrow_down' />}
+        </div>
+        <CardTitle
           title={comment}
+          avatar={cardAvatar}
           subtitle={subtitle}
-          actAsExpander={true}
-          showExpandableButton={true} />
+          />
         <CardActions>
-          {state !== 'deleted' && <FlatButton label="Delete" onTouchTap={() => {onDelete(id)}}/>}
-           <FlatButton label="Edit" onTouchTap={() => {alert('I do nothing')}}/>
+          {state !== 'deleted' && <Button label="Delete" onClick={() => {onDelete(id)}}/>}
+           <Button label="Edit" onClick={() => {alert('I do nothing')}}/>
         </CardActions>
-        <CardText expandable={true}>
-          <List>
-            <ListItem
-                primaryText={schedule}
-                secondaryText="Schedule"/>
+        <CardText>
+          {isOpen && <List>
+            {alertData && <ListItem
+                caption={alertData.message}
+                legend="Message"/>
+            }
+            {alertData && <ListItem
+                caption={JSON.stringify(alertData.extra)}
+                legend="Alert Extra"/>
+            }
+
+            {task && <ListItem
+                caption={task.test_name}
+                legend="Test name"/>
+            }
+            {task && <ListItem
+                caption={JSON.stringify(task.arguments)}
+                legend="Test arguments"/>
+            }
 
             <ListItem
-                primaryText={''+delay}
-                secondaryText="Delay"/>
+                caption={schedule}
+                legend="Schedule"/>
 
             <ListItem
-                primaryText={creationTime}
-                secondaryText="Creation time"/>
-
-
-            <ListItem
-                primaryText={task.test_name}
-                secondaryText="Test name"/>
-            <ListItem
-                primaryText={JSON.stringify(task.arguments)}
-                secondaryText="Test arguments"/>
+                caption={''+delay}
+                legend="Delay"/>
 
             <ListItem
-                primaryText={targetCountries}
-                secondaryText="Target countries"/>
+                caption={creationTime}
+                legend="Creation time"/>
+
             <ListItem
-                primaryText={targetPlatforms}
-                secondaryText="Target platforms"/>
-          </List>
+                caption={targetCountries}
+                legend="Target countries"/>
+            <ListItem
+                caption={targetPlatforms}
+                legend="Target platforms"/>
+          </List>}
 
         </CardText>
       </Card>
@@ -118,9 +151,15 @@ export default class AdminJobsIndex extends React.Component {
     this.state = {
       jobList: [],
       error: null,
-      session: new Session()
+      session: new Session(),
+      actionButtonOpen: false
     }
     this.onDelete = this.onDelete.bind(this)
+    this.toggleAction = this.toggleAction.bind(this)
+  }
+
+  toggleAction () {
+    this.setState({actionButtonOpen: !this.state.actionButtonOpen})
   }
 
   onDelete (jobId) {
@@ -157,7 +196,8 @@ export default class AdminJobsIndex extends React.Component {
 
   render () {
     const {
-      jobList
+      jobList,
+      actionButtonOpen
     } = this.state
 
     return (
@@ -181,14 +221,25 @@ export default class AdminJobsIndex extends React.Component {
                   schedule={job.schedule}
                   state={job.state}
                   target={job.target}
+                  alertData={job.alert}
                   task={job.task} />
                 </Grid>
               )
             })}
             <div className='actions'>
-              <FloatingActionButton href='/admin/jobs/add'>
-                <ContentAdd />
-              </FloatingActionButton>
+              <Flex column>
+                {actionButtonOpen && <Box pt={2}>
+                  <Link href='/admin/jobs/add_alert'><Button floating icon='message' mini /></Link>
+                </Box>}
+                {actionButtonOpen && <Box pt={2}>
+                  <Link href='/admin/jobs/add_task'><Button floating icon='assignment' mini /></Link>
+                </Box>}
+
+                <Box pt={2} onClick={() => this.toggleAction()}>
+                  {!actionButtonOpen && <Button floating icon='add' accent />}
+                  {actionButtonOpen && <Button floating icon='clear' accent />}
+                </Box>
+              </Flex>
             </div>
           </div>
           <style jsx>{`
@@ -197,9 +248,13 @@ export default class AdminJobsIndex extends React.Component {
             padding-left: 20px;
             padding-right: 20px;
             margin: auto;
+            position: relative;
+            min-height: 50vh;
           }
           .actions {
-            float: right;
+            position: absolute;
+            bottom: 0;
+            right: 0;
           }
           `}</style>
         </div>

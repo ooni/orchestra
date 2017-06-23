@@ -3,8 +3,11 @@ import Router from 'next/router'
 import Session from '../../components/session'
 import Layout from '../../components/layout'
 
-import RaisedButton from 'material-ui/RaisedButton'
-import TextField from 'material-ui/TextField'
+import Button from 'react-toolbox/lib/button/Button'
+import Input from 'react-toolbox/lib/input/Input'
+import Card from 'react-toolbox/lib/card/Card'
+import CardActions from 'react-toolbox/lib/card/CardActions'
+import CardTitle from 'react-toolbox/lib/card/CardTitle'
 
 import { Flex, Box, Grid } from 'reflexbox'
 
@@ -23,6 +26,7 @@ export default class AdminLogin extends React.Component {
   }
 
   onUsernameChange(username) {
+    console.log("Setting username to", username)
     this.setState({username})
   }
   onPasswordChange(password) {
@@ -38,7 +42,7 @@ export default class AdminLogin extends React.Component {
         this.setState({
           error: null
         })
-        if (Router.query.from !== null) {
+        if (Router.query.from) {
           redirectPath = Router.query['from']
         }
         Router.push(redirectPath)
@@ -60,39 +64,27 @@ export default class AdminLogin extends React.Component {
 
     return (
       <Layout>
-        <div className='container'>
+        <Card style={{width: "600px", margin: "auto", padding: '20px'}}>
           {error !== null && <p>{error.message}</p>}
-          <Grid col={3} px={2}>
-            <TextField
-              hintText={`your username`}
-              floatingLabelText='Username'
-              value={this.state.username}
-              onChange={(event, value) => this.onUsernameChange(value)}
-            />
-          </Grid>
-          <br/>
-          <Grid col={3} px={2}>
-            <TextField
-              hintText={`your username`}
-              floatingLabelText='Password'
-              type="password"
-              value={this.state.password}
-              onChange={(event, value) => this.onPasswordChange(value)}
-            />
-          </Grid>
-          <br/>
-          <RaisedButton
-            onTouchTap={this.onSubmit}
-            label='Login' style={{marginLeft: 20}}/>
-          <style jsx>{`
-            .container {
-              max-width: 1024px;
-              padding-left: 20px;
-              padding-right: 20px;
-              margin: auto;
-            }
-          `}</style>
-        </div>
+          <CardTitle title="Authorization required" style={{color: "black"}} />
+          <Input
+            type='text'
+            hint='your username'
+            label='Username'
+            value={this.state.username}
+            onChange={(value) => this.onUsernameChange(value)} />
+          <Input
+            type='password'
+            hint='your password'
+            label='Password'
+            value={this.state.password}
+            onChange={(value) => this.onPasswordChange(value)}/>
+          <CardActions>
+          <Button
+            onClick={this.onSubmit}
+            label='Login' />
+          </CardActions>
+        </Card>
       </Layout>
     )
   }

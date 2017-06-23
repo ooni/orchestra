@@ -1,10 +1,15 @@
 [core]
 environment = "development"
 log-level = "debug"
-notify-url = "http://localhost:8081"
+#notify-url = "http://localhost:8081"
+gorush-url = "http://localhost:8081"
+notify-topic-ios = "org.openobservatory.NetProbe"
+notify-topic-android = "org.openobservatory.NetProbe"
 
 [auth]
 jwt-secret = "TESTING"
+gorush-basic-auth-user = "{{ proteus_notify_basic_auth_user }}"
+gorush-basic-auth-password = "{{ proteus_notify_basic_auth_password }}"
 
 [api]
 port = 8082
@@ -15,5 +20,7 @@ url = "postgres://ooni:antani@127.0.0.1:32768/ooni?sslmode=disable"
 active-probes-table = "active_probes"
 probe-updates-table = "probe_updates"
 jobs-table = "jobs"
+job-alerts-table = "job_alerts"
+job-tasks-table = "job_tasks"
 tasks-table = "tasks"
 accounts-table = "accounts"

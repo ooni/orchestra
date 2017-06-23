@@ -1,17 +1,11 @@
 import React from 'react'
 
-import darkBaseTheme from 'material-ui/styles/baseThemes/darkBaseTheme'
-import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider'
-import getMuiTheme from 'material-ui/styles/getMuiTheme'
+import ThemeProvider from 'react-toolbox/lib/ThemeProvider'
+import theme from '../static/theme'
 
-import Home from 'material-ui/svg-icons/action/home'
-import DeviceHub from 'material-ui/svg-icons/hardware/device-hub'
-import Event from 'material-ui/svg-icons/action/event'
-
-import Drawer from 'material-ui/Drawer'
-import MenuItem from 'material-ui/MenuItem'
-import RaisedButton from 'material-ui/RaisedButton'
-import AppBar from 'material-ui/AppBar'
+import Drawer from 'react-toolbox/lib/drawer/Drawer'
+import MenuItem from 'react-toolbox/lib/menu/MenuItem'
+import AppBar from 'react-toolbox/lib/app_bar/AppBar'
 
 import Link from 'next/link'
 import Head from 'next/head'
@@ -45,13 +39,15 @@ export default class extends React.Component {
     const {
       drawerOpen
     } = this.state
-    const {
+    let {
       title,
       children
     } = this.props
-
+    if (!title) {
+      title = "Proteus"
+    }
     return (
-      <MuiThemeProvider muiTheme={getMuiTheme(darkBaseTheme)}>
+      <ThemeProvider theme={theme}>
       <div>
         <style jsx global>{`
 					* {
@@ -61,8 +57,8 @@ export default class extends React.Component {
 						box-sizing: border-box;
 					}
 					body, html {
-        		background: #000;
-        		color: #ccc;
+            background-color: white;
+            color: #1c1c1c;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
             padding-bottom: 6rem;
       		}
@@ -70,20 +66,21 @@ export default class extends React.Component {
         <Head>
           <meta charSet='utf-8' />
           <meta name='viewport' content='initial-scale=1.0, width=device-width' />
+          <link href='/static/theme.css' rel='stylesheet' />
+          <link href='/static/vendor/material-icons/material-design-icons.css' rel='stylesheet' />
         </Head>
         <header>
           <Drawer
-            docked={false}
-            onRequestChange={(open) => this.setState({drawerOpen: open})}
-            open={drawerOpen}>
-            <MenuItem href='/' leftIcon={<Home/>}>Home</MenuItem>
-            <MenuItem href='/admin/jobs' leftIcon={<Event/>}>Jobs</MenuItem>
-            <MenuItem href='/admin/clients' leftIcon={<DeviceHub/>}>Clients</MenuItem>
+            onOverlayClick={() => this.setState({drawerOpen: false})}
+            active={drawerOpen}>
+            <Link href='/'><MenuItem icon='home'>Home</MenuItem></Link>
+            <Link href='/admin/jobs'><MenuItem icon='event'>Jobs</MenuItem></Link>
+            <Link href='/admin/clients'><MenuItem icon='device_hub'>Clients</MenuItem></Link>
           </Drawer>
           <AppBar
             title={title}
-            iconClassNameRight="muidocs-icon-navigation-expand-more"
-            onLeftIconButtonTouchTap={() => (this.toggleDrawer())}
+            leftIcon='menu'
+            onLeftIconClick={() => (this.toggleDrawer())}
           />
         </header>
         <div className='content'>
@@ -102,7 +99,7 @@ export default class extends React.Component {
           }
           .content {
             font-size: 14px;
-            color: #eee;
+            color: #1c1c1c;
           }
           footer {
             display: flex;
@@ -119,7 +116,7 @@ export default class extends React.Component {
         `}
         </style>
       </div>
-      </MuiThemeProvider>
+      </ThemeProvider>
     )
   }
 }

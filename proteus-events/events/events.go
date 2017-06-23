@@ -44,16 +44,22 @@ type Target struct {
 	Platforms	[]string `json:"platforms"`
 }
 
+type AlertData struct {
+	Id				string `json:"id"`
+	Message			string `json:"message" binding:"required"`
+	Extra			map[string]interface{} `json:"extra"`
+}
+
 type URLTestArg struct {
 	GlobalCategories	[]string `json:"global_categories"`
 	CountryCategories	[]string `json:"country_categories"`
 	URLs				[]string `json:"urls"`
 }
 
-type Task struct {
+type TaskData struct {
 	Id			string `json:"id"`
 	TestName	string `json:"test_name" binding:"required"`
-	Arguments	interface{} `json:"arguments"`
+	Arguments	map[string]interface{} `json:"arguments"`
 	State		string
 }
 
@@ -62,7 +68,8 @@ type JobData struct {
 	Schedule		string `json:"schedule" binding:"required"`
 	Delay			int64 `json:"delay"`
 	Comment			string `json:"comment" binding:"required"`
-	Task			Task `json:"task"`
+	TaskData		*TaskData `json:"task"`
+	AlertData		*AlertData `json:"alert"`
 	Target			Target `json:"target"`
 	State			string `json:"state"`
 
@@ -70,6 +77,10 @@ type JobData struct {
 }
 
 func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
+	var (
+		taskNo sql.NullInt64
+		alertNo sql.NullInt64
+	)
 	schedule, err := ParseSchedule(jd.Schedule)
 	if err != nil {
 		ctx.WithError(err).Error("invalid schedule format")
@@ -84,18 +95,74 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 
 	jd.Id = uuid.NewV4().String()
 	{
+		if (jd.AlertData != nil) {
+			query := fmt.Sprintf(`INSERT INTO %s (
+				alert_no,
+				message,
+				extra
+			) VALUES (DEFAULT, $1, $2)
+			RETURNING alert_no;`,
+			pq.QuoteIdentifier(viper.GetString("database.job-alerts-table")))
+			stmt, err := tx.Prepare(query)
+			if (err != nil) {
+				ctx.WithError(err).Error("failed to prepare jobs-alerts query")
+				return "", err
+			}
+			defer stmt.Close()
+
+			alertExtraStr, err := json.Marshal(jd.AlertData.Extra)
+			if err != nil {
+				tx.Rollback()
+				ctx.WithError(err).Error("failed to serialise alert args")
+			}
+			err = stmt.QueryRow(jd.AlertData.Message, alertExtraStr).Scan(&alertNo)
+			if err != nil {
+				tx.Rollback()
+				ctx.WithError(err).Error("failed to insert into job-alerts table")
+				return "", err
+			}
+		} else if (jd.TaskData != nil) {
+			query := fmt.Sprintf(`INSERT INTO %s (
+				task_no,
+				test_name,
+				arguments
+			) VALUES (DEFAULT, $1, $2)
+			RETURNING task_no;`,
+			pq.QuoteIdentifier(viper.GetString("database.job-tasks-table")))
+			stmt, err := tx.Prepare(query)
+			if (err != nil) {
+				ctx.WithError(err).Error("failed to prepare jobs-tasks query")
+				return "", err
+			}
+			defer stmt.Close()
+
+			taskArgsStr, err := json.Marshal(jd.TaskData.Arguments)
+			if err != nil {
+				tx.Rollback()
+				ctx.WithError(err).Error("failed to serialise task args")
+			}
+			err = stmt.QueryRow(jd.TaskData.TestName, taskArgsStr).Scan(&taskNo)
+			if err != nil {
+				tx.Rollback()
+				ctx.WithError(err).Error("failed to insert into job-tasks table")
+				return "", err
+			}
+		} else {
+			return "", errors.New("task or alert must be defined")
+		}
+
 		query := fmt.Sprintf(`INSERT INTO %s (
 			id, comment,
 			schedule, delay,
 			target_countries,
 			target_platforms,
-			task_test_name,
-			task_arguments,
 			creation_time,
 			times_run,
 			next_run_at,
 			is_done,
-			state
+			state,
+			task_no,
+			alert_no
 		) VALUES (
 			$1, $2,
 			$3, $4,
@@ -117,22 +184,17 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 		}
 		defer stmt.Close()
 
-		taskArgsStr, err := json.Marshal(jd.Task.Arguments)
-		if err != nil {
-			ctx.WithError(err).Error("failed to serialise task arguments")
-			return "", err
-		}
 		_, err = stmt.Exec(jd.Id, jd.Comment,
 							jd.Schedule, jd.Delay,
 							pq.Array(jd.Target.Countries),
 							pq.Array(jd.Target.Platforms),
-							jd.Task.TestName,
-							taskArgsStr,
 							time.Now().UTC(),
 							0,
 							schedule.StartTime,
 							false,
-							"active")
+							"active",
+							taskNo,
+							alertNo)
 		if err != nil {
 			tx.Rollback()
 			ctx.WithError(err).Error("failed to insert into jobs table")
@@ -170,10 +232,16 @@ func ListJobs(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
 		schedule, delay,
 		target_countries,
 		target_platforms,
-		task_test_name,
-		task_arguments,
+		jobs.alert_no,
+		job_alerts.message,
+		job_alerts.extra,
+		jobs.task_no,
+		job_tasks.test_name,
+		job_tasks.arguments,
 		COALESCE(state, 'active') AS state
-		FROM %s`,
+		FROM %s
+		LEFT OUTER JOIN job_alerts ON (job_alerts.alert_no = jobs.alert_no)
+		LEFT OUTER JOIN job_tasks ON (job_tasks.task_no = jobs.task_no)`,
 		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
 	if showDeleted == false {
 		query += " WHERE state = 'active'"
@@ -187,26 +255,56 @@ func ListJobs(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
 	for rows.Next() {
 		var (
 			jd JobData
+			alertNo sql.NullInt64
+			alertMessage sql.NullString
+			alertExtra types.JSONText
+
+			taskNo sql.NullInt64
+			taskTestName sql.NullString
 			taskArgs types.JSONText
 		)
-		err := rows.Scan(&jd.Id,
-						&jd.Comment,
+		err := rows.Scan(&jd.Id, &jd.Comment,
 						&jd.CreationTime,
-						&jd.Schedule,
-						&jd.Delay,
+						&jd.Schedule, &jd.Delay,
 						pq.Array(&jd.Target.Countries),
 						pq.Array(&jd.Target.Platforms),
-						&jd.Task.TestName,
+						&alertNo,
+						&alertMessage,
+						&alertExtra,
+						&taskNo,
+						&taskTestName,
 						&taskArgs,
 						&jd.State)
 		if err != nil {
 			ctx.WithError(err).Error("failed to iterate over jobs")
 			return currentJobs, err
 		}
-		err = taskArgs.Unmarshal(&jd.Task.Arguments)
-		if err != nil {
-			ctx.WithError(err).Error("failed to unmarshal JSON")
-			return currentJobs, err
+		if taskNo.Valid {
+			td := TaskData{}
+			// XXX This is quite optimist
+			if !taskTestName.Valid {
+				panic("task_test_name is NULL")
+			}
+			td.TestName = taskTestName.String
+			err = taskArgs.Unmarshal(&td.Arguments)
+			if err != nil {
+				ctx.WithError(err).Error("failed to unmarshal task args JSON")
+				return currentJobs, err
+			}
+			jd.TaskData = &td
+		}
+		if alertNo.Valid {
+			ad := AlertData{}
+			if !alertMessage.Valid {
+				panic("alert_message is NULL")
+			}
+			ad.Message = alertMessage.String
+			err = alertExtra.Unmarshal(&ad.Extra)
+			if err != nil {
+				ctx.WithError(err).Error("failed to unmarshal alert extra JSON")
+				return currentJobs, err
+			}
+			jd.AlertData = &ad
 		}
 		currentJobs = append(currentJobs, jd)
 	}
@@ -236,19 +334,19 @@ var ErrTaskNotFound = errors.New("task not found")
 var ErrAccessDenied = errors.New("access denied")
 var ErrInconsistentState = errors.New("task already accepted")
 
-func GetTask(tID string, uID string, db *sqlx.DB) (Task, error) {
+func GetTask(tID string, uID string, db *sqlx.DB) (TaskData, error) {
 	var (
 		err error
 		probeId string
 		taskArgs types.JSONText
 	)
-	task := Task{}
+	task := TaskData{}
 	query := fmt.Sprintf(`SELECT
 		id,
 		probe_id,
 		test_name,
 		arguments,
-		COALESCE(state, 'active')
+		COALESCE(state, 'ready')
 		FROM %s
 		WHERE id = $1`,
 		pq.QuoteIdentifier(viper.GetString("database.tasks-table")))
@@ -277,10 +375,10 @@ func GetTask(tID string, uID string, db *sqlx.DB) (Task, error) {
 }
 
 func GetTasksForUser(uID string, since string,
-						db *sqlx.DB) ([]Task, error) {
+						db *sqlx.DB) ([]TaskData, error) {
 	var (
 		err error
-		tasks []Task
+		tasks []TaskData
 	)
 	query := fmt.Sprintf(`SELECT
 		id,
@@ -304,7 +402,7 @@ func GetTasksForUser(uID string, since string,
 	for rows.Next() {
 		var (
 			taskArgs types.JSONText
-			task Task
+			task TaskData
 		)
 		rows.Scan(&task.Id, &task.TestName, &taskArgs)
 		if err != nil {

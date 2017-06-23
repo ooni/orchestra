@@ -24,6 +24,11 @@ export default () => {
           justify-content: center;
           position: relative;
         }
+        .hero img {
+          background-color: black;
+          padding: 20px;
+          border-radius: 20px;
+        }
         h1 {
           font-size: 80px;
           font-weight: 200;

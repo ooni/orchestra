@@ -9,6 +9,7 @@ import (
 	"os"
 	"net/http"
 	"net/url"
+	"io/ioutil"
 	_ "os/signal"
 	"sync"
 	_ "syscall"
@@ -23,13 +24,21 @@ import (
 
 type JobTarget struct {
 	ClientID	string
-	TaskID		string
+	TaskId		*string
+	TaskData	*TaskData
+	AlertData	*AlertData
+	Token		string
+	Platform	string
 }
 
-func NewJobTarget(cID string, tID string) *JobTarget {
+func NewJobTarget(cID string, token string, plat string, tid *string, td *TaskData, ad *AlertData) *JobTarget {
 	return &JobTarget{
 		ClientID: cID,
-		TaskID: tID,
+		TaskId: tid,
+		TaskData: td,
+		AlertData: ad,
+		Token: token,
+		Platform: plat,
 	}
 }
 
@@ -47,7 +56,7 @@ type Job struct {
 	IsDone		bool
 }
 
-func (j *Job) CreateTask(cID string, t Task, jDB *JobDB) (string, error) {
+func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
 	tx, err := jDB.db.Begin()
 	if err != nil {
 		ctx.WithError(err).Error("failed to open createTask transaction")
@@ -124,15 +133,20 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 		targetCountries []string
 		targetPlatforms []string
 		targets []*JobTarget
-		taskArgs types.JSONText
-		task Task
+
+		taskNo sql.NullInt64
+		alertNo sql.NullInt64
 		rows *sql.Rows
+		taskData *TaskData
+		alertData *AlertData
 	)
+	ctx.Debug("getting targets")
+
 	query = fmt.Sprintf(`SELECT
 		target_countries,
 		target_platforms,
-		task_test_name,
-		task_arguments
+		task_no,
+		alert_no
 		FROM %s
 		WHERE id = $1`,
 		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
@@ -140,8 +154,8 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	err = jDB.db.QueryRow(query, j.Id).Scan(
 		pq.Array(&targetCountries),
 		pq.Array(&targetPlatforms),
-		&task.TestName,
-		&taskArgs)
+		&taskNo,
+		&alertNo)
 	if err != nil {
 		ctx.WithError(err).Error("failed to obtain targets")
 		if err == sql.ErrNoRows {
@@ -149,15 +163,62 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 		}
 		panic("other error in query")
 	}
-	err = taskArgs.Unmarshal(&task.Arguments)
-	if err != nil {
-		ctx.WithError(err).Error("failed to unmarshal json")
-		panic("invalid JSON in database")
+
+	if alertNo.Valid {
+		var (
+			alertExtra types.JSONText
+		)
+		ad := AlertData{}
+		query := fmt.Sprintf(`SELECT
+			message,
+			extra
+			FROM %s
+			WHERE alert_no = $1`,
+		pq.QuoteIdentifier(viper.GetString("database.job-alerts-table")))
+		err = jDB.db.QueryRow(query, alertNo.Int64).Scan(
+			&ad.Message,
+			&alertExtra)
+		if err != nil {
+			ctx.WithError(err).Errorf("failed to get alert_no %d", alertNo.Int64)
+			panic("failed to get alert_no")
+		}
+		err = alertExtra.Unmarshal(&ad.Extra)
+		if err != nil {
+			ctx.WithError(err).Error("failed to unmarshal json for alert")
+			panic("invalid JSON in database")
+		}
+		alertData = &ad
+	} else if taskNo.Valid {
+		var (
+			taskArgs types.JSONText
+		)
+		td := TaskData{}
+		query := fmt.Sprintf(`SELECT
+			test_name,
+			arguments
+			FROM %s
+			WHERE task_no = $1`,
+		pq.QuoteIdentifier(viper.GetString("database.job-tasks-table")))
+		err = jDB.db.QueryRow(query, taskNo.Int64).Scan(
+			&td.TestName,
+			&taskArgs)
+		if err != nil {
+			ctx.WithError(err).Errorf("failed to get task_no %d", taskNo.Int64)
+			panic("failed to get task_no")
+		}
+		err = taskArgs.Unmarshal(&td.Arguments)
+		if err != nil {
+			ctx.WithError(err).Error("failed to unmarshal json for task")
+			panic("invalid JSON in database")
+		}
+		taskData = &td
+	} else {
+		panic("inconsistent database missing task_no or alert_no")
 	}
 
 	// XXX this is really ghetto. There is probably a much better way of doing
 	// it.
-	query = fmt.Sprintf("SELECT id FROM %s",
+	query = fmt.Sprintf("SELECT id, token, platform FROM %s",
 		pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
 	if len(targetCountries) > 0 && len(targetPlatforms) > 0 {
 		query += " WHERE probe_cc = ANY($1) AND platform = ANY($2)"
@@ -183,20 +244,24 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			clientID string
-			taskID string
+			clientId string
+			taskId string
+			token string
+			plat string
 		)
-		err = rows.Scan(&clientID)
+		err = rows.Scan(&clientId, &token, &plat)
 		if err != nil {
 			ctx.WithError(err).Error("failed to iterate over targets")
 			return targets
 		}
-		taskID, err = j.CreateTask(clientID, task, jDB)
-		if err != nil {
-			ctx.WithError(err).Error("failed to create task")
-			return targets
+		if taskData != nil {
+			taskId, err = j.CreateTask(clientId, taskData, jDB)
+			if err != nil {
+				ctx.WithError(err).Error("failed to create task")
+				return targets
+			}
 		}
-		targets = append(targets, NewJobTarget(clientID, taskID))
+		targets = append(targets, NewJobTarget(clientId, token, plat, &taskId, taskData, alertData))
 	}
 	return targets
 }
@@ -241,18 +306,21 @@ type NotifyReq struct {
 	Event map[string]interface {} `json:"event"`
 }
 
-func TaskNotify(clientID string, taskID string, jDB *JobDB) error {
+func TaskNotifyProteus(bu string, jt *JobTarget) error {
+	var err error;
 	path, _ := url.Parse("/api/v1/notify")
-	baseUrl, err := url.Parse(viper.GetString("core.notify-url"))
+
+	baseUrl, err := url.Parse(bu);
 	if err != nil {
 		ctx.WithError(err).Error("invalid base url")
 		return err
 	}
+
 	notifyReq := NotifyReq{
-		ClientIDs: []string{clientID},
+		ClientIDs: []string{jt.ClientID},
 		Event: map[string]interface{}{
 			"type": "run_task",
-			"task_id": taskID,
+			"task_id": jt.TaskId,
 		},
 	}
 	jsonStr, err := json.Marshal(notifyReq)
@@ -276,8 +344,137 @@ func TaskNotify(clientID string, taskID string, jDB *JobDB) error {
 	if resp.StatusCode != 200 {
 		return errors.New("http request returned invalid status code")
 	}
-	err = SetTaskState(taskID,
-						clientID,
+	return nil
+}
+
+type GoRushNotification struct {
+	Tokens []string `json:"tokens"`
+	Platform int `json:"platform"`
+	Message	string `json:"message"`
+	Topic string `json:"topic"`
+	To string `json:"topic"`
+	Data map[string]interface {} `json:"data"`
+	ContentAvailable bool `json:"content_available"`
+}
+
+type GoRushReq struct {
+	Notifications []*GoRushNotification `json:"notifications"`
+}
+
+type Notification struct {
+	Type int // 1 is message 2 is Event
+	Message string
+	Event map[string]interface {}
+}
+
+func NotifyGorush(bu string, jt *JobTarget) error {
+	var (
+		err error
+	)
+
+	path, _ := url.Parse("/api/push")
+
+	baseUrl, err := url.Parse(bu)
+	if err != nil {
+		ctx.WithError(err).Error("invalid base url")
+		return err
+	}
+
+	notification := &GoRushNotification{
+		Tokens: []string{jt.Token},
+	}
+
+	if jt.AlertData != nil {
+		notification.Message = jt.AlertData.Message
+		notification.Data = jt.AlertData.Extra
+	} else if jt.TaskData != nil {
+		notification.Data = map[string]interface{}{
+			"type": "run_task",
+			"payload": map[string]string{
+				"task_id": *jt.TaskId,
+			},
+		}
+		notification.ContentAvailable = true
+	} else {
+		return errors.New("either alertData or TaskData must be set")
+	}
+
+	if (jt.Platform == "ios") {
+		notification.Platform = 1
+		notification.Topic = viper.GetString("core.notify-topic-ios")
+	} else if (jt.Platform == "android") {
+		notification.Platform = 2
+		notification.To = viper.GetString("core.notify-topic-android")
+	} else {
+		return errors.New("unsupported platform")
+	}
+
+	notifyReq := GoRushReq{
+		Notifications: []*GoRushNotification{notification},
+	}
+
+	jsonStr, err := json.Marshal(notifyReq)
+	if err != nil {
+		ctx.WithError(err).Error("failed to marshal data")
+		return err
+	}
+	u := baseUrl.ResolveReference(path)
+	req, err := http.NewRequest("POST",
+								u.String(),
+								bytes.NewBuffer(jsonStr))
+    req.Header.Set("Content-Type", "application/json")
+	if viper.IsSet("auth.gorush-basic-auth-user") {
+		req.SetBasicAuth(viper.GetString("auth.gorush-basic-auth-user"),
+						 viper.GetString("auth.gorush-basic-auth-password"))
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		ctx.WithError(err).Error("http request failed")
+		return err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		ctx.WithError(err).Error("failed to read response body")
+		return err
+	}
+	ctx.Debugf("got response: %s", body)
+	// XXX do we also want to check the body?
+	if resp.StatusCode != 200 {
+		return errors.New("http request returned invalid status code")
+	}
+	return nil
+
+}
+
+func Notify(jt *JobTarget, jDB *JobDB) error {
+	var err error
+	if  (jt.Platform != "android" && jt.Platform != "ios") {
+		ctx.Debugf("we don't support notifying to %s", jt.Platform)
+		return nil
+	}
+
+	if viper.IsSet("core.gorush-url") {
+		err = NotifyGorush(
+			viper.GetString("core.gorush-url"),
+			jt)
+	} else if viper.IsSet("core.notify-url") {
+		err = errors.New("proteus notify is deprecated")
+		/*
+		err = TaskNotifyProteus(
+			viper.GetString("core.notify-url"),
+			jt)
+		*/
+	} else {
+		err = errors.New("no valid notification service found")
+	}
+
+	if err != nil {
+		return err
+	}
+	err = SetTaskState(jt.TaskData.Id,
+						jt.ClientID,
 						"notified",
 						[]string{"ready"},
 						"notification_time",
@@ -304,11 +501,11 @@ func (j *Job) Run(jDB *JobDB) {
 		// XXX
 		// In here shall go logic to connect to notification server and notify
 		// them of the task
-		ctx.Debugf("notifying %s of %s", t.ClientID, t.TaskID)
-		err := TaskNotify(t.ClientID, t.TaskID, jDB)
+		ctx.Debugf("notifying %s", t.ClientID)
+		err := Notify(t, jDB)
 		if err != nil {
-			ctx.WithError(err).Errorf("failed to notify %s of %s",
-										t.ClientID, t.TaskID)
+			ctx.WithError(err).Errorf("failed to notify %s",
+										t.ClientID)
 		}
 	}
 
@@ -339,7 +536,6 @@ func (j *Job) Save(jDB *JobDB) error {
 		ctx.WithError(err).Error("failed to open transaction")
 		return err
 	}
-
 	query := fmt.Sprintf(`UPDATE %s SET
 		times_run = $2,
 		next_run_at = $3,
@@ -354,7 +550,7 @@ func (j *Job) Save(jDB *JobDB) error {
 	}
 	_, err = stmt.Exec(j.Id,
 						j.TimesRun,
-						j.NextRunAt.Format(ISOUTCTimeLayout),
+						j.NextRunAt.UTC(),
 						j.IsDone)
 
 	if (err != nil) {

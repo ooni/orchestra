@@ -5,17 +5,15 @@ import React from 'react'
 import Head from 'next/head'
 import Router from 'next/router'
 
-import RaisedButton from 'material-ui/RaisedButton'
-import FlatButton from 'material-ui/FlatButton'
-import Checkbox from 'material-ui/Checkbox'
-import DatePicker from 'material-ui/DatePicker'
-import TimePicker from 'material-ui/TimePicker'
-import Slider from 'material-ui/Slider'
-import TextField from 'material-ui/TextField'
-import { Card, CardActions, CardHeader, CardTitle, CardText } from 'material-ui/Card'
-import { List, ListItem } from 'material-ui/List'
-import Divider from 'material-ui/Divider'
-import { Flex, Box, Grid } from 'reflexbox'
+import { Grid } from 'reflexbox'
+
+import Button from 'react-toolbox/lib/button/Button'
+import Card from 'react-toolbox/lib/card/Card'
+import CardTitle from 'react-toolbox/lib/card/CardTitle'
+import CardText from 'react-toolbox/lib/card/CardText'
+
+import List from 'react-toolbox/lib/list/List'
+import ListItem from 'react-toolbox/lib/list/ListItem'
 
 import Session from '../../components/session'
 import Layout from '../../components/layout'
@@ -35,6 +33,12 @@ class ActiveClient extends React.Component {
     lastUpdated: React.PropTypes.string,
     created: React.PropTypes.object,
   }
+  constructor (props) {
+    super(props)
+    this.state = {
+      isOpen: false
+    }
+  }
 
   render () {
     const {
@@ -51,52 +55,58 @@ class ActiveClient extends React.Component {
       lastUpdated,
       created
     } = this.props
+    const {
+      isOpen
+    } = this.state
+
     const title = `${clientId.slice(-5)} (${probeAsn}, ${probeCc})`
     const subtitle = `last updated ${moment(lastUpdated).fromNow()}`
     return (
-      <Card style={{marginBottom: '20px'}}>
-        <CardHeader
+      <Card style={{position: 'relative'}}>
+        <div style={{position: 'absolute', right: 0}} onClick={() => {this.setState({isOpen: !this.state.isOpen})}}>
+          {isOpen && <Button icon='keyboard_arrow_up' />}
+          {!isOpen && <Button icon='keyboard_arrow_down' />}
+        </div>
+        <CardTitle
           title={title}
-          subtitle={subtitle}
-          actAsExpander={true}
-          showExpandableButton={true} />
-        <CardText expandable={true}>
-          <List>
+          subtitle={subtitle} />
+        <CardText>
+          {isOpen && <List>
             <ListItem
-                primaryText={probeAsn}
-                secondaryText="ASN"/>
+                caption={probeAsn}
+                legend="ASN"/>
 
             <ListItem
-                primaryText={probeCc}
-                secondaryText="Country"/>
+                caption={probeCc}
+                legend="Country"/>
 
             <ListItem
-                primaryText={platform}
-                secondaryText="Platform"/>
+                caption={platform}
+                legend="Platform"/>
 
             <ListItem
-                primaryText={softwareName + ' v' + softwareVersion}
-                secondaryText="Software version"/>
+                caption={softwareName + ' v' + softwareVersion}
+                legend="Software version"/>
 
             <ListItem
-                primaryText={supportedTests}
-                secondaryText="Supported tests"/>
+                caption={supportedTests}
+                legend="Supported tests"/>
             <ListItem
-                primaryText={networkType}
-                secondaryText="Network Type"/>
+                caption={networkType}
+                legend="Network Type"/>
             <ListItem
-                primaryText={''+availableBandwidth}
-                secondaryText="Bandwidth"/>
+                caption={''+availableBandwidth}
+                legend="Bandwidth"/>
             <ListItem
-                primaryText={token}
-                secondaryText="Token"/>
+                caption={token}
+                legend="Token"/>
             <ListItem
-                primaryText={moment(lastUpdated).fromNow()}
-                secondaryText="Updated"/>
+                caption={moment(lastUpdated).fromNow()}
+                legend="Updated"/>
             <ListItem
-                primaryText={moment(created).fromNow()}
-                secondaryText="Created"/>
-          </List>
+                caption={moment(created).fromNow()}
+                legend="Created"/>
+          </List>}
 
         </CardText>
       </Card>
