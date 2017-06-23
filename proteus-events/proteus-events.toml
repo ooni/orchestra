@@ -8,6 +8,8 @@ notify-topic-android = "org.openobservatory.NetProbe"
 
 [auth]
 jwt-secret = "TESTING"
+gorush-basic-auth-user = "{{ proteus_notify_basic_auth_user }}"
+gorush-basic-auth-password = "{{ proteus_notify_basic_auth_password }}"
 
 [api]
 port = 8082

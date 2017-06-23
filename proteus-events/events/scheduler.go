@@ -401,10 +401,10 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 
 	if (jt.Platform == "ios") {
 		notification.Platform = 1
-		notification.Topic = viper.GetString("notify-topic-ios")
+		notification.Topic = viper.GetString("core.notify-topic-ios")
 	} else if (jt.Platform == "android") {
 		notification.Platform = 2
-		notification.To = viper.GetString("notify-topic-android")
+		notification.To = viper.GetString("core.notify-topic-android")
 	} else {
 		return errors.New("unsupported platform")
 	}
@@ -423,6 +423,10 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 								u.String(),
 								bytes.NewBuffer(jsonStr))
     req.Header.Set("Content-Type", "application/json")
+	if viper.IsSet("auth.gorush-basic-auth-user") {
+		req.SetBasicAuth(viper.GetString("auth.gorush-basic-auth-user"),
+						 viper.GetString("auth.gorush-basic-auth-password"))
+	}
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {

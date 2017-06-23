@@ -9,6 +9,8 @@ notify-topic-android = "org.openobservatory.ooniprobe"
 
 [auth]
 jwt-secret = "CHANGEME (must be in sync amongst all instances using JWT)"
+gorush-basic-auth-user = "proteus"
+gorush-basic-auth-password = "CHANGEME"
 
 [api]
 port = 8082
