@@ -232,10 +232,16 @@ func ListJobs(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
 		schedule, delay,
 		target_countries,
 		target_platforms,
-		task_test_name,
-		task_arguments,
+		jobs.alert_no,
+		job_alerts.message,
+		job_alerts.extra,
+		jobs.task_no,
+		job_tasks.test_name,
+		job_tasks.arguments,
 		COALESCE(state, 'active') AS state
-		FROM %s`,
+		FROM %s
+		LEFT OUTER JOIN job_alerts ON (job_alerts.alert_no = jobs.alert_no)
+		LEFT OUTER JOIN job_tasks ON (job_tasks.task_no = jobs.task_no)`,
 		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
 	if showDeleted == false {
 		query += " WHERE state = 'active'"
@@ -249,26 +255,56 @@ func ListJobs(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
 	for rows.Next() {
 		var (
 			jd JobData
+			alertNo sql.NullInt64
+			alertMessage sql.NullString
+			alertExtra types.JSONText
+
+			taskNo sql.NullInt64
+			taskTestName sql.NullString
 			taskArgs types.JSONText
 		)
-		err := rows.Scan(&jd.Id,
-						&jd.Comment,
+		err := rows.Scan(&jd.Id, &jd.Comment,
 						&jd.CreationTime,
-						&jd.Schedule,
-						&jd.Delay,
+						&jd.Schedule, &jd.Delay,
 						pq.Array(&jd.Target.Countries),
 						pq.Array(&jd.Target.Platforms),
-						&jd.TaskData.TestName,
+						&alertNo,
+						&alertMessage,
+						&alertExtra,
+						&taskNo,
+						&taskTestName,
 						&taskArgs,
 						&jd.State)
 		if err != nil {
 			ctx.WithError(err).Error("failed to iterate over jobs")
 			return currentJobs, err
 		}
-		err = taskArgs.Unmarshal(&jd.TaskData.Arguments)
-		if err != nil {
-			ctx.WithError(err).Error("failed to unmarshal JSON")
-			return currentJobs, err
+		if taskNo.Valid {
+			td := TaskData{}
+			// XXX This is quite optimist
+			if !taskTestName.Valid {
+				panic("task_test_name is NULL")
+			}
+			td.TestName = taskTestName.String
+			err = taskArgs.Unmarshal(&td.Arguments)
+			if err != nil {
+				ctx.WithError(err).Error("failed to unmarshal task args JSON")
+				return currentJobs, err
+			}
+			jd.TaskData = &td
+		}
+		if alertNo.Valid {
+			ad := AlertData{}
+			if !alertMessage.Valid {
+				panic("alert_message is NULL")
+			}
+			ad.Message = alertMessage.String
+			err = alertExtra.Unmarshal(&ad.Extra)
+			if err != nil {
+				ctx.WithError(err).Error("failed to unmarshal alert extra JSON")
+				return currentJobs, err
+			}
+			jd.AlertData = &ad
 		}
 		currentJobs = append(currentJobs, jd)
 	}
