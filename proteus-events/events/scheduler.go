@@ -352,7 +352,7 @@ type GoRushNotification struct {
 	Platform int `json:"platform"`
 	Message	string `json:"message"`
 	Topic string `json:"topic"`
-	To string `json:"topic"`
+	To string `json:"to"`
 	Data map[string]interface {} `json:"data"`
 	ContentAvailable bool `json:"content_available"`
 }
@@ -385,8 +385,17 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 	}
 
 	if jt.AlertData != nil {
+		var (
+			notificationType = "default"
+		)
+		if _, ok := jt.AlertData.Extra["href"]; ok {
+			notificationType = "open_href"
+		}
 		notification.Message = jt.AlertData.Message
-		notification.Data = jt.AlertData.Extra
+		notification.Data = map[string]interface{}{
+			"type": notificationType,
+			"payload": jt.AlertData.Extra,
+		}
 	} else if jt.TaskData != nil {
 		notification.Data = map[string]interface{}{
 			"type": "run_task",
@@ -419,6 +428,7 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 		return err
 	}
 	u := baseUrl.ResolveReference(path)
+	ctx.Debugf("sending notify request: %s", jsonStr)
 	req, err := http.NewRequest("POST",
 								u.String(),
 								bytes.NewBuffer(jsonStr))
@@ -442,10 +452,10 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 	ctx.Debugf("got response: %s", body)
 	// XXX do we also want to check the body?
 	if resp.StatusCode != 200 {
+		ctx.Debugf("got invalid status code: %d", resp.StatusCode)
 		return errors.New("http request returned invalid status code")
 	}
 	return nil
-
 }
 
 func Notify(jt *JobTarget, jDB *JobDB) error {
@@ -473,15 +483,17 @@ func Notify(jt *JobTarget, jDB *JobDB) error {
 	if err != nil {
 		return err
 	}
-	err = SetTaskState(jt.TaskData.Id,
-						jt.ClientID,
-						"notified",
-						[]string{"ready"},
-						"notification_time",
-						jDB.db)
-	if err != nil {
-		ctx.WithError(err).Error("failed to update task state")
-		return err
+	if jt.TaskData != nil {
+		err = SetTaskState(jt.TaskData.Id,
+							jt.ClientID,
+							"notified",
+							[]string{"ready"},
+							"notification_time",
+							jDB.db)
+		if err != nil {
+			ctx.WithError(err).Error("failed to update task state")
+			return err
+		}
 	}
 	return nil
 }
