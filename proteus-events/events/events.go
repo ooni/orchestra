@@ -313,7 +313,7 @@ func ListJobs(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
 
 var ErrJobNotFound = errors.New("job not found")
 
-func DeleteJob(jobID string, db *sqlx.DB) (error) {
+func DeleteJob(jobID string, db *sqlx.DB, s *Scheduler) (error) {
 	query := fmt.Sprintf(`UPDATE %s SET
 		state = $2
 		WHERE id = $1`,
@@ -326,6 +326,10 @@ func DeleteJob(jobID string, db *sqlx.DB) (error) {
 		}
 		ctx.WithError(err).Error("failed delete job")
 		return err
+	}
+	err = s.DeleteJob(jobID)
+	if err != nil {
+		ctx.WithError(err).Error("failed to delete job from runningJobs")
 	}
 	return nil
 }
@@ -555,7 +559,7 @@ func Start() {
 		})
 		admin.DELETE("/job/:job_id", func(c *gin.Context) {
 			jobID := c.Param("job_id")
-			err := DeleteJob(jobID, db)
+			err := DeleteJob(jobID, db, scheduler)
 			if err != nil {
 				if err == ErrJobNotFound {
 					c.JSON(http.StatusNotFound,

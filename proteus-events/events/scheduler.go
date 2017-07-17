@@ -663,15 +663,26 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 }
 
 type Scheduler struct {
-	jobDB	JobDB
-
+	jobDB		JobDB
+	runningJobs	map[string]*Job
 	stopped	chan os.Signal
 }
 
 func NewScheduler(db *sqlx.DB) *Scheduler {
 	return &Scheduler{
 			stopped: make(chan os.Signal),
+			runningJobs: make(map[string]*Job),
 			jobDB: JobDB{db: db}}
+}
+
+func (s *Scheduler) DeleteJob(jobID string) error {
+	job, ok := s.runningJobs[jobID]
+	if !ok {
+		return errors.New("Job is not part of the running jobs")
+	}
+	job.IsDone = true
+	delete(s.runningJobs, jobID)
+	return nil
 }
 
 func (s *Scheduler) RunJob(j *Job) {
@@ -691,6 +702,7 @@ func (s *Scheduler) Start() {
 		return
 	}
 	for _, j := range allJobs {
+		s.runningJobs[j.Id] = j
 		s.RunJob(j)
 	}
 }
