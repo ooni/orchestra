@@ -1,3 +1,15 @@
+# proteus 0.1.0-beta.4 [2017-06-17]
+
+* Fix bug in deletion of jobs
+
+# proteus 0.1.0-beta.3 [2017-06-23]
+
+* Add support for alert notifications
+
+* Temporarily disable measurement job scheduling from UI
+
+* Use gorush instead of proteus-notify
+
 # proteus 0.1.0-beta.2 [2017-05-28]
 
 * Fix the schema of proteus-events
