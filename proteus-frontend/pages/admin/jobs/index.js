@@ -184,7 +184,7 @@ export default class AdminJobsIndex extends React.Component {
     req.get('/api/v1/admin/jobs')
       .then((res) => {
         this.setState({
-          jobList: res.data.jobs,
+          jobList: res.data.jobs || [],
           error: null
         })
     }).catch((err) => {
