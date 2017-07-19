@@ -2,7 +2,7 @@
   "name": "proteus-frontend",
   "author": "",
   "license": "BSD-2-Clause",
-  "version": "0.1.0-beta.2",
+  "version": "0.1.0-beta.5",
   "dependencies": {
     "axios": "^0.15.3",
     "dotenv": "^4.0.0",
