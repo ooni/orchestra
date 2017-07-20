@@ -132,7 +132,7 @@ export default class AdminJobsAdd extends React.Component {
       startDate: new Date(),
       startTime: new Date(),
       startMoment: moment(),
-      repeatCount: 0,
+      repeatCount: 1,
       alertMessage: '',
       href: '',
       altHref: '',
@@ -477,42 +477,39 @@ export default class AdminJobsAdd extends React.Component {
               </Box>
 
               <Box px={2}>
-              <div className='option'>
-                <span className='option-name'>
-                  Repeat
-                </span>
-                <RepeatString duration={this.state.duration} repeatCount={this.state.repeatCount} />
-                <DurationPicker onChange={this.onDurationChange}
-                                duration={this.state.duration} />
                 <Checkbox
-                  label="Repeat forever"
-                  checked={this.state.repeatCount === 0}
+                  label="Repeat"
+                  checked={this.state.repeatCount !== 1}
                   onChange={(isInputChecked) => {
-                    if (isInputChecked === true) this.onRepeatChange(0)
+                    console.log(isInputChecked)
+                    if (isInputChecked === true) this.onRepeatChange(2)
                     else this.onRepeatChange(1)
                   }}
                 />
-                <Input
-                  type='text'
-                  style={{width: 20, float: 'left'}}
+                {this.state.repeatCount !== 1 && <div>
+                  <Checkbox
+                    label="Repeat forever"
+                    checked={this.state.repeatCount === 0}
+                    onChange={(isInputChecked) => {
+                      if (isInputChecked === true) this.onRepeatChange(0)
+                      else this.onRepeatChange(2)
+                    }}
+                  />
+                  {this.state.repeatCount !== 0 && <Input
+                  type='number'
+                  min='0'
+                  label='times to repeat'
                   name='repeat-count'
                   value={this.state.repeatCount}
                   onChange={(value) => {this.onRepeatChange(value)}}
-                />
-                <Slider
-                  style={{width: 100, float: 'left', marginLeft: 20}}
-                  min={1}
-                  max={99}
-                  step={1}
-                  disabled={this.state.repeatCount === 0}
-                  value={this.state.repeatCount}
-                  onChange={this.onRepeatChange}
-                />
-              </div>
+                  />}
+                <DurationPicker onChange={this.onDurationChange}
+                                duration={this.state.duration} />
+
+                <RepeatString duration={this.state.duration} repeatCount={this.state.repeatCount} />
+                </div>}
               </Box>
               </Flex>
-
-
 
               </CardText>
               <CardActions>
