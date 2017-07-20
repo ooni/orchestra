@@ -16,6 +16,8 @@ import CardText from 'react-toolbox/lib/card/CardText'
 
 import DatePicker from 'react-toolbox/lib/date_picker/DatePicker'
 import TimePicker from 'react-toolbox/lib/time_picker/TimePicker'
+import List from 'react-toolbox/lib/list/List'
+import ListItem from 'react-toolbox/lib/list/ListItem'
 
 import moment from 'moment'
 
@@ -59,57 +61,60 @@ class JobCreateConfirm extends React.Component {
       targetCountries,
       targetPlatforms
     } = this.props
-    console.log("Got properties", this.props)
+
+    let durationCaption = <div>
+      {RepeatString({duration, repeatCount})}
+      ({ToScheduleString({
+        duration: duration,
+        startMoment: startMoment,
+        repeatCount: repeatCount
+      })})
+    </div>
+
+    let startTimeCaption = startMoment.calendar()
+    startTimeCaption += ' ('
+    startTimeCaption += startMoment.toString()
+    startTimeCaption += ')'
 
     return (
       <div>
         <CardTitle title="New Alert Summary" />
         <CardText>
-
-        <h3>Message</h3>
-        <p>{alertMessage}</p>
-
-
-        {href && <div>
-        <h3>Link</h3>
-        <p>Primary: {href}</p>
-        {altHref && <p>Alernatives:
-          <ul>
-          {altHref.split('\n').map((v) => {
-            return (<li>{v}</li>)
+          <List>
+          <ListItem
+            ripple={false}
+            caption={alertMessage}
+            legend="Message" />
+          <ListItem
+            ripple={false}
+            caption={href}
+            legend="Link" />
+          {altHref && altHref.split('\n')
+            .map((v, i) => {
+              return <ListItem
+                ripple={false}
+                caption={v}
+                legend={`Alt Link #${i}`} />
             })
           }
-          </ul>
-        </p>}
-        </div>}
+          <ListItem
+            ripple={false}
+            caption={startTimeCaption}
+            legend="Start time" />
+          <ListItem
+            ripple={false}
+            caption={durationCaption}
+            legend="Duration" />
 
-        <h3>Start time</h3>
-        <p>{startMoment.calendar()} ({startMoment.toString()})</p>
-
-        <h3>Duration</h3>
-        <div>{RepeatString({duration, repeatCount})} ({ToScheduleString({
-                      duration: duration,
-                      startMoment: startMoment,
-                      repeatCount: repeatCount
-                  })})</div>
-
-        <h3>targetCountries</h3>
-        <ul>
-        {targetCountries.map((v) => {
-          return (
-            <li key={v}>{v}</li>
-          )
-        })}
-        </ul>
-
-        <h3>targetPlatforms</h3>
-        <ul>
-        {targetPlatforms.map((v) => {
-          return (
-            <li key={v}>{v}</li>
-          )
-        })}
-        </ul>
+          <ListItem
+            ripple={false}
+            caption={targetCountries.join(',')}
+            legend="Target pountries" />
+          <ListItem
+            ripple={false}
+            caption={targetPlatforms.join(',')}
+            legend="Target platforms" />
+          </List>
 
         </CardText>
 
@@ -325,36 +330,13 @@ export default class AdminJobsAdd extends React.Component {
           <div className='container'>
             {submitted &&
               <Card>
-              <JobCreateConfirm
-                startMoment={this.state.startMoment}
-                duration={this.state.duration}
-                repeatCount={this.state.repeatCount}
-                duration={this.state.duration}
-
-                alertMessage={this.state.alertMessage}
-                href={this.state.href}
-                altHref={this.state.altHref}
-
-                targetCountries={this.state.targetCountries}
-                targetPlatforms={this.state.targetPlatforms}
-                urls={this.state.urls}
-                comment={this.state.comment}
-              />
-              {!finalized &&
-                <CardActions>
-                <Button
-                  onClick={this.onEdit}
-                  label='Edit'/>
-                <Button
-                  onClick={this.onAdd}
-                  label='Add'/>
-                </CardActions>
-              }
               {finalized && finalized.error === null &&
-                <p>Job created!</p>}
+                <CardTitle title="Job created successfully!" />
+              }
               {finalized && finalized.error !== null &&
                 <div>
-                <p>Job creation failed: {finalized.error.toString()}</p>
+                <CardTitle title="Job creation error" />
+                <p>{finalized.error.toString()}</p>
                 <CardActions>
                 <Button
                   raised
@@ -367,6 +349,32 @@ export default class AdminJobsAdd extends React.Component {
                 </CardActions>
                 </div>
               }
+              {!finalized && <div>
+                <JobCreateConfirm
+                  startMoment={this.state.startMoment}
+                  duration={this.state.duration}
+                  repeatCount={this.state.repeatCount}
+                  duration={this.state.duration}
+
+                  alertMessage={this.state.alertMessage}
+                  href={this.state.href}
+                  altHref={this.state.altHref}
+
+                  targetCountries={this.state.targetCountries}
+                  targetPlatforms={this.state.targetPlatforms}
+                  urls={this.state.urls}
+                  comment={this.state.comment}
+                />
+                <CardActions>
+                <Button
+                  onClick={this.onEdit}
+                  label='Edit'/>
+                <Button
+                  onClick={this.onAdd}
+                  label='Add'/>
+                </CardActions>
+              </div>}
+
               </Card>
             }
           </div>
@@ -387,6 +395,7 @@ export default class AdminJobsAdd extends React.Component {
                 <Input
                   onChange={this.onAltHrefChange}
                   label="alt hrefs"
+                  multiline
                   type="text" />
               <hr/>
 

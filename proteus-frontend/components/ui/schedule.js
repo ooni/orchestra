@@ -119,7 +119,6 @@ export const RepeatString = ({duration, repeatCount}) => {
     {'key': 'm', 'name': 'minute'},
     {'key': 's', 'name': 'second'}
   ]
-
   return (
     <Flex pt={2} align='center'>
       <Box><FontIcon value='alarm' /></Box>
