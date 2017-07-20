@@ -7,7 +7,6 @@ import Immutable from 'immutable'
 
 import Avatar from 'react-toolbox/lib/avatar/Avatar'
 import Button from 'react-toolbox/lib/button/Button'
-import FontIcon from 'react-toolbox/lib/font_icon/FontIcon'
 import Card from 'react-toolbox/lib/card/Card'
 import CardActions from 'react-toolbox/lib/card/CardActions'
 import CardTitle from 'react-toolbox/lib/card/CardTitle'

@@ -28,6 +28,7 @@ class ActiveClient extends React.Component {
     softwareVersion: React.PropTypes.string,
     supportedTests: React.PropTypes.string,
     networkType: React.PropTypes.string,
+    language: React.PropTypes.string,
     availableBandwidth: React.PropTypes.number,
     token: React.PropTypes.string,
     lastUpdated: React.PropTypes.string,
@@ -50,6 +51,7 @@ class ActiveClient extends React.Component {
       softwareVersion,
       supportedTests,
       networkType,
+      language,
       availableBandwidth,
       token,
       lastUpdated,
@@ -94,6 +96,11 @@ class ActiveClient extends React.Component {
             <ListItem
                 caption={networkType}
                 legend="Network Type"/>
+
+            <ListItem
+                caption={language}
+                legend="Language"/>
+
             <ListItem
                 caption={''+availableBandwidth}
                 legend="Bandwidth"/>
@@ -164,6 +171,7 @@ export default class AdminClients extends React.Component {
                 softwareVersion={d.software_version}
                 supportedTests={d.supported_tests}
                 networkType={d.network_type}
+                language={d.language}
                 availableBandwidth={d.available_bandwidth}
                 token={d.token}
                 lastUpdated={d.last_updated}

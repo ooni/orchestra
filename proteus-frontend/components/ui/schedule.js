@@ -4,7 +4,10 @@ import Immutable from 'immutable'
 
 import moment from 'moment'
 
+import FontIcon from 'react-toolbox/lib/font_icon/FontIcon'
 import Slider from 'react-toolbox/lib/slider/Slider'
+
+import { Flex, Box } from 'reflexbox'
 
 export class DesignatorSlider extends React.Component {
   static propTypes = {
@@ -118,25 +121,31 @@ export const RepeatString = ({duration, repeatCount}) => {
   ]
 
   return (
-    <div>
+    <Flex pt={2} align='center'>
+      <Box><FontIcon value='alarm' /></Box>
+      <Box pl={2}>
+      <div>
       Will run
       {repeatCount === 0
-      && ' forever every '}
+      && <strong> forever</strong> }
       {repeatCount === 1
-      && ' once'}
+      && <strong>once</strong>}
       {repeatCount > 1
-      && ` ${repeatCount} times every `}
-      {repeatCount !== 1 && units.map((unit) => {
+      && <span> <strong>{repeatCount}</strong> times </span> }
+      {repeatCount !== 1 && repeatCount !== 0 && <span> every </span>}
+      {repeatCount !== 1 && repeatCount !== 0 && units.map((unit) => {
         const value = duration[unit.key]
         if (value && value !== 0) {
           let unitName = unit.name
           if (value > 1) {
             unitName += 's'
           }
-          return <span key={unit.key}>{value} {unitName} </span>
+          return <span key={unit.key}><strong>{value} {unitName}</strong> </span>
         }
       })}
-    </div>
+      </div>
+      </Box>
+    </Flex>
   )
 }
 
