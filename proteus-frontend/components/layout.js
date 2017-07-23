@@ -8,9 +8,8 @@ import MenuItem from 'react-toolbox/lib/menu/MenuItem'
 import AppBar from 'react-toolbox/lib/app_bar/AppBar'
 
 import Link from 'next/link'
-import Head from 'next/head'
 
-import './tapEvents'
+import Meta from './meta'
 
 import pkgJson from '../package.json'
 
@@ -49,26 +48,7 @@ export default class extends React.Component {
     return (
       <ThemeProvider theme={theme}>
       <div>
-        <style jsx global>{`
-					* {
-						margin: 0;
-						padding: 0;
-						text-rendering: geometricPrecision;
-						box-sizing: border-box;
-					}
-					body, html {
-            background-color: white;
-            color: #1c1c1c;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-            padding-bottom: 6rem;
-      		}
-        `}</style>
-        <Head>
-          <meta charSet='utf-8' />
-          <meta name='viewport' content='initial-scale=1.0, width=device-width' />
-          <link href='/static/theme.css' rel='stylesheet' />
-          <link href='/static/vendor/material-icons/material-design-icons.css' rel='stylesheet' />
-        </Head>
+        <Meta />
         <header>
           <Drawer
             onOverlayClick={() => this.setState({drawerOpen: false})}
