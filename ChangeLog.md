@@ -1,10 +1,10 @@
-# proteus 0.1.0-beta.5 [2017-06-19]
+# proteus 0.1.0-beta.5 [2017-07-19]
 
 * Fix bug in migration script
 
 * Re-enable measurement job scheduling from UI
 
-# proteus 0.1.0-beta.4 [2017-06-17]
+# proteus 0.1.0-beta.4 [2017-07-17]
 
 * Fix bug in deletion of jobs
 
