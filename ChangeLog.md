@@ -1,3 +1,9 @@
+# proteus 0.1.0-beta.6 [2017-07-24]
+
+* Improvements to the scheduling UI
+
+* Add minimal progress bar
+
 # proteus 0.1.0-beta.5 [2017-07-19]
 
 * Fix bug in migration script

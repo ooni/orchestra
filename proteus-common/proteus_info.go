@@ -33,7 +33,7 @@ var CurrentProteusVersion = ProteusVersion{
 	Major: 0,
 	Minor: 1,
 	Patch: 0,
-	Suffix:	"-beta.4",
+	Suffix:	"-beta.6",
 }
 
 type ProteusInfo struct {
