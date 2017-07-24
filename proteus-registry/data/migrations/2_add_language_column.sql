@@ -1,6 +1,8 @@
--- +migrate Drop
+-- +migrate Down
+-- +migrate StatementBegin
 ALTER TABLE active_probes DROP COLUMN IF EXISTS lang_code;
 ALTER TABLE probe_updates DROP COLUMN IF EXISTS lang_code;
+-- +migrate StatementEnd
 
 -- +migrate Up
 -- +migrate StatementBegin

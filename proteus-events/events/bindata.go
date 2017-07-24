@@ -127,7 +127,7 @@ func dataMigrations2_add_jobs_stateSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/migrations/2_add_jobs_state.sql", size: 616, mode: os.FileMode(420), modTime: time.Unix(1500390937, 0)}
+	info := bindataFileInfo{name: "data/migrations/2_add_jobs_state.sql", size: 616, mode: os.FileMode(420), modTime: time.Unix(1500482133, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
