@@ -45,7 +45,8 @@ type ClientData struct {
 
 	NetworkType string `json:"network_type"`
 	AvailableBandwidth string `json:"available_bandwidth"`
-	
+	Language string `json:"language"`
+
 	Token string `json:"token"`
 
 	ProbeFamily string `json:"probe_family"`
@@ -84,16 +85,19 @@ func Update(db *sqlx.DB, clientID string, req ClientData) (error) {
 			platform, software_name,
 			software_version, supported_tests,
 			network_type, available_bandwidth,
+			lang_code,
 			token, probe_family,
 			probe_id, update_type
 		) VALUES (
 			$1, $2,
-			$3, $4,
-			$5, $6,
-			$7, $8,
-			$9, $10,
-			$11, $12,
-			$13, $14, $15)`,
+			$3,
+			$4, $5,
+			$6, $7,
+			$8, $9,
+			$10, $11,
+			$12,
+			$13, $14,
+			$15, $16)`,
 			pq.QuoteIdentifier(viper.GetString("database.probe-updates-table")))
 
 		stmt, err := tx.Prepare(query)
@@ -109,6 +113,7 @@ func Update(db *sqlx.DB, clientID string, req ClientData) (error) {
 							req.Platform, req.SoftwareName,
 							req.SoftwareVersion, pq.Array(req.SupportedTests),
 							req.NetworkType, req.AvailableBandwidth,
+							req.Language,
 							req.Token, req.ProbeFamily,
 							req.ProbeID, "register")
 		if (err != nil) {
@@ -130,9 +135,10 @@ func Update(db *sqlx.DB, clientID string, req ClientData) (error) {
 			supported_tests = $8,
 			network_type = $9,
 			available_bandwidth = $10,
-			token = $11,
-			probe_family = $12,
-			probe_id = $13
+			lang_code = $11,
+			token = $12,
+			probe_family = $13,
+			probe_id = $14
 			WHERE id = $1`,
 			pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
 
@@ -151,6 +157,7 @@ func Update(db *sqlx.DB, clientID string, req ClientData) (error) {
 							pq.Array(req.SupportedTests),
 							req.NetworkType,
 							req.AvailableBandwidth,
+							req.Language,
 							req.Token,
 							req.ProbeFamily,
 							req.ProbeID)
@@ -194,16 +201,19 @@ func Register(db *sqlx.DB, req ClientData) (string, error) {
 			platform, software_name,
 			software_version, supported_tests,
 			network_type, available_bandwidth,
+			lang_code,
 			token, probe_family,
 			probe_id
 		) VALUES (
 			$1, $2,
-			$3, $4,
-			$5, $6,
-			$7, $8,
-			$9, $10,
-			$11, $12,
-			$13, $14)`,
+			$3,
+			$4, $5,
+			$6, $7,
+			$8, $9,
+			$10, $11,
+			$12,
+			$13, $14,
+			$15)`,
 			pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
 
 		stmt, err := tx.Prepare(query)
@@ -219,6 +229,7 @@ func Register(db *sqlx.DB, req ClientData) (string, error) {
 							req.Platform, req.SoftwareName,
 							req.SoftwareVersion, pq.Array(req.SupportedTests),
 							req.NetworkType, req.AvailableBandwidth,
+							req.Language,
 							req.Token, req.ProbeFamily,
 							req.ProbeID)
 		if err != nil {
@@ -236,16 +247,19 @@ func Register(db *sqlx.DB, req ClientData) (string, error) {
 			platform, software_name,
 			software_version, supported_tests,
 			network_type, available_bandwidth,
+			lang_code,
 			token, probe_family,
 			probe_id, update_type
 		) VALUES (
 			$1, $2,
-			$3, $4,
-			$5, $6,
-			$7, $8,
-			$9, $10,
-			$11, $12,
-			$13, $14, $15)`,
+			$3,
+			$4, $5,
+			$6, $7,
+			$8, $9,
+			$10, $11,
+			$12,
+			$13, $14,
+			$15, $16)`,
 			pq.QuoteIdentifier(viper.GetString("database.probe-updates-table")))
 
 		stmt, err := tx.Prepare(query)
@@ -262,6 +276,7 @@ func Register(db *sqlx.DB, req ClientData) (string, error) {
 							req.Platform, req.SoftwareName,
 							req.SoftwareVersion, pq.Array(req.SupportedTests),
 							req.NetworkType, req.AvailableBandwidth,
+							req.Language,
 							req.Token, req.ProbeFamily,
 							req.ProbeID, "register")
 		if (err != nil) {
@@ -329,6 +344,7 @@ type ActiveClient struct {
 
 	NetworkType			string `json:"network_type"`
 	AvailableBandwidth	string `json:"available_bandwidth"`
+	Language			string `json:"language"`
 	
 	Token				string `json:"token"`
 
@@ -349,6 +365,7 @@ func ListClients(db *sqlx.DB) ([]ActiveClient, error) {
 			platform, software_name,
 			software_version, supported_tests,
 			network_type, available_bandwidth,
+			lang_code,
 			token, probe_family,
 			probe_id FROM %s`,
 		pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
@@ -372,6 +389,7 @@ func ListClients(db *sqlx.DB) ([]ActiveClient, error) {
 						&ac.SupportedTests,
 						&ac.NetworkType,
 						&ac.AvailableBandwidth,
+						&ac.Language,
 						&ac.Token,
 						&ac.ProbeFamily,
 						&ac.ProbeID)

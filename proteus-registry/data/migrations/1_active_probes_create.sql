@@ -1,4 +1,4 @@
--- +migrate Drop
+-- +migrate Down
 DROP TABLE IF EXISTS active_probes;
 
 -- +migrate Up
