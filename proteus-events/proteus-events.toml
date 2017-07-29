@@ -4,7 +4,6 @@ log-level = "debug"
 #notify-url = "http://localhost:8081"
 gorush-url = "http://localhost:8081"
 notify-topic-ios = "org.openobservatory.NetProbe"
-notify-topic-android = "org.openobservatory.NetProbe"
 
 [auth]
 jwt-secret = "TESTING"

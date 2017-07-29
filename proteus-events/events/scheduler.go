@@ -46,13 +46,13 @@ type Job struct {
 	Id			string
 	Schedule	Schedule
 	Delay		int64
-	Comment		string	
+	Comment		string
 
 	NextRunAt	time.Time
 	TimesRun	int64
 
 	lock		sync.RWMutex
-	jobTimer	*time.Timer	
+	jobTimer	*time.Timer
 	IsDone		bool
 }
 
@@ -150,7 +150,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 		FROM %s
 		WHERE id = $1`,
 		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
-	
+
 	err = jDB.db.QueryRow(query, j.Id).Scan(
 		pq.Array(&targetCountries),
 		pq.Array(&targetPlatforms),
@@ -292,7 +292,7 @@ func (j *Job) WaitAndRun(jDB *JobDB) {
 
 	j.lock.Lock()
 	defer j.lock.Unlock()
-	
+
 	waitDuration := j.GetWaitDuration()
 
 	ctx.Debugf("will wait for: \"%s\"", waitDuration)
@@ -413,7 +413,11 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 		notification.Topic = viper.GetString("core.notify-topic-ios")
 	} else if (jt.Platform == "android") {
 		notification.Platform = 2
-		notification.To = viper.GetString("core.notify-topic-android")
+		/* We don't need to send a topic on Android. As the response message of
+		   failed requests say: `Must use either "registration_ids" field or
+		   "to", not both`. And we need `registration_ids` because we send in
+		   multicast to many clients. More evidence, as usual, on SO:
+		   <https://stackoverflow.com/a/33440105>. */
 	} else {
 		return errors.New("unsupported platform")
 	}
