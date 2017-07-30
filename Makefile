@@ -29,7 +29,7 @@ build-notify:
 build-registry:
 	go build ${LDFLAGS} -o bin/proteus-registry proteus-registry/main.go
 
-proteus: vendor build-events build-registry build-notify
+proteus: vendor build-all
 
 proteus-no-gitinfo: LDFLAGS = ${NOGI_LDFLAGS}
 proteus-no-gitinfo: vendor proteus
