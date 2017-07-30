@@ -1,3 +1,7 @@
+# proteus 0.1.0-beta.7 [2017-07-30]
+
+* fix(proteus-events): do not propagate topic on Android
+
 # proteus 0.1.0-beta.6 [2017-07-24]
 
 * Improvements to the scheduling UI
