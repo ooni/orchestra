@@ -40,6 +40,27 @@ notifications via **proteus-notify**.
 
 Can also be used to view the event history.
 
+## Building and releasing
+
+- Make sure the `GOPATH` environment variable is set. (For reference, the setup
+  of sbs is `export GOPATH=$HOME` with repositories in `$HOME/src/`; e.g. this
+  repository is `$HOME/src/github.com/TheTorProject/proteus`).
+
+- Of course, you also need to have golang installed.
+
+- To build for development, run `make proteus`.
+
+- To create a release, run `make release`.
+
+Checklist before tagging a release:
+
+- Make sure you have updated the changelog
+
+- Make sure you bumped the version number in:
+
+    - `Makefile`
+
+    - `proteus-common/proteus_info.go`
 
 ## Notifications specification
 
