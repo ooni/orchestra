@@ -355,6 +355,7 @@ type GoRushNotification struct {
 	To string `json:"to"`
 	Data map[string]interface {} `json:"data"`
 	ContentAvailable bool `json:"content_available"`
+	Notification map[string]string `json:"notification"`
 }
 
 type GoRushReq struct {
@@ -408,10 +409,14 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 		return errors.New("either alertData or TaskData must be set")
 	}
 
+	notification.Notification = make(map[string]string);
+
 	if (jt.Platform == "ios") {
 		notification.Platform = 1
 		notification.Topic = viper.GetString("core.notify-topic-ios")
 	} else if (jt.Platform == "android") {
+		notification.Notification["click_action"] = viper.GetString(
+			"core.notify-click-action-android")
 		notification.Platform = 2
 		/* We don't need to send a topic on Android. As the response message of
 		   failed requests say: `Must use either "registration_ids" field or
