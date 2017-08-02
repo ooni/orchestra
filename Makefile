@@ -18,7 +18,7 @@ vendor-fetch:
 
 bindata:
 	go get -u github.com/jteeuwen/go-bindata/...
-	for tool in ${TOOL_LIST};do go-bindata -prefix proteus-$$tool/ -o proteus-$$tool/$$tool/bindata.go -pkg $$tool proteus-$$tool/data/...;done
+	for tool in ${TOOL_LIST};do if [ -d proteus-$$tool/data ]; then go-bindata -prefix proteus-$$tool/ -o proteus-$$tool/$$tool/bindata.go -pkg $$tool proteus-$$tool/data/...; fi; done
 
 build-all: build-events build-notify build-registry
 
