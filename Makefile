@@ -20,7 +20,7 @@ bindata:
 	go get -u github.com/jteeuwen/go-bindata/...
 	for tool in ${TOOL_LIST};do if [ -d proteus-$$tool/data ]; then go-bindata -prefix proteus-$$tool/ -o proteus-$$tool/$$tool/bindata.go -pkg $$tool proteus-$$tool/data/...; fi; done
 
-build-all: build-events build-notify build-registry
+build-all: bindata build-events build-notify build-registry
 
 build-events:
 	go build ${LDFLAGS} -o bin/proteus-events proteus-events/main.go
@@ -34,7 +34,7 @@ proteus: vendor build-all
 proteus-no-gitinfo: LDFLAGS = ${NOGI_LDFLAGS}
 proteus-no-gitinfo: vendor proteus
 
-release:
+release: bindata
 	go get github.com/mitchellh/gox
 	mkdir -p ./dist
 	rm -rf ./dist/*
