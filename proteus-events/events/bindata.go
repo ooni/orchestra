@@ -87,7 +87,7 @@ func dataMigrations1_jobs_createSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/migrations/1_jobs_create.sql", size: 685, mode: os.FileMode(420), modTime: time.Unix(1498387809, 0)}
+	info := bindataFileInfo{name: "data/migrations/1_jobs_create.sql", size: 685, mode: os.FileMode(420), modTime: time.Unix(1501274911, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -107,7 +107,7 @@ func dataMigrations1_tasks_createSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/migrations/1_tasks_create.sql", size: 711, mode: os.FileMode(420), modTime: time.Unix(1498387808, 0)}
+	info := bindataFileInfo{name: "data/migrations/1_tasks_create.sql", size: 711, mode: os.FileMode(420), modTime: time.Unix(1501274911, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -127,7 +127,7 @@ func dataMigrations2_add_jobs_stateSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/migrations/2_add_jobs_state.sql", size: 616, mode: os.FileMode(420), modTime: time.Unix(1500482133, 0)}
+	info := bindataFileInfo{name: "data/migrations/2_add_jobs_state.sql", size: 616, mode: os.FileMode(420), modTime: time.Unix(1501274911, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -147,7 +147,7 @@ func dataMigrations3_add_job_type_tablesSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/migrations/3_add_job_type_tables.sql", size: 1353, mode: os.FileMode(420), modTime: time.Unix(1498242860, 0)}
+	info := bindataFileInfo{name: "data/migrations/3_add_job_type_tables.sql", size: 1353, mode: os.FileMode(420), modTime: time.Unix(1501274911, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -167,7 +167,7 @@ func dataTemplatesHomeTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/templates/home.tmpl", size: 1264, mode: os.FileMode(420), modTime: time.Unix(1495831185, 0)}
+	info := bindataFileInfo{name: "data/templates/home.tmpl", size: 1264, mode: os.FileMode(420), modTime: time.Unix(1501274911, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
