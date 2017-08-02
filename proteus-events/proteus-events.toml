@@ -1,9 +1,10 @@
 [core]
 environment = "development"
 log-level = "debug"
-#notify-url = "http://localhost:8081"
+#notify-url = "http://localhost:8081"  # <- deprecated
 gorush-url = "http://localhost:8081"
 notify-topic-ios = "org.openobservatory.NetProbe"
+notify-click-action-android = "org.openobservatory.ooniprobe.OPEN_BROWSER"
 
 [auth]
 jwt-secret = "TESTING"
