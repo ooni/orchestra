@@ -1,5 +1,5 @@
 PACKAGE = github.com/thetorproject/proteus
-VERSION="0.1.0-beta.7"
+VERSION="0.1.0-beta.8"
 COMMIT_HASH = `git rev-parse --short HEAD 2>/dev/null`
 BUILD_DATE = `date +%FT%T%z`
 LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common.CommitHash=${COMMIT_HASH} -X ${PACKAGE}/proteus-common.BuildDate=${BUILD_DATE}"

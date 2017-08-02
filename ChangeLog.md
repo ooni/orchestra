@@ -1,3 +1,13 @@
+# proteus 0.1.0-beta.8 [2017-08-02]
+
+* refactor(Makefile): simplify the proteus targets dependencies
+* feature(README.md): build and release instruction
+* feature(events): fwd `click_action` for Android
+* fix(registry): adjust syntax of `add_language_column`
+* fix(Makefile): don't assume a tool has bindata
+* regen(bindata): run `make bindata`
+* fix(Makefile): always update embedded binary data
+
 # proteus 0.1.0-beta.7 [2017-07-30]
 
 * fix(proteus-events): do not propagate topic on Android
