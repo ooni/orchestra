@@ -6,7 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"database/sql"
-	
+
 	"github.com/thetorproject/proteus/proteus-common/middleware"
 
 	"github.com/jmoiron/sqlx"
@@ -345,7 +345,7 @@ type ActiveClient struct {
 	NetworkType			string `json:"network_type"`
 	AvailableBandwidth	string `json:"available_bandwidth"`
 	Language			string `json:"language"`
-	
+
 	Token				string `json:"token"`
 
 	ProbeFamily			string `json:"probe_family"`
@@ -378,6 +378,15 @@ func ListClients(db *sqlx.DB) ([]ActiveClient, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var ac ActiveClient
+		/* In theory Language should be a string and we accept it as such
+		   when processing incoming JSON. Yet, because in #6 we migrated the
+		   schema adding the language column, there are plenty of rows in
+		   which the language is actually `null`. This would cause the Scan
+		   to fail. Fix passing in a nullable type for language and then
+		   setting the proper String type as JSON expects it only _if_
+		   the value in the database is not `null`. (I know this creates
+		   glue, however I don't want to change the datatype.) */
+		var maybeLanguage sql.NullString
 		err := rows.Scan(&ac.ClientID,
 						&ac.CreationTime,
 						&ac.LastUpdated,
@@ -389,13 +398,16 @@ func ListClients(db *sqlx.DB) ([]ActiveClient, error) {
 						&ac.SupportedTests,
 						&ac.NetworkType,
 						&ac.AvailableBandwidth,
-						&ac.Language,
+						&maybeLanguage,
 						&ac.Token,
 						&ac.ProbeFamily,
 						&ac.ProbeID)
 		if err != nil {
 			ctx.WithError(err).Error("failed to iterate over clients")
 			return activeClients, err
+		}
+		if (maybeLanguage.Valid) {
+			ac.Language = maybeLanguage.String;
 		}
 		activeClients = append(activeClients, ac)
 	}
