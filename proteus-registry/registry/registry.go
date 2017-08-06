@@ -418,7 +418,7 @@ func runMigrations(db *sqlx.DB) (error) {
 	migrations := &migrate.AssetMigrationSource{
 		Asset: Asset,
 		AssetDir: AssetDir,
-		Dir: "data/migrations",
+		Dir: "proteus-common/data/migrations",
 	}
 	n, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
 	if err != nil {

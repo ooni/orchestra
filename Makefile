@@ -18,7 +18,14 @@ vendor-fetch:
 
 bindata:
 	go get -u github.com/jteeuwen/go-bindata/...
-	for tool in ${TOOL_LIST};do if [ -d proteus-$$tool/data ]; then go-bindata -prefix proteus-$$tool/ -o proteus-$$tool/$$tool/bindata.go -pkg $$tool proteus-$$tool/data/...; fi; done
+	@for tool in ${TOOL_LIST}; do                                          \
+	  if [ -d proteus-$$tool/data ]; then                                  \
+	    extra_dirs="proteus-$$tool/data/...";                              \
+	  fi;                                                                  \
+	  go-bindata -prefix proteus-$$tool/                                   \
+	    -o proteus-$$tool/$$tool/bindata.go -pkg $$tool                    \
+	    proteus-common/data/... $$extra_dirs;                              \
+	done
 
 build-all: bindata build-events build-notify build-registry
 
