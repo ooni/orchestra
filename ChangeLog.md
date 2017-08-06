@@ -1,3 +1,8 @@
+# proteus 0.1.0-beta.9 [2017-08-06]
+
+* fix(registry): Language may be null
+* fix(database): inconsistent migrations
+
 # proteus 0.1.0-beta.8 [2017-08-02]
 
 * refactor(Makefile): simplify the proteus targets dependencies
