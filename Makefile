@@ -1,7 +1,7 @@
 PACKAGE = github.com/thetorproject/proteus
 VERSION="0.1.0-beta.9"
 GOFILES := $(shell find . -name "*.go" -type f -not -path "./vendor/*" -not -name "bindata.go")
-PACKAGES ?= $(shell go list ./... | grep -v /vendor/)
+PACKAGES ?= $(shell govendor list -no-status +local)
 COMMIT_HASH = `git rev-parse --short HEAD 2>/dev/null`
 BUILD_DATE = `date +%FT%T%z`
 LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common.CommitHash=${COMMIT_HASH} -X ${PACKAGE}/proteus-common.BuildDate=${BUILD_DATE}"
@@ -12,10 +12,15 @@ RELEASE_OSARCH = -osarch "${ARCH_LIST}"
 OUTPUT_SUFFIX = "${VERSION}.{{.OS}}-{{.Arch}}/{{.Dir}}"
 
 vendor:
-	go get github.com/kardianos/govendor
+	@hash govendor > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
+		go get github.com/kardianos/govendor \
+	fi
 	govendor sync proteus
 
 vendor-fetch:
+	@hash govendor > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
+		go get github.com/kardianos/govendor \
+	fi
 	govendor fetch +external
 
 fmt:
@@ -34,6 +39,13 @@ lint:
 		go get -u github.com/golang/lint/golint; \
 	fi
 	for PKG in $(PACKAGES); do golint -set_exit_status $$PKG || exit 1; done;
+
+test: fmt-check
+	echo "mode: count" > coverage-all.txt
+	$(foreach pkg,$(PACKAGES),                                             \
+		govendor test -coverprofile=coverage.txt -covermode=count $(pkg);  \
+		tail -n +2 coverage.txt >> coverage-all.txt;)
+	go tool cover -html=coverage-all.txt
 
 bindata:
 	@hash go-bindata > /dev/null 2>&1; if [ $$? -ne 0 ]; then              \
