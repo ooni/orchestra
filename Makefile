@@ -1,6 +1,7 @@
 PACKAGE = github.com/thetorproject/proteus
 VERSION="0.1.0-beta.9"
 GOFILES := $(shell find . -name "*.go" -type f -not -path "./vendor/*")
+PACKAGES ?= $(shell go list ./... | grep -v /vendor/)
 COMMIT_HASH = `git rev-parse --short HEAD 2>/dev/null`
 BUILD_DATE = `date +%FT%T%z`
 LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common.CommitHash=${COMMIT_HASH} -X ${PACKAGE}/proteus-common.BuildDate=${BUILD_DATE}"
@@ -19,6 +20,12 @@ vendor-fetch:
 
 fmt:
 	gofmt -s -w $(GOFILES)
+
+lint:
+	@hash golint > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
+		go get -u github.com/golang/lint/golint; \
+	fi
+	for PKG in $(PACKAGES); do golint -set_exit_status $$PKG || exit 1; done;
 
 bindata:
 	go get -u github.com/jteeuwen/go-bindata/...
