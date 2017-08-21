@@ -1,4 +1,4 @@
-package proteus_mw
+package middleware
 
 import (
 	"crypto/subtle"
@@ -21,12 +21,14 @@ import (
 // https://github.com/appleboy/gin-jwt/blob/master/auth_jwt.go
 // with some minor changes.
 
+// ProteusClaims are claims for the JWT token
 type ProteusClaims struct {
 	Role string `json:"role"`
 	User string `json:"user"`
 	jwt.StandardClaims
 }
 
+// Account is the details of the account
 type Account struct {
 	Username string
 	Role     string
@@ -388,6 +390,7 @@ func (mw *GinJWTMiddleware) unauthorized(c *gin.Context, code int, message strin
 	return
 }
 
+// InitAuthMiddleware is called to initialise the authentication middleware
 func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 	return &GinJWTMiddleware{
 		Realm:      "Proteus Realm",
@@ -443,6 +446,7 @@ func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 	}, nil
 }
 
+// AdminAuthorizor is used to protect routes that are allowed only by administrator accounts
 func AdminAuthorizor(account Account, c *gin.Context) bool {
 	if account.Role == "admin" {
 		return true
@@ -450,6 +454,7 @@ func AdminAuthorizor(account Account, c *gin.Context) bool {
 	return false
 }
 
+// DeviceAuthorizor is used to protect routes that are allowed only by authenticated devices
 func DeviceAuthorizor(account Account, c *gin.Context) bool {
 	if account.Role == "device" {
 		return true

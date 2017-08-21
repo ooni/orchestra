@@ -14,6 +14,7 @@ var (
 
 var proteusInfo *ProteusInfo
 
+// ProteusVersion contains the version information for proteus
 type ProteusVersion struct {
 	Major  int
 	Minor  int
@@ -29,6 +30,7 @@ func proteusVersion(major int, minor int, patchVersion int, suffix string) strin
 	return fmt.Sprintf("%d.%d.%d%s", major, minor, patchVersion, suffix)
 }
 
+// CurrentProteusVersion is the current version of proteus. Remember to change this before making a release
 var CurrentProteusVersion = ProteusVersion{
 	Major:  0,
 	Minor:  1,
@@ -36,6 +38,7 @@ var CurrentProteusVersion = ProteusVersion{
 	Suffix: "-beta.9",
 }
 
+// ProteusInfo contains information for the current proteus build
 type ProteusInfo struct {
 	Version    string
 	CommitHash string
