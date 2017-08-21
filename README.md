@@ -62,6 +62,8 @@ Checklist before tagging a release:
 
     - `proteus-common/proteus_info.go`
 
+- Make sure all unittests are passing (`make check`)
+
 ## Notifications specification
 
 A client needs to register to the proteus-registry service.
