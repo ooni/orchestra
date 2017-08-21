@@ -14,7 +14,7 @@ metadata is.
 
 **proteus-notify**
 
-Status: BETA
+Status: DEPRECATED
 
 Is responsible for dispatching notifications out to OPOS clients depending on
 the capabilities they support.

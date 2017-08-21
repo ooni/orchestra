@@ -4,6 +4,10 @@ go:
   - 1.8.3
   - tip
 install:
-  - make vendor # to install govendor
+  # Rename TheTorProject to all lowercase to make imports work properly
+  - mv $GOPATH/src/github.com/TheTorProject $GOPATH/src/github.com/thetorproject
+  - cd $GOPATH/src/github.com/thetorproject/proteus
+  # Install govendor
+  - make vendor
 script:
   - make check
