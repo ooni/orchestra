@@ -47,6 +47,8 @@ test: fmt-check
 		tail -n +2 coverage.txt >> coverage-all.txt;)
 	go tool cover -html=coverage-all.txt
 
+check: fmt-check lint test
+
 bindata:
 	@hash go-bindata > /dev/null 2>&1; if [ $$? -ne 0 ]; then              \
 		go get -u github.com/jteeuwen/go-bindata/...;                      \
@@ -85,4 +87,4 @@ release: fmt-check bindata
 	gox ${NOGI_LDFLAGS} ${RELEASE_OSARCH} -output dist/proteus-registry-${OUTPUT_SUFFIX} ./proteus-registry
 	for tool in ${TOOL_LIST};do for x in ${ARCH_LIST};do ARCH=$$(echo $$x | sed "s/\//-/");cp LICENSE dist/proteus-$$tool-${VERSION}.$$ARCH/;tar -cvf dist/proteus-$$tool-${VERSION}.$$ARCH.tar.gz -C ./dist/ proteus-$$tool-${VERSION}.$$ARCH/;done;done
 
-.PHONY: vendor build build-events build-notify build-registry release bindata build-all fmt fmt-check
+.PHONY: vendor build build-events build-notify build-registry release bindata build-all fmt fmt-check check

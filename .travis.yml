@@ -1,0 +1,7 @@
+language: go
+dist: precise
+go:
+  - 1.8.3
+  - tip
+script:
+  - make check
