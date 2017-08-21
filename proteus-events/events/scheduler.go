@@ -22,6 +22,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// JobTarget the target of a job
 type JobTarget struct {
 	ClientID  string
 	TaskId    *string
@@ -31,6 +32,7 @@ type JobTarget struct {
 	Platform  string
 }
 
+// NewJobTarget create a new job target instance
 func NewJobTarget(cID string, token string, plat string, tid *string, td *TaskData, ad *AlertData) *JobTarget {
 	return &JobTarget{
 		ClientID:  cID,
@@ -42,6 +44,7 @@ func NewJobTarget(cID string, token string, plat string, tid *string, td *TaskDa
 	}
 }
 
+// Job container
 type Job struct {
 	Id       string
 	Schedule Schedule
@@ -56,6 +59,7 @@ type Job struct {
 	IsDone   bool
 }
 
+// CreateTask creates a new task and stores it in the JobDB
 func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
 	tx, err := jDB.db.Begin()
 	if err != nil {
@@ -126,6 +130,7 @@ func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
 	return taskID, nil
 }
 
+// GetTargets returns all the targets for the job
 func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	var (
 		err             error
@@ -266,6 +271,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	return targets
 }
 
+// GetWaitDuration gets the amount of time to wait for the task to run next
 func (j *Job) GetWaitDuration() time.Duration {
 	var waitDuration time.Duration
 	ctx.Debugf("calculating wait duration. ran already %d", j.TimesRun)
@@ -287,6 +293,7 @@ func (j *Job) GetWaitDuration() time.Duration {
 	return waitDuration
 }
 
+// WaitAndRun will wait on the job and then run it when it's time
 func (j *Job) WaitAndRun(jDB *JobDB) {
 	ctx.Debugf("running job: \"%s\"", j.Comment)
 
@@ -300,12 +307,15 @@ func (j *Job) WaitAndRun(jDB *JobDB) {
 	j.jobTimer = time.AfterFunc(waitDuration, jobRun)
 }
 
+// NotifyReq
 // XXX this is duplicated in proteus-notify
 type NotifyReq struct {
 	ClientIDs []string               `json:"client_ids"`
 	Event     map[string]interface{} `json:"event"`
 }
 
+// TaskNotifyProteus this will tell the notify backend to notify the client of
+// the task
 func TaskNotifyProteus(bu string, jt *JobTarget) error {
 	var err error
 	path, _ := url.Parse("/api/v1/notify")
@@ -347,6 +357,7 @@ func TaskNotifyProteus(bu string, jt *JobTarget) error {
 	return nil
 }
 
+// GoRushNotification all the notification metadata for gorush
 type GoRushNotification struct {
 	Tokens           []string               `json:"tokens"`
 	Platform         int                    `json:"platform"`
@@ -358,16 +369,19 @@ type GoRushNotification struct {
 	Notification     map[string]string      `json:"notification"`
 }
 
+// GoRushReq a wrapper for a gorush notification request
 type GoRushReq struct {
 	Notifications []*GoRushNotification `json:"notifications"`
 }
 
+// Notification payload of a notification to be sent to gorush
 type Notification struct {
 	Type    int // 1 is message 2 is Event
 	Message string
 	Event   map[string]interface{}
 }
 
+// NotifyGorush tell gorush to notify clients
 func NotifyGorush(bu string, jt *JobTarget) error {
 	var (
 		err error

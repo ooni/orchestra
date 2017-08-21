@@ -39,23 +39,27 @@ func initDatabase() (*sqlx.DB, error) {
 	return db, err
 }
 
+// Target is the target country
 type Target struct {
 	Countries []string `json:"countries"`
 	Platforms []string `json:"platforms"`
 }
 
+// AlertData is the alert message
 type AlertData struct {
 	Id      string                 `json:"id"`
 	Message string                 `json:"message" binding:"required"`
 	Extra   map[string]interface{} `json:"extra"`
 }
 
+// URLTestArg are the URL arguments for the test
 type URLTestArg struct {
 	GlobalCategories  []string `json:"global_categories"`
 	CountryCategories []string `json:"country_categories"`
 	URLs              []string `json:"urls"`
 }
 
+// TaskData is the data for the task
 type TaskData struct {
 	Id        string                 `json:"id"`
 	TestName  string                 `json:"test_name" binding:"required"`
@@ -63,6 +67,7 @@ type TaskData struct {
 	State     string
 }
 
+// JobData struct for containing all Job metadata (both alert and tasks)
 type JobData struct {
 	Id        string     `json:"id"`
 	Schedule  string     `json:"schedule" binding:"required"`
@@ -76,6 +81,7 @@ type JobData struct {
 	CreationTime time.Time `json:"creation_time"`
 }
 
+// AddJob adds a job to the database and run it
 func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 	var (
 		taskNo  sql.NullInt64
@@ -221,6 +227,7 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 	return jd.Id, nil
 }
 
+// ListJobs list all the jobs present in the database
 func ListJobs(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
 	// XXX this can probably be unified with JobDB.GetAll()
 	var (
@@ -311,8 +318,10 @@ func ListJobs(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
 	return currentJobs, nil
 }
 
+// ErrJobNotFound did not found the job in the DB
 var ErrJobNotFound = errors.New("job not found")
 
+// DeleteJob mark the job as deleted
 func DeleteJob(jobID string, db *sqlx.DB, s *Scheduler) error {
 	query := fmt.Sprintf(`UPDATE %s SET
 		state = $2
@@ -334,10 +343,16 @@ func DeleteJob(jobID string, db *sqlx.DB, s *Scheduler) error {
 	return nil
 }
 
+// ErrTaskNotFound could not find the referenced task
 var ErrTaskNotFound = errors.New("task not found")
+
+// ErrAccessDenied not enough permissions
 var ErrAccessDenied = errors.New("access denied")
+
+// ErrInconsistentState when you try to accept an already accepted task
 var ErrInconsistentState = errors.New("task already accepted")
 
+// GetTask returns the specified task with the ID
 func GetTask(tID string, uID string, db *sqlx.DB) (TaskData, error) {
 	var (
 		err      error
@@ -378,6 +393,7 @@ func GetTask(tID string, uID string, db *sqlx.DB) (TaskData, error) {
 	return task, nil
 }
 
+// GetTasksForUser lists all the tasks a user has
 func GetTasksForUser(uID string, since string,
 	db *sqlx.DB) ([]TaskData, error) {
 	var (
@@ -423,6 +439,7 @@ func GetTasksForUser(uID string, since string,
 	return tasks, nil
 }
 
+// SetTaskState sets the state of the task
 func SetTaskState(tID string, uID string,
 	state string, validStates []string,
 	updateTimeCol string,
@@ -490,6 +507,7 @@ func loadTemplates(list ...string) multitemplate.Render {
 	return r
 }
 
+// Start starts the events backend including the web handlers
 func Start() {
 	db, err := initDatabase()
 	if err != nil {
