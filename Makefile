@@ -1,6 +1,6 @@
 PACKAGE = github.com/thetorproject/proteus
 VERSION="0.1.0-beta.9"
-GOFILES := $(shell find . -name "*.go" -type f -not -path "./vendor/*")
+GOFILES := $(shell find . -name "*.go" -type f -not -path "./vendor/*" -not -name "bindata.go")
 PACKAGES ?= $(shell go list ./... | grep -v /vendor/)
 COMMIT_HASH = `git rev-parse --short HEAD 2>/dev/null`
 BUILD_DATE = `date +%FT%T%z`
@@ -20,6 +20,14 @@ vendor-fetch:
 
 fmt:
 	gofmt -s -w $(GOFILES)
+
+fmt-check:
+	@diff=$$(gofmt -d $(GOFILES));               \
+	if [ -n "$$diff" ]; then                     \
+		echo "Please run 'make fmt' and commit"; \
+		echo "$${diff}";                         \
+		exit 1;                                  \
+	fi
 
 lint:
 	@hash golint > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
@@ -56,7 +64,7 @@ proteus: vendor build-all
 proteus-no-gitinfo: LDFLAGS = ${NOGI_LDFLAGS}
 proteus-no-gitinfo: vendor proteus
 
-release: bindata
+release: fmt-check bindata
 	go get github.com/mitchellh/gox
 	mkdir -p ./dist
 	rm -rf ./dist/*
@@ -65,4 +73,4 @@ release: bindata
 	gox ${NOGI_LDFLAGS} ${RELEASE_OSARCH} -output dist/proteus-registry-${OUTPUT_SUFFIX} ./proteus-registry
 	for tool in ${TOOL_LIST};do for x in ${ARCH_LIST};do ARCH=$$(echo $$x | sed "s/\//-/");cp LICENSE dist/proteus-$$tool-${VERSION}.$$ARCH/;tar -cvf dist/proteus-$$tool-${VERSION}.$$ARCH.tar.gz -C ./dist/ proteus-$$tool-${VERSION}.$$ARCH/;done;done
 
-.PHONY: vendor build build-events build-notify build-registry release bindata build-all fmt
+.PHONY: vendor build build-events build-notify build-registry release bindata build-all fmt fmt-check
