@@ -24,12 +24,14 @@ var ctx = log.WithFields(log.Fields{
 	"env": "production",
 })
 
+// RootCmd where all commands begin
 var RootCmd = &cobra.Command{
 	Use:   "proteus-events",
 	Short: "I receive events to propagate to probes",
 	Long:  events.LongDescription,
 }
 
+// Execute parse the command arguments
 func Execute() {
 	RootCmd.AddCommand(cmd.VersionCmd)
 	if err := RootCmd.Execute(); err != nil {

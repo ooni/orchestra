@@ -440,14 +440,14 @@ func Start() {
 		return
 	}
 
-	authMiddleware, err := proteus_mw.InitAuthMiddleware(db)
+	authMiddleware, err := middleware.InitAuthMiddleware(db)
 	if err != nil {
 		ctx.WithError(err).Error("failed to initialise authMiddlewareDevice")
 		return
 	}
 
 	router := gin.Default()
-	router.Use(cors.New(proteus_mw.CorsConfig()))
+	router.Use(cors.New(middleware.CorsConfig()))
 
 	v1 := router.Group("/api/v1")
 	v1.POST("/login", authMiddleware.LoginHandler)
@@ -473,7 +473,7 @@ func Start() {
 	})
 
 	admin := v1.Group("/admin")
-	admin.Use(authMiddleware.MiddlewareFunc(proteus_mw.AdminAuthorizor))
+	admin.Use(authMiddleware.MiddlewareFunc(middleware.AdminAuthorizor))
 	{
 		admin.GET("/clients", func(c *gin.Context) {
 			clientList, err := ListClients(db)
@@ -488,7 +488,7 @@ func Start() {
 	}
 
 	device := v1.Group("/")
-	device.Use(authMiddleware.MiddlewareFunc(proteus_mw.DeviceAuthorizor))
+	device.Use(authMiddleware.MiddlewareFunc(middleware.DeviceAuthorizor))
 	{
 		// XXX do we also want to support a PATCH method?
 		device.PUT("/update/:client_id", func(c *gin.Context) {

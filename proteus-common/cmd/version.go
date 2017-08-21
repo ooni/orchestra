@@ -13,6 +13,7 @@ import (
 	"github.com/thetorproject/proteus/proteus-common"
 )
 
+// VersionCmd is the command used to output the version of proteus
 var VersionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number of Proteus",

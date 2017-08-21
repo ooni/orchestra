@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	_ "strings"
+	"strings"
 	"sync"
 	"time"
 
@@ -504,7 +504,7 @@ func Start() {
 		return
 	}
 
-	authMiddleware, err := proteus_mw.InitAuthMiddleware(db)
+	authMiddleware, err := middleware.InitAuthMiddleware(db)
 	if err != nil {
 		ctx.WithError(err).Error("failed to initialise authMiddlewareDevice")
 		return
@@ -513,7 +513,7 @@ func Start() {
 	scheduler := NewScheduler(db)
 
 	router := gin.Default()
-	router.Use(cors.New(proteus_mw.CorsConfig()))
+	router.Use(cors.New(middleware.CorsConfig()))
 	router.HTMLRender = loadTemplates("home.tmpl")
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "home.tmpl", gin.H{
@@ -525,7 +525,7 @@ func Start() {
 	v1 := router.Group("/api/v1")
 
 	admin := v1.Group("/admin")
-	admin.Use(authMiddleware.MiddlewareFunc(proteus_mw.AdminAuthorizor))
+	admin.Use(authMiddleware.MiddlewareFunc(middleware.AdminAuthorizor))
 	{
 		admin.GET("/jobs", func(c *gin.Context) {
 			jobList, err := ListJobs(db, true)
@@ -576,7 +576,7 @@ func Start() {
 	}
 
 	device := v1.Group("/")
-	device.Use(authMiddleware.MiddlewareFunc(proteus_mw.DeviceAuthorizor))
+	device.Use(authMiddleware.MiddlewareFunc(middleware.DeviceAuthorizor))
 	{
 		device.GET("/tasks", func(c *gin.Context) {
 			userId := c.MustGet("userID").(string)
