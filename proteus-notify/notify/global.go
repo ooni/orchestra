@@ -13,5 +13,5 @@ var (
 	})
 	CertificatePemIos tls.Certificate
 	QueueNotification chan PushNotification
-	ApnsClient *apns.Client
+	ApnsClient        *apns.Client
 )

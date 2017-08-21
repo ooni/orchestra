@@ -32,10 +32,9 @@ func TestParseSchedule(t *testing.T) {
 	}
 	if s.Duration.Minutes != 2.0 {
 		t.Errorf("expected 2.0 minutes duration (got: %f)",
-					s.Duration.Minutes)
+			s.Duration.Minutes)
 	}
 }
-
 
 func TestToDuration(t *testing.T) {
 	t.Log("Running test to duration")
@@ -43,13 +42,13 @@ func TestToDuration(t *testing.T) {
 	if err != nil {
 		t.Error("failed")
 	}
-    d := s.Duration.ToDuration()
+	d := s.Duration.ToDuration()
 	// d.Hours() should be > 2.2x the hours in February + 24
 	// and < 2.2x the hours in a month with 31 days + 24
-	febHours := (2.2*28+1)*24
-	decHours := (2.2*31+1)*24
+	febHours := (2.2*28 + 1) * 24
+	decHours := (2.2*31 + 1) * 24
 	if d.Hours() < febHours || d.Hours() > decHours {
 		t.Errorf("expected duration to be in range (1478, 1637) (got: %d)",
-					d.Hours())
+			d.Hours())
 	}
 }

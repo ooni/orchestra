@@ -1,22 +1,22 @@
 package cmd
 
 import (
-	"runtime"
-	"strings"
 	"fmt"
 	"os"
+	"runtime"
+	"strings"
 
-	"github.com/thetorproject/proteus/proteus-common/cmd"
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
+	"github.com/thetorproject/proteus/proteus-common/cmd"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var (
-	cfgFile string
-	logLevel string
+	cfgFile   string
+	logLevel  string
 	psqlDBStr string
 )
 
@@ -27,7 +27,7 @@ var ctx = log.WithFields(log.Fields{
 var RootCmd = &cobra.Command{
 	Use:   "proteus-notify",
 	Short: "I tell probes what to do",
-	Long: ``,
+	Long:  ``,
 }
 
 func Execute() {

@@ -1,16 +1,16 @@
 package cmd
 
 import (
-	"os"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
 	"github.com/kardianos/osext"
-	"github.com/thetorproject/proteus/proteus-common"
 	"github.com/spf13/cobra"
+	"github.com/thetorproject/proteus/proteus-common"
 )
 
 var VersionCmd = &cobra.Command{

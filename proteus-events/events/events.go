@@ -7,22 +7,22 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"time"
 	_ "strings"
 	"sync"
+	"time"
 
 	"github.com/thetorproject/proteus/proteus-common/middleware"
 
-	"github.com/gin-contrib/multitemplate"
 	"github.com/apex/log"
-	"github.com/satori/go.uuid"
-	"github.com/rubenv/sql-migrate"
-	"github.com/lib/pq"
+	"github.com/facebookgo/grace/gracehttp"
+	"github.com/gin-contrib/multitemplate"
+	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
+	"github.com/lib/pq"
+	"github.com/rubenv/sql-migrate"
+	"github.com/satori/go.uuid"
 	"github.com/spf13/viper"
-	"github.com/gin-gonic/gin"
-	"github.com/facebookgo/grace/gracehttp"
 	"gopkg.in/gin-contrib/cors.v1"
 )
 
@@ -40,45 +40,45 @@ func initDatabase() (*sqlx.DB, error) {
 }
 
 type Target struct {
-	Countries	[]string `json:"countries"`
-	Platforms	[]string `json:"platforms"`
+	Countries []string `json:"countries"`
+	Platforms []string `json:"platforms"`
 }
 
 type AlertData struct {
-	Id				string `json:"id"`
-	Message			string `json:"message" binding:"required"`
-	Extra			map[string]interface{} `json:"extra"`
+	Id      string                 `json:"id"`
+	Message string                 `json:"message" binding:"required"`
+	Extra   map[string]interface{} `json:"extra"`
 }
 
 type URLTestArg struct {
-	GlobalCategories	[]string `json:"global_categories"`
-	CountryCategories	[]string `json:"country_categories"`
-	URLs				[]string `json:"urls"`
+	GlobalCategories  []string `json:"global_categories"`
+	CountryCategories []string `json:"country_categories"`
+	URLs              []string `json:"urls"`
 }
 
 type TaskData struct {
-	Id			string `json:"id"`
-	TestName	string `json:"test_name" binding:"required"`
-	Arguments	map[string]interface{} `json:"arguments"`
-	State		string
+	Id        string                 `json:"id"`
+	TestName  string                 `json:"test_name" binding:"required"`
+	Arguments map[string]interface{} `json:"arguments"`
+	State     string
 }
 
 type JobData struct {
-	Id				string `json:"id"`
-	Schedule		string `json:"schedule" binding:"required"`
-	Delay			int64 `json:"delay"`
-	Comment			string `json:"comment" binding:"required"`
-	TaskData		*TaskData `json:"task"`
-	AlertData		*AlertData `json:"alert"`
-	Target			Target `json:"target"`
-	State			string `json:"state"`
+	Id        string     `json:"id"`
+	Schedule  string     `json:"schedule" binding:"required"`
+	Delay     int64      `json:"delay"`
+	Comment   string     `json:"comment" binding:"required"`
+	TaskData  *TaskData  `json:"task"`
+	AlertData *AlertData `json:"alert"`
+	Target    Target     `json:"target"`
+	State     string     `json:"state"`
 
-	CreationTime	time.Time `json:"creation_time"`
+	CreationTime time.Time `json:"creation_time"`
 }
 
 func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 	var (
-		taskNo sql.NullInt64
+		taskNo  sql.NullInt64
 		alertNo sql.NullInt64
 	)
 	schedule, err := ParseSchedule(jd.Schedule)
@@ -95,16 +95,16 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 
 	jd.Id = uuid.NewV4().String()
 	{
-		if (jd.AlertData != nil) {
+		if jd.AlertData != nil {
 			query := fmt.Sprintf(`INSERT INTO %s (
 				alert_no,
 				message,
 				extra
 			) VALUES (DEFAULT, $1, $2)
 			RETURNING alert_no;`,
-			pq.QuoteIdentifier(viper.GetString("database.job-alerts-table")))
+				pq.QuoteIdentifier(viper.GetString("database.job-alerts-table")))
 			stmt, err := tx.Prepare(query)
-			if (err != nil) {
+			if err != nil {
 				ctx.WithError(err).Error("failed to prepare jobs-alerts query")
 				return "", err
 			}
@@ -121,16 +121,16 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 				ctx.WithError(err).Error("failed to insert into job-alerts table")
 				return "", err
 			}
-		} else if (jd.TaskData != nil) {
+		} else if jd.TaskData != nil {
 			query := fmt.Sprintf(`INSERT INTO %s (
 				task_no,
 				test_name,
 				arguments
 			) VALUES (DEFAULT, $1, $2)
 			RETURNING task_no;`,
-			pq.QuoteIdentifier(viper.GetString("database.job-tasks-table")))
+				pq.QuoteIdentifier(viper.GetString("database.job-tasks-table")))
 			stmt, err := tx.Prepare(query)
-			if (err != nil) {
+			if err != nil {
 				ctx.WithError(err).Error("failed to prepare jobs-tasks query")
 				return "", err
 			}
@@ -175,26 +175,26 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 			$11,
 			$12,
 			$13)`,
-		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
+			pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
 
 		stmt, err := tx.Prepare(query)
-		if (err != nil) {
+		if err != nil {
 			ctx.WithError(err).Error("failed to prepare jobs query")
 			return "", err
 		}
 		defer stmt.Close()
 
 		_, err = stmt.Exec(jd.Id, jd.Comment,
-							jd.Schedule, jd.Delay,
-							pq.Array(jd.Target.Countries),
-							pq.Array(jd.Target.Platforms),
-							time.Now().UTC(),
-							0,
-							schedule.StartTime,
-							false,
-							"active",
-							taskNo,
-							alertNo)
+			jd.Schedule, jd.Delay,
+			pq.Array(jd.Target.Countries),
+			pq.Array(jd.Target.Platforms),
+			time.Now().UTC(),
+			0,
+			schedule.StartTime,
+			false,
+			"active",
+			taskNo,
+			alertNo)
 		if err != nil {
 			tx.Rollback()
 			ctx.WithError(err).Error("failed to insert into jobs table")
@@ -207,13 +207,13 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 		return "", err
 	}
 	j := Job{
-		Id: jd.Id,
-		Comment: jd.Comment,
-		Schedule: schedule,
-		Delay: jd.Delay,
-		TimesRun: 0,
-		lock: sync.RWMutex{},
-		IsDone: false,
+		Id:        jd.Id,
+		Comment:   jd.Comment,
+		Schedule:  schedule,
+		Delay:     jd.Delay,
+		TimesRun:  0,
+		lock:      sync.RWMutex{},
+		IsDone:    false,
 		NextRunAt: schedule.StartTime,
 	}
 	go s.RunJob(&j)
@@ -254,27 +254,27 @@ func ListJobs(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			jd JobData
-			alertNo sql.NullInt64
+			jd           JobData
+			alertNo      sql.NullInt64
 			alertMessage sql.NullString
-			alertExtra types.JSONText
+			alertExtra   types.JSONText
 
-			taskNo sql.NullInt64
+			taskNo       sql.NullInt64
 			taskTestName sql.NullString
-			taskArgs types.JSONText
+			taskArgs     types.JSONText
 		)
 		err := rows.Scan(&jd.Id, &jd.Comment,
-						&jd.CreationTime,
-						&jd.Schedule, &jd.Delay,
-						pq.Array(&jd.Target.Countries),
-						pq.Array(&jd.Target.Platforms),
-						&alertNo,
-						&alertMessage,
-						&alertExtra,
-						&taskNo,
-						&taskTestName,
-						&taskArgs,
-						&jd.State)
+			&jd.CreationTime,
+			&jd.Schedule, &jd.Delay,
+			pq.Array(&jd.Target.Countries),
+			pq.Array(&jd.Target.Platforms),
+			&alertNo,
+			&alertMessage,
+			&alertExtra,
+			&taskNo,
+			&taskTestName,
+			&taskArgs,
+			&jd.State)
 		if err != nil {
 			ctx.WithError(err).Error("failed to iterate over jobs")
 			return currentJobs, err
@@ -313,7 +313,7 @@ func ListJobs(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
 
 var ErrJobNotFound = errors.New("job not found")
 
-func DeleteJob(jobID string, db *sqlx.DB, s *Scheduler) (error) {
+func DeleteJob(jobID string, db *sqlx.DB, s *Scheduler) error {
 	query := fmt.Sprintf(`UPDATE %s SET
 		state = $2
 		WHERE id = $1`,
@@ -340,8 +340,8 @@ var ErrInconsistentState = errors.New("task already accepted")
 
 func GetTask(tID string, uID string, db *sqlx.DB) (TaskData, error) {
 	var (
-		err error
-		probeId string
+		err      error
+		probeId  string
 		taskArgs types.JSONText
 	)
 	task := TaskData{}
@@ -379,9 +379,9 @@ func GetTask(tID string, uID string, db *sqlx.DB) (TaskData, error) {
 }
 
 func GetTasksForUser(uID string, since string,
-						db *sqlx.DB) ([]TaskData, error) {
+	db *sqlx.DB) ([]TaskData, error) {
 	var (
-		err error
+		err   error
 		tasks []TaskData
 	)
 	query := fmt.Sprintf(`SELECT
@@ -406,7 +406,7 @@ func GetTasksForUser(uID string, since string,
 	for rows.Next() {
 		var (
 			taskArgs types.JSONText
-			task TaskData
+			task     TaskData
 		)
 		rows.Scan(&task.Id, &task.TestName, &taskArgs)
 		if err != nil {
@@ -424,9 +424,9 @@ func GetTasksForUser(uID string, since string,
 }
 
 func SetTaskState(tID string, uID string,
-					state string, validStates []string,
-					updateTimeCol string,
-					db *sqlx.DB) (error) {
+	state string, validStates []string,
+	updateTimeCol string,
+	db *sqlx.DB) error {
 	var err error
 	task, err := GetTask(tID, uID, db)
 	if err != nil {
@@ -459,11 +459,11 @@ func SetTaskState(tID string, uID string,
 	return nil
 }
 
-func runMigrations(db *sqlx.DB) (error) {
+func runMigrations(db *sqlx.DB) error {
 	migrations := &migrate.AssetMigrationSource{
-		Asset: Asset,
+		Asset:    Asset,
 		AssetDir: AssetDir,
-		Dir: "proteus-common/data/migrations",
+		Dir:      "proteus-common/data/migrations",
 	}
 	n, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
 	if err != nil {
@@ -474,38 +474,38 @@ func runMigrations(db *sqlx.DB) (error) {
 }
 
 func loadTemplates(list ...string) multitemplate.Render {
-    r := multitemplate.New()
-    for _, x := range list {
-        templateString, err := Asset("data/templates/" + x)
-        if err != nil {
+	r := multitemplate.New()
+	for _, x := range list {
+		templateString, err := Asset("data/templates/" + x)
+		if err != nil {
 			ctx.WithError(err).Error("failed to load template")
-        }
+		}
 
-        tmplMessage, err := template.New(x).Parse(string(templateString))
-        if err != nil {
+		tmplMessage, err := template.New(x).Parse(string(templateString))
+		if err != nil {
 			ctx.WithError(err).Error("failed to parse template")
-        }
-        r.Add(x, tmplMessage)
-    }
-    return r
+		}
+		r.Add(x, tmplMessage)
+	}
+	return r
 }
 
 func Start() {
 	db, err := initDatabase()
-	if (err != nil) {
+	if err != nil {
 		ctx.WithError(err).Error("failed to connect to DB")
 		return
 	}
 	defer db.Close()
 
 	err = runMigrations(db)
-	if (err != nil) {
+	if err != nil {
 		ctx.WithError(err).Error("failed to run DB migration")
 		return
 	}
 
 	authMiddleware, err := proteus_mw.InitAuthMiddleware(db)
-	if (err != nil) {
+	if err != nil {
 		ctx.WithError(err).Error("failed to initialise authMiddlewareDevice")
 		return
 	}
@@ -517,8 +517,8 @@ func Start() {
 	router.HTMLRender = loadTemplates("home.tmpl")
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "home.tmpl", gin.H{
-			"title": "proteus-events",
-			"componentName": "proteus-events",
+			"title":                "proteus-events",
+			"componentName":        "proteus-events",
 			"componentDescription": LongDescription,
 		})
 	})
@@ -531,11 +531,11 @@ func Start() {
 			jobList, err := ListJobs(db, true)
 			if err != nil {
 				c.JSON(http.StatusBadRequest,
-						gin.H{"error": err.Error()})
+					gin.H{"error": err.Error()})
 				return
 			}
 			c.JSON(http.StatusOK,
-					gin.H{"jobs": jobList})
+				gin.H{"jobs": jobList})
 		})
 		admin.POST("/job", func(c *gin.Context) {
 			var jobData JobData
@@ -543,18 +543,18 @@ func Start() {
 			if err != nil {
 				ctx.WithError(err).Error("invalid request")
 				c.JSON(http.StatusBadRequest,
-						gin.H{"error": "invalid request"})
+					gin.H{"error": "invalid request"})
 				return
 			}
 			jobID, err := AddJob(db, jobData, scheduler)
-			if (err != nil) {
+			if err != nil {
 				c.JSON(http.StatusBadRequest,
-						gin.H{"error": err.Error()})
+					gin.H{"error": err.Error()})
 				return
 			}
 
 			c.JSON(http.StatusOK,
-					gin.H{"id": jobID})
+				gin.H{"id": jobID})
 			return
 		})
 		admin.DELETE("/job/:job_id", func(c *gin.Context) {
@@ -563,15 +563,15 @@ func Start() {
 			if err != nil {
 				if err == ErrJobNotFound {
 					c.JSON(http.StatusNotFound,
-							gin.H{"error": "job not found"})
+						gin.H{"error": "job not found"})
 					return
 				}
 				c.JSON(http.StatusBadRequest,
-						gin.H{"error": "server side error"})
+					gin.H{"error": "server side error"})
 				return
 			}
 			c.JSON(http.StatusOK,
-					gin.H{"status": "deleted"})
+				gin.H{"status": "deleted"})
 		})
 	}
 
@@ -584,17 +584,17 @@ func Start() {
 			_, err := time.Parse(ISOUTCTimeLayout, since)
 			if err != nil {
 				c.JSON(http.StatusBadRequest,
-						gin.H{"error": "invalid since specified"})
+					gin.H{"error": "invalid since specified"})
 				return
 			}
 			tasks, err := GetTasksForUser(userId, since, db)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError,
-						gin.H{"error": "server side error"})
+					gin.H{"error": "server side error"})
 				return
 			}
 			c.JSON(http.StatusOK,
-					gin.H{"tasks": tasks})
+				gin.H{"tasks": tasks})
 		})
 
 		device.GET("/task/:task_id", func(c *gin.Context) {
@@ -604,7 +604,7 @@ func Start() {
 			if err != nil {
 				if err == ErrAccessDenied {
 					c.JSON(http.StatusUnauthorized,
-							gin.H{"error": "access denied"})
+						gin.H{"error": "access denied"})
 					return
 				}
 				if err == ErrTaskNotFound {
@@ -613,118 +613,118 @@ func Start() {
 					// I don't think it's a security issue, but it's worth
 					// thinking about...
 					c.JSON(http.StatusNotFound,
-							gin.H{"error": "task not found"})
+						gin.H{"error": "task not found"})
 					return
 				}
 				c.JSON(http.StatusBadRequest,
-						gin.H{"error": "invalid request"})
+					gin.H{"error": "invalid request"})
 				return
 			}
 			c.JSON(http.StatusOK,
-					gin.H{"id": task.Id,
-						"test_name": task.TestName,
-						"arguments": task.Arguments})
+				gin.H{"id": task.Id,
+					"test_name": task.TestName,
+					"arguments": task.Arguments})
 			return
 		})
 		device.POST("/task/:task_id/accept", func(c *gin.Context) {
 			taskID := c.Param("task_id")
 			userId := c.MustGet("userID").(string)
 			err := SetTaskState(taskID,
-								userId,
-								"accepted",
-								[]string{"ready", "notified"},
-								"accept_time",
-								db)
+				userId,
+				"accepted",
+				[]string{"ready", "notified"},
+				"accept_time",
+				db)
 			if err != nil {
 				if err == ErrInconsistentState {
 					c.JSON(http.StatusBadRequest,
-							gin.H{"error": "task already accepted"})
+						gin.H{"error": "task already accepted"})
 					return
 				}
 				if err == ErrAccessDenied {
 					c.JSON(http.StatusUnauthorized,
-							gin.H{"error": "access denied"})
+						gin.H{"error": "access denied"})
 					return
 				}
 				if err == ErrTaskNotFound {
 					c.JSON(http.StatusNotFound,
-							gin.H{"error": "task not found"})
+						gin.H{"error": "task not found"})
 					return
 				}
 			}
 			c.JSON(http.StatusOK,
-					gin.H{"status": "accepted"})
+				gin.H{"status": "accepted"})
 			return
 		})
 		device.POST("/task/:task_id/reject", func(c *gin.Context) {
 			taskID := c.Param("task_id")
 			userId := c.MustGet("userID").(string)
 			err := SetTaskState(taskID,
-								userId,
-								"rejected",
-								[]string{"ready", "notified", "accepted"},
-								"done_time",
-								db)
+				userId,
+				"rejected",
+				[]string{"ready", "notified", "accepted"},
+				"done_time",
+				db)
 			if err != nil {
 				if err == ErrInconsistentState {
 					c.JSON(http.StatusBadRequest,
-							gin.H{"error": "task already done"})
+						gin.H{"error": "task already done"})
 					return
 				}
 				if err == ErrAccessDenied {
 					c.JSON(http.StatusUnauthorized,
-							gin.H{"error": "access denied"})
+						gin.H{"error": "access denied"})
 					return
 				}
 				if err == ErrTaskNotFound {
 					c.JSON(http.StatusNotFound,
-							gin.H{"error": "task not found"})
+						gin.H{"error": "task not found"})
 					return
 				}
 			}
 			c.JSON(http.StatusOK,
-					gin.H{"status": "rejected"})
+				gin.H{"status": "rejected"})
 			return
 		})
 		device.POST("/task/:task_id/done", func(c *gin.Context) {
 			taskID := c.Param("task_id")
 			userId := c.MustGet("userID").(string)
 			err := SetTaskState(taskID,
-								userId,
-								"done",
-								[]string{"accepted"},
-								"done_time",
-								db)
+				userId,
+				"done",
+				[]string{"accepted"},
+				"done_time",
+				db)
 			if err != nil {
 				if err == ErrInconsistentState {
 					c.JSON(http.StatusBadRequest,
-							gin.H{"error": "task already done"})
+						gin.H{"error": "task already done"})
 					return
 				}
 				if err == ErrAccessDenied {
 					c.JSON(http.StatusUnauthorized,
-							gin.H{"error": "access denied"})
+						gin.H{"error": "access denied"})
 					return
 				}
 				if err == ErrTaskNotFound {
 					c.JSON(http.StatusNotFound,
-							gin.H{"error": "task not found"})
+						gin.H{"error": "task not found"})
 					return
 				}
 			}
 			c.JSON(http.StatusOK,
-					gin.H{"status": "done"})
+				gin.H{"status": "done"})
 			return
 		})
 	}
 
 	Addr := fmt.Sprintf("%s:%d", viper.GetString("api.address"),
-								viper.GetInt("api.port"))
+		viper.GetInt("api.port"))
 	ctx.Infof("starting on %s", Addr)
 
 	scheduler.Start()
 	s := &http.Server{
-		Addr: Addr,
+		Addr:    Addr,
 		Handler: router,
 	}
 	gracehttp.Serve(s)

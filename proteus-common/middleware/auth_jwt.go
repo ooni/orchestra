@@ -2,21 +2,20 @@ package proteus_mw
 
 import (
 	"crypto/subtle"
+	"database/sql"
 	"errors"
-	"strings"
-	"time"
 	"fmt"
 	"net/http"
-	"database/sql"
+	"strings"
+	"time"
 
-	"github.com/lib/pq"
-	"github.com/jmoiron/sqlx"
 	"github.com/gin-gonic/gin"
+	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"github.com/spf13/viper"
-	"gopkg.in/dgrijalva/jwt-go.v3"
 	"golang.org/x/crypto/bcrypt"
+	"gopkg.in/dgrijalva/jwt-go.v3"
 )
-
 
 // This is taken from:
 // https://github.com/appleboy/gin-jwt/blob/master/auth_jwt.go
@@ -30,8 +29,9 @@ type ProteusClaims struct {
 
 type Account struct {
 	Username string
-	Role string
+	Role     string
 }
+
 // GinJWTMiddleware provides a Json-Web-Token authentication implementation. On failure, a 401 HTTP response
 // is returned. On success, the wrapped middleware is called, and the userID is made available as
 // c.Get("userID").(string).
@@ -136,7 +136,7 @@ func (mw *GinJWTMiddleware) MiddlewareInit() error {
 		mw.IdentityHandler = func(claims *ProteusClaims) Account {
 			return Account{
 				Username: claims.User,
-				Role: claims.Role,
+				Role:     claims.Role,
 			}
 		}
 	}
@@ -223,7 +223,7 @@ func (mw *GinJWTMiddleware) LoginHandler(c *gin.Context) {
 		User: account.Username,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expire.Unix(),
-			IssuedAt: mw.TimeFunc().Unix(),
+			IssuedAt:  mw.TimeFunc().Unix(),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.GetSigningMethod(mw.SigningAlgorithm), claims)
@@ -262,7 +262,7 @@ func (mw *GinJWTMiddleware) RefreshHandler(c *gin.Context) {
 		User: claims.User,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expire.Unix(),
-			IssuedAt: origIat,
+			IssuedAt:  origIat,
 		},
 	}
 	newToken := jwt.NewWithClaims(jwt.GetSigningMethod(mw.SigningAlgorithm), newClaims)
@@ -300,8 +300,8 @@ func (mw *GinJWTMiddleware) TokenGenerator(userID string, role string) string {
 		Role: userID,
 		User: role,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt:  mw.TimeFunc().Add(mw.Timeout).Unix(),
-			IssuedAt: mw.TimeFunc().Unix(),
+			ExpiresAt: mw.TimeFunc().Add(mw.Timeout).Unix(),
+			IssuedAt:  mw.TimeFunc().Unix(),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.GetSigningMethod(mw.SigningAlgorithm), claims)
@@ -365,13 +365,13 @@ func (mw *GinJWTMiddleware) parseToken(c *gin.Context) (*jwt.Token, error) {
 	}
 
 	return jwt.ParseWithClaims(token, &ProteusClaims{},
-								func(token *jwt.Token) (interface{}, error) {
-		if jwt.GetSigningMethod(mw.SigningAlgorithm) != token.Method {
-			return nil, errors.New("invalid signing algorithm")
-		}
+		func(token *jwt.Token) (interface{}, error) {
+			if jwt.GetSigningMethod(mw.SigningAlgorithm) != token.Method {
+				return nil, errors.New("invalid signing algorithm")
+			}
 
-		return mw.Key, nil
-	})
+			return mw.Key, nil
+		})
 }
 
 func (mw *GinJWTMiddleware) unauthorized(c *gin.Context, code int, message string) {
@@ -397,15 +397,15 @@ func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 		Authenticator: func(userId string, password string, c *gin.Context) (Account, bool) {
 			var (
 				passwordHash string
-				account Account
+				account      Account
 			)
 			account.Username = userId
-			if (account.Username == "admin") {
+			if account.Username == "admin" {
 				if viper.IsSet("auth.admin-password") == false {
 					return account, false
 				}
 				adminPassword := []byte(viper.GetString("auth.admin-password"))
-				if (subtle.ConstantTimeCompare([]byte(password), adminPassword) == 1) {
+				if subtle.ConstantTimeCompare([]byte(password), adminPassword) == 1 {
 					account.Role = "admin"
 					return account, true
 				}
@@ -415,7 +415,7 @@ func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 			query := fmt.Sprintf(`SELECT
 							password_hash, role
 							FROM %s WHERE username = $1`,
-						pq.QuoteIdentifier(viper.GetString("database.accounts-table")))
+				pq.QuoteIdentifier(viper.GetString("database.accounts-table")))
 			err := db.QueryRow(query, userId).Scan(
 				&passwordHash,
 				&account.Role)
@@ -433,13 +433,13 @@ func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 		},
 		Unauthorized: func(c *gin.Context, code int, message string) {
 			c.JSON(code, gin.H{
-				"code":    code,
+				"code":  code,
 				"error": message,
 			})
 		},
-		TokenLookup: "header:Authorization",
+		TokenLookup:   "header:Authorization",
 		TokenHeadName: "Bearer",
-		TimeFunc: time.Now,
+		TimeFunc:      time.Now,
 	}, nil
 }
 
