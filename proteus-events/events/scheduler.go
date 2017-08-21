@@ -6,54 +6,54 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
+	"io/ioutil"
 	"net/http"
 	"net/url"
-	"io/ioutil"
+	"os"
 	_ "os/signal"
 	"sync"
 	_ "syscall"
 	"time"
 
-	"github.com/satori/go.uuid"
-	"github.com/spf13/viper"
-	"github.com/lib/pq"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
+	"github.com/lib/pq"
+	"github.com/satori/go.uuid"
+	"github.com/spf13/viper"
 )
 
 type JobTarget struct {
-	ClientID	string
-	TaskId		*string
-	TaskData	*TaskData
-	AlertData	*AlertData
-	Token		string
-	Platform	string
+	ClientID  string
+	TaskId    *string
+	TaskData  *TaskData
+	AlertData *AlertData
+	Token     string
+	Platform  string
 }
 
 func NewJobTarget(cID string, token string, plat string, tid *string, td *TaskData, ad *AlertData) *JobTarget {
 	return &JobTarget{
-		ClientID: cID,
-		TaskId: tid,
-		TaskData: td,
+		ClientID:  cID,
+		TaskId:    tid,
+		TaskData:  td,
 		AlertData: ad,
-		Token: token,
-		Platform: plat,
+		Token:     token,
+		Platform:  plat,
 	}
 }
 
 type Job struct {
-	Id			string
-	Schedule	Schedule
-	Delay		int64
-	Comment		string
+	Id       string
+	Schedule Schedule
+	Delay    int64
+	Comment  string
 
-	NextRunAt	time.Time
-	TimesRun	int64
+	NextRunAt time.Time
+	TimesRun  int64
 
-	lock		sync.RWMutex
-	jobTimer	*time.Timer
-	IsDone		bool
+	lock     sync.RWMutex
+	jobTimer *time.Timer
+	IsDone   bool
 }
 
 func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
@@ -87,7 +87,7 @@ func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
 			$10,
 			$11,
 			$12)`,
-		pq.QuoteIdentifier(viper.GetString("database.tasks-table")))
+			pq.QuoteIdentifier(viper.GetString("database.tasks-table")))
 		stmt, err := tx.Prepare(query)
 		if err != nil {
 			ctx.WithError(err).Error("failed to prepare task create query")
@@ -103,15 +103,15 @@ func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
 		}
 		now := time.Now().UTC()
 		_, err = stmt.Exec(taskID, cID,
-							j.Id, t.TestName,
-							taskArgsStr,
-							"ready",
-							0,
-							now,
-							nil,
-							nil,
-							nil,
-							now)
+			j.Id, t.TestName,
+			taskArgsStr,
+			"ready",
+			0,
+			now,
+			nil,
+			nil,
+			nil,
+			now)
 		if err != nil {
 			tx.Rollback()
 			ctx.WithError(err).Error("failed to insert into tasks table")
@@ -128,16 +128,16 @@ func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
 
 func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	var (
-		err error
-		query string
+		err             error
+		query           string
 		targetCountries []string
 		targetPlatforms []string
-		targets []*JobTarget
+		targets         []*JobTarget
 
-		taskNo sql.NullInt64
-		alertNo sql.NullInt64
-		rows *sql.Rows
-		taskData *TaskData
+		taskNo    sql.NullInt64
+		alertNo   sql.NullInt64
+		rows      *sql.Rows
+		taskData  *TaskData
 		alertData *AlertData
 	)
 	ctx.Debug("getting targets")
@@ -174,7 +174,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 			extra
 			FROM %s
 			WHERE alert_no = $1`,
-		pq.QuoteIdentifier(viper.GetString("database.job-alerts-table")))
+			pq.QuoteIdentifier(viper.GetString("database.job-alerts-table")))
 		err = jDB.db.QueryRow(query, alertNo.Int64).Scan(
 			&ad.Message,
 			&alertExtra)
@@ -198,7 +198,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 			arguments
 			FROM %s
 			WHERE task_no = $1`,
-		pq.QuoteIdentifier(viper.GetString("database.job-tasks-table")))
+			pq.QuoteIdentifier(viper.GetString("database.job-tasks-table")))
 		err = jDB.db.QueryRow(query, taskNo.Int64).Scan(
 			&td.TestName,
 			&taskArgs)
@@ -223,8 +223,8 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	if len(targetCountries) > 0 && len(targetPlatforms) > 0 {
 		query += " WHERE probe_cc = ANY($1) AND platform = ANY($2)"
 		rows, err = jDB.db.Query(query,
-									pq.Array(targetCountries),
-									pq.Array(targetPlatforms))
+			pq.Array(targetCountries),
+			pq.Array(targetPlatforms))
 	} else if len(targetCountries) > 0 || len(targetPlatforms) > 0 {
 		if len(targetCountries) > 0 {
 			query += " WHERE probe_cc = ANY($1)"
@@ -245,9 +245,9 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	for rows.Next() {
 		var (
 			clientId string
-			taskId string
-			token string
-			plat string
+			taskId   string
+			token    string
+			plat     string
 		)
 		err = rows.Scan(&clientId, &token, &plat)
 		if err != nil {
@@ -302,15 +302,15 @@ func (j *Job) WaitAndRun(jDB *JobDB) {
 
 // XXX this is duplicated in proteus-notify
 type NotifyReq struct {
-	ClientIDs []string `json:"client_ids"`
-	Event map[string]interface {} `json:"event"`
+	ClientIDs []string               `json:"client_ids"`
+	Event     map[string]interface{} `json:"event"`
 }
 
 func TaskNotifyProteus(bu string, jt *JobTarget) error {
-	var err error;
+	var err error
 	path, _ := url.Parse("/api/v1/notify")
 
-	baseUrl, err := url.Parse(bu);
+	baseUrl, err := url.Parse(bu)
 	if err != nil {
 		ctx.WithError(err).Error("invalid base url")
 		return err
@@ -319,7 +319,7 @@ func TaskNotifyProteus(bu string, jt *JobTarget) error {
 	notifyReq := NotifyReq{
 		ClientIDs: []string{jt.ClientID},
 		Event: map[string]interface{}{
-			"type": "run_task",
+			"type":    "run_task",
 			"task_id": jt.TaskId,
 		},
 	}
@@ -330,9 +330,9 @@ func TaskNotifyProteus(bu string, jt *JobTarget) error {
 	}
 	u := baseUrl.ResolveReference(path)
 	req, err := http.NewRequest("POST",
-								u.String(),
-								bytes.NewBuffer(jsonStr))
-    req.Header.Set("Content-Type", "application/json")
+		u.String(),
+		bytes.NewBuffer(jsonStr))
+	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -348,14 +348,14 @@ func TaskNotifyProteus(bu string, jt *JobTarget) error {
 }
 
 type GoRushNotification struct {
-	Tokens []string `json:"tokens"`
-	Platform int `json:"platform"`
-	Message	string `json:"message"`
-	Topic string `json:"topic"`
-	To string `json:"to"`
-	Data map[string]interface {} `json:"data"`
-	ContentAvailable bool `json:"content_available"`
-	Notification map[string]string `json:"notification"`
+	Tokens           []string               `json:"tokens"`
+	Platform         int                    `json:"platform"`
+	Message          string                 `json:"message"`
+	Topic            string                 `json:"topic"`
+	To               string                 `json:"to"`
+	Data             map[string]interface{} `json:"data"`
+	ContentAvailable bool                   `json:"content_available"`
+	Notification     map[string]string      `json:"notification"`
 }
 
 type GoRushReq struct {
@@ -363,9 +363,9 @@ type GoRushReq struct {
 }
 
 type Notification struct {
-	Type int // 1 is message 2 is Event
+	Type    int // 1 is message 2 is Event
 	Message string
-	Event map[string]interface {}
+	Event   map[string]interface{}
 }
 
 func NotifyGorush(bu string, jt *JobTarget) error {
@@ -394,7 +394,7 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 		}
 		notification.Message = jt.AlertData.Message
 		notification.Data = map[string]interface{}{
-			"type": notificationType,
+			"type":    notificationType,
 			"payload": jt.AlertData.Extra,
 		}
 	} else if jt.TaskData != nil {
@@ -409,12 +409,12 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 		return errors.New("either alertData or TaskData must be set")
 	}
 
-	notification.Notification = make(map[string]string);
+	notification.Notification = make(map[string]string)
 
-	if (jt.Platform == "ios") {
+	if jt.Platform == "ios" {
 		notification.Platform = 1
 		notification.Topic = viper.GetString("core.notify-topic-ios")
-	} else if (jt.Platform == "android") {
+	} else if jt.Platform == "android" {
 		notification.Notification["click_action"] = viper.GetString(
 			"core.notify-click-action-android")
 		notification.Platform = 2
@@ -439,12 +439,12 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 	u := baseUrl.ResolveReference(path)
 	ctx.Debugf("sending notify request: %s", jsonStr)
 	req, err := http.NewRequest("POST",
-								u.String(),
-								bytes.NewBuffer(jsonStr))
-    req.Header.Set("Content-Type", "application/json")
+		u.String(),
+		bytes.NewBuffer(jsonStr))
+	req.Header.Set("Content-Type", "application/json")
 	if viper.IsSet("auth.gorush-basic-auth-user") {
 		req.SetBasicAuth(viper.GetString("auth.gorush-basic-auth-user"),
-						 viper.GetString("auth.gorush-basic-auth-password"))
+			viper.GetString("auth.gorush-basic-auth-password"))
 	}
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -469,7 +469,7 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 
 func Notify(jt *JobTarget, jDB *JobDB) error {
 	var err error
-	if  (jt.Platform != "android" && jt.Platform != "ios") {
+	if jt.Platform != "android" && jt.Platform != "ios" {
 		ctx.Debugf("we don't support notifying to %s", jt.Platform)
 		return nil
 	}
@@ -481,9 +481,9 @@ func Notify(jt *JobTarget, jDB *JobDB) error {
 	} else if viper.IsSet("core.notify-url") {
 		err = errors.New("proteus notify is deprecated")
 		/*
-		err = TaskNotifyProteus(
-			viper.GetString("core.notify-url"),
-			jt)
+			err = TaskNotifyProteus(
+				viper.GetString("core.notify-url"),
+				jt)
 		*/
 	} else {
 		err = errors.New("no valid notification service found")
@@ -494,11 +494,11 @@ func Notify(jt *JobTarget, jDB *JobDB) error {
 	}
 	if jt.TaskData != nil {
 		err = SetTaskState(jt.TaskData.Id,
-							jt.ClientID,
-							"notified",
-							[]string{"ready"},
-							"notification_time",
-							jDB.db)
+			jt.ClientID,
+			"notified",
+			[]string{"ready"},
+			"notification_time",
+			jDB.db)
 		if err != nil {
 			ctx.WithError(err).Error("failed to update task state")
 			return err
@@ -526,7 +526,7 @@ func (j *Job) Run(jDB *JobDB) {
 		err := Notify(t, jDB)
 		if err != nil {
 			ctx.WithError(err).Errorf("failed to notify %s",
-										t.ClientID)
+				t.ClientID)
 		}
 	}
 
@@ -565,16 +565,16 @@ func (j *Job) Save(jDB *JobDB) error {
 		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
 
 	stmt, err := tx.Prepare(query)
-	if (err != nil) {
+	if err != nil {
 		ctx.WithError(err).Error("failed to prepare update jobs query")
 		return err
 	}
 	_, err = stmt.Exec(j.Id,
-						j.TimesRun,
-						j.NextRunAt.UTC(),
-						j.IsDone)
+		j.TimesRun,
+		j.NextRunAt.UTC(),
+		j.IsDone)
 
-	if (err != nil) {
+	if err != nil {
 		tx.Rollback()
 		ctx.WithError(err).Error("failed to jobs table, rolling back")
 		return errors.New("failed to update jobs table")
@@ -640,17 +640,17 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			j				Job
-			schedule		string
-			nextRunAtStr	string
+			j            Job
+			schedule     string
+			nextRunAtStr string
 		)
 		err := rows.Scan(&j.Id,
-						&j.Comment,
-						&schedule,
-						&j.Delay,
-						&j.TimesRun,
-						&nextRunAtStr,
-						&j.IsDone)
+			&j.Comment,
+			&schedule,
+			&j.Delay,
+			&j.TimesRun,
+			&nextRunAtStr,
+			&j.IsDone)
 		if err != nil {
 			ctx.WithError(err).Error("failed to iterate over jobs")
 			return allJobs, err
@@ -672,16 +672,16 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 }
 
 type Scheduler struct {
-	jobDB		JobDB
-	runningJobs	map[string]*Job
-	stopped	chan os.Signal
+	jobDB       JobDB
+	runningJobs map[string]*Job
+	stopped     chan os.Signal
 }
 
 func NewScheduler(db *sqlx.DB) *Scheduler {
 	return &Scheduler{
-			stopped: make(chan os.Signal),
-			runningJobs: make(map[string]*Job),
-			jobDB: JobDB{db: db}}
+		stopped:     make(chan os.Signal),
+		runningJobs: make(map[string]*Job),
+		jobDB:       JobDB{db: db}}
 }
 
 func (s *Scheduler) DeleteJob(jobID string) error {

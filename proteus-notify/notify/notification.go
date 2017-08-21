@@ -1,8 +1,8 @@
 package notify
 
 import (
-	"time"
 	"errors"
+	"time"
 
 	"github.com/spf13/viper"
 	"path/filepath"
@@ -14,20 +14,20 @@ import (
 )
 
 type PushNotification struct {
-	Tokens		[]string
-	Platform	string
-	Priority	string
-	Data		map[string]interface{}
-	Retry		int
-	Topic		string
+	Tokens   []string
+	Platform string
+	Priority string
+	Data     map[string]interface{}
+	Retry    int
+	Topic    string
 
 	// iOS specific
-	Expiration	time.Time
-	ApnsID		string
+	Expiration time.Time
+	ApnsID     string
 
 	// Android specific
-	TimeToLive	int
-	DryRun		bool
+	TimeToLive int
+	DryRun     bool
 }
 
 func InitApnsClient() error {
@@ -37,10 +37,10 @@ func InitApnsClient() error {
 	}
 
 	var (
-		err error
-		apnKeyPath = viper.GetString("apn.key-path")
+		err            error
+		apnKeyPath     = viper.GetString("apn.key-path")
 		apnKeyPassword = viper.GetString("apn.key-password")
-		isProduction = viper.GetBool("apn.production")
+		isProduction   = viper.GetBool("apn.production")
 	)
 	ctx.Debugf("Using key path: %s", apnKeyPath)
 	ext := filepath.Ext(apnKeyPath)
@@ -93,7 +93,7 @@ func PushToAny(req PushNotification) {
 
 func PushToApn(req PushNotification) {
 	ctx.Debug("Pushing iOS notification to APN")
-	
+
 	var retryCount = 0
 	var retryAfter = 1
 	var maxRetry = viper.GetInt("apn.max-retry")
@@ -101,7 +101,7 @@ func PushToApn(req PushNotification) {
 	if req.Retry > 0 && req.Retry < maxRetry {
 		maxRetry = req.Retry
 	}
-	
+
 	var isDone = false
 
 	for isDone == false {
@@ -136,9 +136,9 @@ func PushToApn(req PushNotification) {
 				// somewhere and stop trying to send messages to these
 				// devices.
 				ctx.Errorf("failed to send %v %v %v",
-									res.StatusCode,
-									res.ApnsID,
-									res.Reason)
+					res.StatusCode,
+					res.ApnsID,
+					res.Reason)
 				toRetryTokens = append(toRetryTokens, token)
 				continue
 			}
@@ -147,13 +147,12 @@ func PushToApn(req PushNotification) {
 			isDone = true
 		} else {
 			time.Sleep(time.Duration(retryAfter) * time.Second)
-			retryAfter = retryAfter*2
+			retryAfter = retryAfter * 2
 			retryCount++
 			req.Tokens = toRetryTokens
 		}
 	}
 }
-
 
 func MakeApnNotification(req PushNotification) *apns.Notification {
 	notification := &apns.Notification{
@@ -178,7 +177,7 @@ func MakeApnNotification(req PushNotification) *apns.Notification {
 
 func PushToFcm(req PushNotification) {
 	ctx.Debug("Pushing Android notification to FCM")
-	
+
 	var retryCount = 0
 	var retryAfter = 1
 	var maxRetry = viper.GetInt("fcm.max-retry")
@@ -186,7 +185,7 @@ func PushToFcm(req PushNotification) {
 	if req.Retry > 0 && req.Retry < maxRetry {
 		maxRetry = req.Retry
 	}
-	
+
 	var isDone = false
 
 	for isDone == false {
@@ -217,7 +216,7 @@ func PushToFcm(req PushNotification) {
 			isDone = true
 		} else {
 			time.Sleep(time.Duration(retryAfter) * time.Second)
-			retryAfter = retryAfter*2
+			retryAfter = retryAfter * 2
 			retryCount++
 			req.Tokens = toRetryTokens
 		}

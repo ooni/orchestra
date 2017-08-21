@@ -3,21 +3,21 @@ package events
 import (
 	"bytes"
 	"errors"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 )
 
 const ISOUTCTimeLayout = "2006-01-02T15:04:05Z"
 
 type ScheduleDuration struct {
-	Years	float64
-	Months	float64
-	Weeks	float64
-	Days	float64
-	Hours	float64
-	Minutes	float64
-	Seconds	float64
+	Years   float64
+	Months  float64
+	Weeks   float64
+	Days    float64
+	Hours   float64
+	Minutes float64
+	Seconds float64
 }
 
 func (d *ScheduleDuration) ToDuration() time.Duration {
@@ -84,9 +84,9 @@ func IntInSlice(num int, slice []int) bool {
 }
 
 type Schedule struct {
-	Repeat		int64
-	StartTime	time.Time
-	Duration	ScheduleDuration
+	Repeat    int64
+	StartTime time.Time
+	Duration  ScheduleDuration
 }
 
 func leadingFloat(s string) (float64, string, error) {
@@ -109,12 +109,12 @@ func leadingFloat(s string) (float64, string, error) {
 func ParseDuration(s string) (ScheduleDuration, error) {
 	timePart := false
 	d := ScheduleDuration{Years: 0,
-						Months: 0,
-						Weeks: 0,
-						Days: 0,
-						Hours: 0,
-						Minutes: 0,
-						Seconds: 0}
+		Months:  0,
+		Weeks:   0,
+		Days:    0,
+		Hours:   0,
+		Minutes: 0,
+		Seconds: 0}
 	if s == "" {
 		return d, nil
 	}
@@ -189,7 +189,7 @@ func ParseSchedule(s string) (Schedule, error) {
 		}
 	}
 	schedule.Repeat = r
-	
+
 	var t = time.Now().UTC()
 	if len(parts[1]) != 0 {
 		t, err = time.Parse(ISOUTCTimeLayout, parts[1])

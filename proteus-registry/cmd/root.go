@@ -1,21 +1,21 @@
 package cmd
 
 import (
-	"strings"
 	"fmt"
 	"os"
+	"strings"
 
-	"github.com/thetorproject/proteus/proteus-common/cmd"
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
+	"github.com/thetorproject/proteus/proteus-common/cmd"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var (
-	cfgFile string
-	logLevel string
+	cfgFile   string
+	logLevel  string
 	psqlDBStr string
 )
 

@@ -15,10 +15,10 @@ var (
 var proteusInfo *ProteusInfo
 
 type ProteusVersion struct {
-	Major	int
-	Minor	int
-	Patch	int
-	Suffix	string
+	Major  int
+	Minor  int
+	Patch  int
+	Suffix string
 }
 
 func (v ProteusVersion) String() string {
@@ -30,10 +30,10 @@ func proteusVersion(major int, minor int, patchVersion int, suffix string) strin
 }
 
 var CurrentProteusVersion = ProteusVersion{
-	Major: 0,
-	Minor: 1,
-	Patch: 0,
-	Suffix:	"-beta.9",
+	Major:  0,
+	Minor:  1,
+	Patch:  0,
+	Suffix: "-beta.9",
 }
 
 type ProteusInfo struct {
