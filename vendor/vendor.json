@@ -367,6 +367,12 @@
 			"revisionTime": "2017-01-31T20:38:18Z"
 		},
 		{
+			"checksumSHA1": "uR1qI7p56R7u43DJGoYtyRleQpA=",
+			"path": "gopkg.in/DATA-DOG/go-sqlmock.v1",
+			"revision": "b983233bc0bbea4dc6e8ec8c8c923d935765ffec",
+			"revisionTime": "2017-02-21T15:59:18Z"
+		},
+		{
 			"checksumSHA1": "9QENMGpz4ELXL4R4DI69TzGHulw=",
 			"path": "gopkg.in/dgrijalva/jwt-go.v3",
 			"revision": "d2709f9f1f31ebcda9651b03077758c1f3a0018c",
