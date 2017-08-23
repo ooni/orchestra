@@ -426,20 +426,7 @@ func runMigrations(db *sqlx.DB) error {
 	return nil
 }
 
-func Start() {
-	db, err := initDatabase()
-
-	if err != nil {
-		ctx.WithError(err).Error("failed to connect to DB")
-		return
-	}
-	defer db.Close()
-	err = runMigrations(db)
-	if err != nil {
-		ctx.WithError(err).Error("failed to run DB migration")
-		return
-	}
-
+func initRouterEngine(db) *gin.Engine {
 	authMiddleware, err := middleware.InitAuthMiddleware(db)
 	if err != nil {
 		ctx.WithError(err).Error("failed to initialise authMiddlewareDevice")
@@ -525,6 +512,24 @@ func Start() {
 				gin.H{"status": "ok"})
 		})
 	}
+	return router
+}
+
+func Start() {
+	db, err := initDatabase()
+
+	if err != nil {
+		ctx.WithError(err).Error("failed to connect to DB")
+		return
+	}
+	defer db.Close()
+	err = runMigrations(db)
+	if err != nil {
+		ctx.WithError(err).Error("failed to run DB migration")
+		return
+	}
+
+	router := initRouterEngine(db)
 
 	Addr := fmt.Sprintf("%s:%d", viper.GetString("api.address"),
 		viper.GetInt("api.port"))
