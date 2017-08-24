@@ -3,8 +3,7 @@ package cmd
 import (
 	"os"
 	"io/ioutil"
-	"crypto/ecdsa"
-	"crypto/elliptic"
+	"crypto/rsa"
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/pem"
@@ -16,30 +15,22 @@ import (
 var outputFile string
 
 func keygen() {
-	// pub, priv, err := ed25519.GenerateKey(rand.Reader)
-	priv_key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	priv_key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		panic(err)
 	}
-	priv_key_bytes, err := x509.MarshalECPrivateKey(priv_key)
-	if err != nil {
-		panic(err)
-	}
+	priv_key_bytes := x509.MarshalPKCS1PrivateKey(priv_key)
 	pub_key_bytes, err := x509.MarshalPKIXPublicKey(&priv_key.PublicKey)
 	if err != nil {
 		panic(err)
 	}
 	pem_priv := pem.EncodeToMemory(
-		&pem.Block{Type: "EC PRIVATE KEY", Bytes: priv_key_bytes},
+		&pem.Block{Type: "RSA PRIVATE KEY", Bytes: priv_key_bytes},
 	)
-	//fmt.Println("pem_priv_block: ")
-	//fmt.Print(string(pem_priv))
 
 	pem_pub := pem.EncodeToMemory(
-		&pem.Block{Type: "EC PUBLIC KEY", Bytes: pub_key_bytes},
+		&pem.Block{Type: "RSA PUBLIC KEY", Bytes: pub_key_bytes},
 	)
-	//fmt.Println("pem_pub_block: ")
-	//fmt.Print(string(pem_pub))
 	ioutil.WriteFile(outputFile, pem_priv, 0600)
 	ioutil.WriteFile(outputFile + ".pub", pem_pub, 0644)
 }
