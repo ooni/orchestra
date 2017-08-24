@@ -27,11 +27,11 @@ func sign(claims ProteusClaims) {
 	if err != nil {
 		panic(err)
 	}
-	privKey, err := jwt.ParseECPrivateKeyFromPEM(keyPEM)
+	privKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyPEM)
 	if err != nil {
 		panic(err)
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
 	ss, err := token.SignedString(privKey)
 	if err != nil {
 		panic(err)

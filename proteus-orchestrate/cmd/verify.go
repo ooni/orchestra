@@ -7,7 +7,7 @@ import (
 	"os"
 	"io/ioutil"
 	"strings"
-	"crypto/ecdsa"
+	"crypto/rsa"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -17,9 +17,9 @@ import (
 
 var pubKeyPath string
 
-func verify(tokenString string, pubKey *ecdsa.PublicKey) {
+func verify(tokenString string, pubKey *rsa.PublicKey) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
 		return pubKey, nil
@@ -54,7 +54,7 @@ var verifyCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		pubKey, err := jwt.ParseECPublicKeyFromPEM(pubKeyBytes)
+		pubKey, err := jwt.ParseRSAPublicKeyFromPEM(pubKeyBytes)
 		if err != nil {
 			panic(err)
 		}
