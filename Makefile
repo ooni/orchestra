@@ -35,6 +35,8 @@ build-notify:
 	go build ${LDFLAGS} -o bin/proteus-notify proteus-notify/main.go
 build-registry:
 	go build ${LDFLAGS} -o bin/proteus-registry proteus-registry/main.go
+build-orchestrate:
+	go build ${LDFLAGS} -o bin/orchestrate proteus-orchestrate/main.go
 
 proteus: vendor build-all
 
