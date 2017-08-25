@@ -11,29 +11,32 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/thetorproject/proteus/proteus-orchestrate/orchestrate/keystore"
 )
 
 var outputFile string
 
-func keygen() {
-	priv_key, err := rsa.GenerateKey(rand.Reader, 2048)
+func keygen(writePrivKey bool) (*rsa.PrivateKey, error) {
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	priv_key_bytes := x509.MarshalPKCS1PrivateKey(priv_key)
-	pub_key_bytes, err := x509.MarshalPKIXPublicKey(&priv_key.PublicKey)
+	privKeyBytes := x509.MarshalPKCS1PrivateKey(privKey)
+	pubKeyBytes, err := x509.MarshalPKIXPublicKey(&privKey.PublicKey)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	pem_priv := pem.EncodeToMemory(
-		&pem.Block{Type: "RSA PRIVATE KEY", Bytes: priv_key_bytes},
+	pemPriv := pem.EncodeToMemory(
+		&pem.Block{Type: "RSA PRIVATE KEY", Bytes: privKeyBytes},
 	)
-
-	pem_pub := pem.EncodeToMemory(
-		&pem.Block{Type: "RSA PUBLIC KEY", Bytes: pub_key_bytes},
+	pemPub := pem.EncodeToMemory(
+		&pem.Block{Type: "RSA PUBLIC KEY", Bytes: pubKeyBytes},
 	)
-	ioutil.WriteFile(outputFile, pem_priv, 0600)
-	ioutil.WriteFile(outputFile + ".pub", pem_pub, 0644)
+	if writePrivKey == true {
+		ioutil.WriteFile(outputFile, pemPriv, 0600)
+	}
+	ioutil.WriteFile(outputFile + ".pub", pemPub, 0644)
+	return privKey, nil
 }
 
 func askForConfirm() bool {
@@ -64,7 +67,19 @@ var keygenCmd = &cobra.Command{
 			}
 			fmt.Println("overwriting...")
 		}
-		keygen()
+		privKey, err := keygen(true)
+		if err != nil {
+			fmt.Printf("failed to generate key pair: %v", err)
+		}
+		//sh, err := orchestrate.SetupHSM("/usr/local/lib/softhsm/libsofthsm2.so")
+		err = keystore.AddKey("/usr/local/lib/softhsm/libsofthsm2.so", privKey)
+		if err != nil {
+			fmt.Printf("failed to add key: %v\n", err)
+		}
+		err = keystore.ListKeys("/usr/local/lib/softhsm/libsofthsm2.so")
+		if err != nil {
+			fmt.Printf("failed to list keys: %v\n", err)
+		}
 	},
 }
 
