@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"os"
+	"strings"
 	"io/ioutil"
 	"crypto/rsa"
 	"crypto/rand"
@@ -35,6 +36,18 @@ func keygen() {
 	ioutil.WriteFile(outputFile + ".pub", pem_pub, 0644)
 }
 
+func askForConfirm() bool {
+	var response string
+	_, err := fmt.Scanln(&response)
+	if err != nil {
+		panic(err)
+	}
+	if (strings.ToLower(string(response[0])) == "y") {
+		return true
+	}
+	return false
+}
+
 // keygenCmd represents the keygen command
 var keygenCmd = &cobra.Command{
 	Use:   "keygen",
@@ -43,7 +56,13 @@ var keygenCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if _, err := os.Stat(outputFile); !os.IsNotExist(err) {
 			// XXX add confirmation dialog
-			fmt.Printf("WARNING: %s exists. Will overwrite\n", outputFile)
+			fmt.Printf("WARNING: %s exists\n", outputFile)
+			fmt.Printf("overwrite? (y/n) ")
+			if askForConfirm() == false {
+				fmt.Println("ok quiting...")
+				return
+			}
+			fmt.Println("overwriting...")
 		}
 		keygen()
 	},
