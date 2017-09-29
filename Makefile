@@ -1,5 +1,5 @@
 PACKAGE = github.com/thetorproject/proteus
-VERSION="0.1.0-beta.9"
+VERSION="0.1.0-rc.1"
 GOFILES := $(shell find . -name "*.go" -type f -not -path "./vendor/*" -not -name "bindata.go")
 COMMIT_HASH = `git rev-parse --short HEAD 2>/dev/null`
 BUILD_DATE = `date +%FT%T%z`

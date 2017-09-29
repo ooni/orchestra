@@ -1,3 +1,11 @@
+# proteus 0.1.0-rc.1 [2017-09-29]
+
+Changes:
+
+* Improvements to testing and code style
+
+* Add unittests that speak to a database
+
 # proteus 0.1.0-beta.9 [2017-08-06]
 
 * fix(registry): Language may be null
