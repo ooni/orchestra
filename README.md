@@ -7,21 +7,10 @@ Probe Orcehstration System.
 
 **proteus-registry**
 
-Status: BETA
-
 Is responsible for registering probes and keeping tabs on what their related
 metadata is.
 
-**proteus-notify**
-
-Status: DEPRECATED
-
-Is responsible for dispatching notifications out to OPOS clients depending on
-the capabilities they support.
-
 **proteus-frontend**
-
-Status: BETA
 
 Is the frontend to:
 
@@ -33,12 +22,15 @@ Is the frontend to:
 
 **proteus-events**
 
-Status: BETA
-
 Is responsible for receiving events via the admin interface and triggering
 notifications via **proteus-notify**.
 
 Can also be used to view the event history.
+
+**proteus-notify**
+
+This is now deprecated in favour of using
+[gorush](https://github.com/appleboy/gorush).
 
 ## Building and releasing
 
