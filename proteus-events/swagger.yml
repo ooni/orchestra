@@ -1,0 +1,220 @@
+swagger: '2.0'
+schemes:
+  - http
+  - https
+host: events.proteus.ooni.io # XXX maybe bikeshed
+basePath: /api/v1
+info:
+  description: |
+    This is an the OpenAPI spec for proteus events
+  version: '2.0.0'
+produces:
+  - application/json
+paths:
+  # These are admin endpoints
+  /admin/job/{job_id}:
+    delete:
+      responses:
+        '200':
+          description: 'OK'
+          examples:
+            'application/json': 'Hello world!'
+          schema:
+            type: string
+  /admin/job:
+    post:
+      responses:
+        '200':
+          description: 'OK'
+          examples:
+            'application/json': 'Hello world!'
+          schema:
+            type: string
+  /admin/jobs:
+    get:
+      responses:
+        '200':
+          description: 'OK'
+          examples:
+            'application/json': 'Hello world!'
+          schema:
+            type: string
+
+
+  # These are operations related to getting tasks to run in unattended
+  # orchestration mode
+  /tasks:
+    get:
+      responses:
+        '200':
+          description: 'OK'
+          examples:
+            'application/json': 'Hello world!'
+          schema:
+            type: string
+  /task/{task_id}/accept:
+    post:
+      responses:
+        '200':
+          description: 'OK'
+          examples:
+            'application/json': 'Hello world!'
+          schema:
+            type: string
+  /task/{task_id}/done:
+    post:
+      responses:
+        '200':
+          description: 'OK'
+          examples:
+            'application/json': 'Hello world!'
+          schema:
+            type: string
+  /task/{task_id}/reject:
+    post:
+      responses:
+        '200':
+          description: 'OK'
+          examples:
+            'application/json': 'Hello world!'
+          schema:
+            type: string
+
+  /task/{task_id}:
+    summary: Echo test
+    description: Receive the exact message you've sent
+    get:
+      responses:
+        '200':
+          description: 'OK'
+          examples:
+            'application/json': 'Hello world!'
+          schema:
+            type: string
+
+  /rendezvous:
+    get:
+      parameters:
+        - name: probe_cc
+          in: query
+          type: string
+          description: The two letter country code
+        - name: probe_asn
+          in: query
+          type: string
+          description: the Autonomous system number in the format "ASXXX"
+        - name: input_type
+          in: query
+          type: string
+          enum:
+            - url
+        - name: cat_code
+          in: query
+          type: array
+          collectionFormat: csv
+          items:
+            type: string
+          description: |
+            The list of category codes to return URLs for. If not specified, will
+            return urls of ANY category code.
+        - name: test_helpers
+          in: query
+          type: array
+          collectionFormat: csv
+          items:
+            type: string
+          description: |
+            The list of test helpers we should return addresses for.
+
+      responses:
+        '200':
+          description: |
+            Returns the directions of where measurements are
+            submitted and what inputs should be used.
+          schema:
+            $ref: "#/definitions/Rendezvous"
+
+definitions:
+  # client sends:
+  # probe_cc,
+  # probe_asn,
+  # cat_codes,
+  # test_helpers: [
+  #   'nome_a',
+  #   'nome_b'
+  # ]
+
+  # backend responds:
+  # - collector
+  # - test helper
+  # - list of inputs
+  CollectorList:
+    properties:
+      onion:
+        type: array
+        items:
+          type: string
+
+      https:
+        type: array
+        items:
+          type: string
+
+      domain_fronted:
+        type: array
+        items:
+          $ref: '#/definitions/DomainFrontAddress'
+
+  DomainFrontAddress:
+    properties:
+      domain:
+        type: string
+        description: 'The actual domain you want to connect to'
+      front:
+        type: string
+        description: 'The front to use to connect to the domain'
+
+  UrlInputList:
+    properties:
+      cat_code:
+        type: string
+        description: 'The citizenlab category code'
+      url:
+        type: string
+        description: 'The Url to test'
+
+  Rendezvous:
+    type: object
+    properties:
+      collectors:
+        description: List of collectors to submit measurements
+        $ref: '#/definitions/CollectorList'
+      test_helpers:
+        description: List of requested test helpers
+        type: object
+      inputs:
+        description: List of inputs to test
+        $ref: '#/definitions/UrlInputList'
+    example:
+      collectors:
+        onion:
+          - example.onion
+        https:
+          - https://example.com
+        domain_fronted:
+          - front: cdn.aws.com
+            domain: example.com
+          - front: cdn2.aws.com
+            domain: example2.com
+      test_helpers:
+        name_a:
+          - https://foo.com
+        name_b:
+          - https://bar.com
+      inputs:
+        - cat_code: 'SRCH'
+          url: https://google.com
+        - cat_code: 'SRCH'
+          url: https://facebook.com
+        - cat_code: 'ALDR'
+          url: https://google.com
