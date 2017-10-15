@@ -5,6 +5,60 @@ The OONI Probe Orchestration System.
 This repository contains the various microservices that compose the OONI
 Probe Orcehstration System.
 
+## Getting started
+
+You should have a working golang installation. Then you can:
+
+```
+go get github.com/thetorproject/proteus
+```
+
+You will also need to install:
+
+```
+go get github.com/kardianos/govendor
+go get -u github.com/jteeuwen/go-bindata/...
+```
+
+To build all the binaries, run:
+
+```
+make proteus
+```
+
+You should now have inside of `./bin` a series of binaries. The ones you are
+about are:
+
+```
+./bin/proteus-events
+./bin/proteus-registry
+```
+
+They both take a config file that you are use the
+`proteus-events/proteus-events.toml.example` (or the `-registry` one) as an
+example respectively.
+
+To aid local testing you should setup a local postgres instance and create users
+and database by running:
+```
+CREATE USER proteus WITH PASSWORD 'changeme';
+CREATE DATABASE proteus;
+GRANT ALL PRIVILEGES ON DATABASE proteus to proteus;
+```
+
+You should then change the config line in the `database` section for key `url`
+to something like:
+
+```
+[database]
+url = "postgres://proteus:changeme@127.0.0.1:32768/proteus?sslmode=disable"
+```
+
+For both `proteus-events/proteus-events.toml` and
+`proteus-registry/proteus-registry.toml`.
+
+## Components
+
 **proteus-registry**
 
 Is responsible for registering probes and keeping tabs on what their related
