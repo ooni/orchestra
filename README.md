@@ -57,6 +57,13 @@ url = "postgres://proteus:changeme@127.0.0.1:32768/proteus?sslmode=disable"
 For both `proteus-events/proteus-events.toml` and
 `proteus-registry/proteus-registry.toml`.
 
+You should then be able to start the services by running:
+
+```
+./bin/proteus-events --config proteus-events/proteus-events.toml start
+```
+
+
 ## Components
 
 **proteus-registry**
