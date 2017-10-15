@@ -595,6 +595,12 @@ func Start() {
 	device := v1.Group("/")
 	device.Use(authMiddleware.MiddlewareFunc(middleware.DeviceAuthorizor))
 	{
+		device.GET("/rendezvous", func(c *gin.Context) {
+			c.JSON(http.StatusInternalServerError,
+				gin.H{"error": "not implemented"})
+			return
+		})
+
 		device.GET("/tasks", func(c *gin.Context) {
 			userId := c.MustGet("userID").(string)
 			since := c.DefaultQuery("since", "2016-10-20T10:30:00Z")
