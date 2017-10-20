@@ -10,7 +10,7 @@ import git
 TEST_LISTS_GIT_URL = 'https://github.com/citizenlab/test-lists/'
 
 CREATE_URL_CATEGORIES_TABLE = """
-CREATE SEQUENCE cat_no_seq;
+CREATE SEQUENCE IF NOT EXISTS cat_no_seq;
 
 CREATE TABLE IF NOT EXISTS url_categories
 (
@@ -22,10 +22,11 @@ CREATE TABLE IF NOT EXISTS url_categories
 );
 """
 
+# XXX can a url belong to more than one category? (probably not)
 CREATE_URL_TABLE = """
-CREATE SEQUENCE url_no_seq;
+CREATE SEQUENCE IF NOT EXISTS url_no_seq;
 
-CREATE TABLE IF NOT EXISTS url
+CREATE TABLE IF NOT EXISTS urls
 (
     url_no INT NOT NULL default nextval('url_no_seq') PRIMARY KEY,
     url VARCHAR,
@@ -33,12 +34,14 @@ CREATE TABLE IF NOT EXISTS url
     country_no INT,
     date_added TIMESTAMP WITH TIME ZONE,
     source VARCHAR,
-    notes VARCHAR
+    notes VARCHAR,
+    active BOOLEAN,
+    UNIQUE (url, country_no)
 );
 """
 
 CREATE_COUNTRY_TABLE = """
-CREATE SEQUENCE country_no_seq;
+CREATE SEQUENCE IF NOT EXISTS country_no_seq;
 
 CREATE TABLE IF NOT EXISTS country
 (
@@ -117,12 +120,14 @@ def init_countries(postgres):
             alpha_3 = country.alpha_3
             name = country_name_fixes.get(alpha_2, country.name)
             c.execute('INSERT INTO country (name, alpha_2, alpha_3)'
-                      ' VALUES (%s, %s, %s)',
+                      ' VALUES (%s, %s, %s)'
+                      ' ON CONFLICT DO NOTHING RETURNING country_no',
                       (name, alpha_2, alpha_3))
 
         for name, alpha_2, alpha_3 in special_countries:
             c.execute('INSERT INTO country (name, alpha_2, alpha_3)'
-                      ' VALUES (%s, %s, %s)',
+                      ' VALUES (%s, %s, %s)'
+                      ' ON CONFLICT DO NOTHING RETURNING country_no',
                       (name, alpha_2, alpha_3))
 
 def init_url_lists(working_dir, postgres, cat_code_no, country_alpha_2_no):
@@ -150,10 +155,11 @@ def init_url_lists(working_dir, postgres, cat_code_no, country_alpha_2_no):
                     print("INVALID country code %s" % alpha_2)
                     continue
                 try:
-                    c.execute('INSERT INTO url (url, cat_no, country_no, date_added, source, notes)'
-                              ' VALUES (%s, %s, %s, %s, %s, %s)'
+                    print("inserting into urls")
+                    c.execute('INSERT INTO urls (url, cat_no, country_no, date_added, source, notes, active)'
+                              ' VALUES (%s, %s, %s, %s, %s, %s, %s)'
                               ' ON CONFLICT DO NOTHING RETURNING url_no',
-                              (url, cat_no, country_no, date_added, source, notes))
+                              (url, cat_no, country_no, date_added, source, notes, True))
                 except:
                     print("INVALID row in %s: %s" % (csv_path, row))
                     raise RuntimeError("INVALID row in %s: %s" % (csv_path, row))
@@ -165,10 +171,11 @@ def sync_repo(working_dir):
         print("%s does not exist. Try running with --init" % repo_dir)
         raise RuntimeError("%s does not exist" % repo_dir)
     repo = git.Repo(repo_dir)
-    previous_commit = repo.head.commit
-    repo.remotes.origin.pull()
-    if repo.head.commit != previous_commit:
-        diffs = previous_commit.diff(repo.head.commit)
+    #previous_commit = repo.head.commit
+    #repo.remotes.origin.pull()
+    #if repo.head.commit != previous_commit:
+    #    diffs = previous_commit.diff(repo.head.commit)
+    diffs = repo.head.commit.diff("HEAD~1")
     return diffs
 
 
@@ -176,6 +183,7 @@ def update_country_list(changed_path, working_dir, postgres, cat_code_no, countr
     pgconn = psycopg2.connect(dsn=postgres)
 
     with pgconn, pgconn.cursor() as c:
+        csv_path = os.path.join(working_dir, 'test-lists', changed_path)
         alpha_2 = os.path.basename(changed_path).split('.csv')[0].upper()
         if alpha_2 == 'GLOBAL':
             alpha_2 = 'XX' # We use XX to denote the global country code
@@ -183,7 +191,29 @@ def update_country_list(changed_path, working_dir, postgres, cat_code_no, countr
         if len(alpha_2) != 2: # Skip every non two letter country code (ex. 00-LEGEND-category_codes)
             return
 
-        csv_path = os.path.join(working_dir, 'test-lists', changed_path)
+        country_no = country_alpha_2_no[alpha_2]
+
+        # for each URL in DB, if it's not in the newest CSV, mark it inactive
+        c.execute('SELECT url_no, url FROM urls'
+                  ' WHERE country_no = %s AND active = %s', (country_no, True))
+        db_urlno_urls = [_ for _ in c]
+        csv_urls = set([row[0] for row in _iterate_csv(csv_path, skip_header=True)]) # XXX check for dupes, etc
+        print("for country %s, have %s active urls in db" % (alpha_2, len(db_urlno_urls)))
+        print("for country %s, have %s urls in newest csv" % (alpha_2, len(csv_urls)))
+        for db_urlno_url in db_urlno_urls:
+            if db_urlno_url[1] not in csv_urls:
+                # mark inactive
+                try:
+                    c.execute('UPDATE urls '
+                              'SET active = %s'
+                              ' WHERE url_no = %s',
+                              (False, db_urlno_url[0]))
+                except:
+                    print("Failed to mark url_no:%s inactive" % db_urlno_url[0])
+                    raise RuntimeError("Failed to mark url_no:%s inactive" % db_urlno_url[0])
+
+        # now go through urls in the newest csv. insert them if they're *not*
+        # in the db, and update them if they *are* in the db.
         for row in _iterate_csv(csv_path, skip_header=True):
             url, cat_code, _, date_added, source, notes = row
             try:
@@ -197,33 +227,35 @@ def update_country_list(changed_path, working_dir, postgres, cat_code_no, countr
                 print("INVALID country code %s" % alpha_2)
                 continue
 
-            c.execute('SELECT cat_no, source, notes, url_no FROM url'
+            c.execute('SELECT cat_no, source, notes, url_no, active FROM urls'
                       ' WHERE country_no = %s AND url = %s', (country_no, url))
             url_in_db = [_ for _ in c]
             if len(url_in_db) == 0:
                 try:
-                    c.execute('INSERT INTO url (url, cat_no, country_no, date_added, source, notes)'
-                              ' VALUES (%s, %s, %s, %s, %s, %s)'
+                    c.execute('INSERT INTO urls (url, cat_no, country_no, date_added, source, notes, active)'
+                              ' VALUES (%s, %s, %s, %s, %s, %s, %s)'
                               ' ON CONFLICT DO NOTHING RETURNING url_no',
-                              (url, cat_no, country_no, date_added, source, notes))
+                              (url, cat_no, country_no, date_added, source, notes, True))
                 except:
                     print("INVALID row in %s: %s" % (csv_path, row))
                     raise RuntimeError("INVALID row in %s: %s" % (csv_path, row))
             elif len(url_in_db) == 1:
                 url_no = url_in_db[0][3]
-                if url_in_db[0][0] != cat_no or url_in_db[0][1] != source or url_in_db[0][2] != notes:
+                if url_in_db[0][0] != cat_no or url_in_db[0][1] != source or url_in_db[0][2] != notes or url_in_db[0][4] != True:
                     try:
-                        c.execute('UPDATE url '
+                        c.execute('UPDATE urls '
                                   'SET cat_no = %s,'
                                   '    source = %s,'
-                                  '    notes = %s'
+                                  '    notes = %s,'
+                                  '    active = %s'
                                   ' WHERE url_no = %s',
-                                  (cat_no, source, notes, url_no))
+                                  (cat_no, source, notes, True, url_no))
                     except:
                         print("Failed to update %s with values: %s" % (csv_path, row))
                         raise RuntimeError("Failed to update %s with values: %s" % (csv_path, row))
                 else:
-                    print("Value unchanged, skipping")
+                    pass
+                    #print("Value unchanged, skipping")
             else:
                 print("Duplicate entries found in database. Something is wrong see: %s" % url_in_db)
 
@@ -232,6 +264,7 @@ def update(working_dir, postgres):
     diffs = sync_repo(working_dir)
 
     if len(diffs) == 0:
+        print("no diffs")
         return
 
     cat_code_no = get_cat_code_no(postgres)
