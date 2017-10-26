@@ -39,8 +39,12 @@ CREATE TABLE IF NOT EXISTS urls
 
 );
 
+CREATE SEQUENCE test_helper_no_seq;
 CREATE TABLE IF NOT EXISTS test_helpers
 (
+    test_helper_no INTEGER DEFAULT nextval('test_helper_no_seq'::regclass) PRIMARY KEY NOT NULL,
+    test_name VARCHAR,
+    address VARCHAR
 
 );
 
