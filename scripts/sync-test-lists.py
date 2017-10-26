@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS urls
 CREATE_COUNTRY_TABLE = """
 CREATE SEQUENCE IF NOT EXISTS country_no_seq;
 
-CREATE TABLE IF NOT EXISTS country
+CREATE TABLE IF NOT EXISTS countries
 (
     country_no INT NOT NULL default nextval('country_no_seq') PRIMARY KEY,
     name VARCHAR UNIQUE NOT NULL,
@@ -101,7 +101,7 @@ special_countries = (
 def get_country_alpha_2_no(postgres):
     pgconn = psycopg2.connect(dsn=postgres)
     with pgconn, pgconn.cursor() as c:
-        c.execute('SELECT alpha_2, country_no FROM country')
+        c.execute('SELECT alpha_2, country_no FROM countries')
         country_alpha_2_no = {str(_[0]): _[1] for _ in c}
     return country_alpha_2_no
 
@@ -119,13 +119,13 @@ def init_countries(postgres):
             alpha_2 = country.alpha_2
             alpha_3 = country.alpha_3
             name = country_name_fixes.get(alpha_2, country.name)
-            c.execute('INSERT INTO country (name, alpha_2, alpha_3)'
+            c.execute('INSERT INTO countries (name, alpha_2, alpha_3)'
                       ' VALUES (%s, %s, %s)'
                       ' ON CONFLICT DO NOTHING RETURNING country_no',
                       (name, alpha_2, alpha_3))
 
         for name, alpha_2, alpha_3 in special_countries:
-            c.execute('INSERT INTO country (name, alpha_2, alpha_3)'
+            c.execute('INSERT INTO countries (name, alpha_2, alpha_3)'
                       ' VALUES (%s, %s, %s)'
                       ' ON CONFLICT DO NOTHING RETURNING country_no',
                       (name, alpha_2, alpha_3))
