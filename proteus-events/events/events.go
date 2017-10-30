@@ -354,9 +354,9 @@ var ErrInconsistentState = errors.New("task already accepted")
 // GetCollectors() returns a map of collectors keyed by their type
 func GetCollectors(db *sqlx.DB) (map[string]interface{}, error) {
 	var (
-		err   error
+		err error
 	)
-    collectors := make(map[string]interface{})
+	collectors := make(map[string]interface{})
 	query := fmt.Sprintf(`SELECT
 		type,
 		address,
@@ -372,16 +372,16 @@ func GetCollectors(db *sqlx.DB) (map[string]interface{}, error) {
 		return collectors, err
 	}
 	defer rows.Close()
-    var (
-        onion_cos   []string
-        https_cos   []string
-        fronted_cos []map[string]string
-    )
+	var (
+		onion_cos   []string
+		https_cos   []string
+		fronted_cos []map[string]string
+	)
 	for rows.Next() {
 		var (
-		    ctype       string
-		    caddress    string
-		    cfront      sql.NullString
+			ctype    string
+			caddress string
+			cfront   sql.NullString
 		)
 		err = rows.Scan(&ctype, &caddress, &cfront)
 		if err != nil {
@@ -389,23 +389,23 @@ func GetCollectors(db *sqlx.DB) (map[string]interface{}, error) {
 			continue
 		}
 		switch ctype {
-        case "onion":
-            onion_cos = append(onion_cos, caddress)
-        case "https":
-            https_cos = append(https_cos, caddress)
-        case "domain_fronted":
-            if !cfront.Valid {
-                ctx.Error("domain_fronted collector with bad front domain")
-                continue
-            }
-            fronted_co := map[string]string{}
-            fronted_co["domain"] = caddress
-            fronted_co["front"] = cfront.String
-            fronted_cos = append(fronted_cos, fronted_co)
-        default:
-            ctx.Error("collector with bad type in DB")
-            continue
-        }
+		case "onion":
+			onion_cos = append(onion_cos, caddress)
+		case "https":
+			https_cos = append(https_cos, caddress)
+		case "domain_fronted":
+			if !cfront.Valid {
+				ctx.Error("domain_fronted collector with bad front domain")
+				continue
+			}
+			fronted_co := map[string]string{}
+			fronted_co["domain"] = caddress
+			fronted_co["front"] = cfront.String
+			fronted_cos = append(fronted_cos, fronted_co)
+		default:
+			ctx.Error("collector with bad type in DB")
+			continue
+		}
 	}
 	collectors["onion"] = onion_cos
 	collectors["https"] = https_cos
@@ -416,9 +416,9 @@ func GetCollectors(db *sqlx.DB) (map[string]interface{}, error) {
 // GetTestHelpers() returns a map of test helpers keyed by the test name
 func GetTestHelpers(db *sqlx.DB) (map[string][]string, error) {
 	var (
-		err   error
+		err error
 	)
-    helpers := make(map[string][]string)
+	helpers := make(map[string][]string)
 	query := fmt.Sprintf(`SELECT
 		test_name,
 		address
@@ -435,8 +435,8 @@ func GetTestHelpers(db *sqlx.DB) (map[string][]string, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var (
-		    test_name  string
-		    address    string
+			test_name string
+			address   string
 		)
 		err = rows.Scan(&test_name, &address)
 		if err != nil {
@@ -450,18 +450,18 @@ func GetTestHelpers(db *sqlx.DB) (map[string][]string, error) {
 
 // GetTestInputs returns a slice of test inputs
 func GetTestInputs(co_alpha_2 string, db *sqlx.DB) ([]map[string]string, error) {
-    var err error
-    inputs := make([]map[string]string, 0)
-    query := fmt.Sprintf(`SELECT
+	var err error
+	inputs := make([]map[string]string, 0)
+	query := fmt.Sprintf(`SELECT
         url,
         cat_code
         FROM %s urls
         INNER JOIN %s cos ON urls.country_no = cos.country_no
         INNER JOIN %s url_cats ON urls.cat_no = url_cats.cat_no
         WHERE cos.alpha_2 = $1`,
-        pq.QuoteIdentifier(viper.GetString("database.urls-table")),
-        pq.QuoteIdentifier(viper.GetString("database.countries-table")),
-        pq.QuoteIdentifier(viper.GetString("database.url-categories-table")))
+		pq.QuoteIdentifier(viper.GetString("database.urls-table")),
+		pq.QuoteIdentifier(viper.GetString("database.countries-table")),
+		pq.QuoteIdentifier(viper.GetString("database.url-categories-table")))
 	rows, err := db.Query(query, co_alpha_2)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -472,19 +472,19 @@ func GetTestInputs(co_alpha_2 string, db *sqlx.DB) ([]map[string]string, error) 
 	}
 	defer rows.Close()
 	for rows.Next() {
-	    var (
-            url string
-            cat string
-        )
-        err = rows.Scan(&url, &cat)
-        if err != nil {
-            ctx.WithError(err).Error("failed to get test input row (urls)")
-            continue
-        }
-        input := map[string]string{"cat_code": cat, "url": url}
-        inputs = append(inputs, input)
-    }
-    return inputs, nil
+		var (
+			url string
+			cat string
+		)
+		err = rows.Scan(&url, &cat)
+		if err != nil {
+			ctx.WithError(err).Error("failed to get test input row (urls)")
+			continue
+		}
+		input := map[string]string{"cat_code": cat, "url": url}
+		inputs = append(inputs, input)
+	}
+	return inputs, nil
 }
 
 // GetTask returns the specified task with the ID
@@ -732,28 +732,28 @@ func Start() {
 	//device.Use(authMiddleware.MiddlewareFunc(middleware.DeviceAuthorizor))
 	{
 		device.GET("/rendezvous", func(c *gin.Context) {
-            collectors, err := GetCollectors(db)
+			collectors, err := GetCollectors(db)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError,
 					gin.H{"error": "server side error"})
 				return
-            }
-            test_helpers, err := GetTestHelpers(db)
-            if err != nil {
-                c.JSON(http.StatusInternalServerError,
-                    gin.H{"error": "server side error"})
-                    return
-            }
-            test_inputs, err := GetTestInputs("MZ", db)
-            if err != nil {
-                c.JSON(http.StatusInternalServerError,
-                    gin.H{"error": "server side error"})
-                    return
-            }
+			}
+			test_helpers, err := GetTestHelpers(db)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError,
+					gin.H{"error": "server side error"})
+				return
+			}
+			test_inputs, err := GetTestInputs("MZ", db)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError,
+					gin.H{"error": "server side error"})
+				return
+			}
 			c.JSON(http.StatusOK,
 				gin.H{"collectors": collectors,
-			          "test_helpers": test_helpers,
-			          "inputs": test_inputs})
+					"test_helpers": test_helpers,
+					"inputs":       test_inputs})
 			return
 		})
 
