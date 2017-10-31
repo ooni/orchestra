@@ -449,7 +449,7 @@ func GetTestHelpers(db *sqlx.DB) (map[string][]string, error) {
 }
 
 // GetTestInputs returns a slice of test inputs
-func GetTestInputs(co_alpha_2 string, db *sqlx.DB) ([]map[string]string, error) {
+func GetTestInputs(co_alpha_2 string, cat_code string, db *sqlx.DB) ([]map[string]string, error) {
 	var err error
 	inputs := make([]map[string]string, 0)
 	query := fmt.Sprintf(`SELECT
@@ -458,11 +458,12 @@ func GetTestInputs(co_alpha_2 string, db *sqlx.DB) ([]map[string]string, error) 
         FROM %s urls
         INNER JOIN %s cos ON urls.country_no = cos.country_no
         INNER JOIN %s url_cats ON urls.cat_no = url_cats.cat_no
-        WHERE cos.alpha_2 = $1`,
+        WHERE cos.alpha_2 = $1
+        AND url_cats.cat_code = $2`,
 		pq.QuoteIdentifier(viper.GetString("database.urls-table")),
 		pq.QuoteIdentifier(viper.GetString("database.countries-table")),
 		pq.QuoteIdentifier(viper.GetString("database.url-categories-table")))
-	rows, err := db.Query(query, co_alpha_2)
+	rows, err := db.Query(query, co_alpha_2, cat_code)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return inputs, nil
@@ -744,7 +745,7 @@ func Start() {
 					gin.H{"error": "server side error"})
 				return
 			}
-			test_inputs, err := GetTestInputs("MZ", db)
+			test_inputs, err := GetTestInputs("AZ", "NEWS", db)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError,
 					gin.H{"error": "server side error"})
