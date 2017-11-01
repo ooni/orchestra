@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -448,22 +449,56 @@ func GetTestHelpers(db *sqlx.DB) (map[string][]string, error) {
 	return helpers, nil
 }
 
-// GetTestInputs returns a slice of test inputs
-func GetTestInputs(co_alpha_2 string, cat_code string, db *sqlx.DB) ([]map[string]string, error) {
-	var err error
-	inputs := make([]map[string]string, 0)
+func BuildTestInputQuery(countries []string, cat_codes []string) (string, error) {
 	query := fmt.Sprintf(`SELECT
-        url,
-        cat_code
-        FROM %s urls
-        INNER JOIN %s cos ON urls.country_no = cos.country_no
-        INNER JOIN %s url_cats ON urls.cat_no = url_cats.cat_no
-        WHERE cos.alpha_2 = $1
-        AND url_cats.cat_code = $2`,
+		url,
+		cat_code,
+		alpha_2
+		FROM %s urls
+		INNER JOIN %s cos ON urls.country_no = cos.country_no
+		INNER JOIN %s url_cats ON urls.cat_no = url_cats.cat_no`,
 		pq.QuoteIdentifier(viper.GetString("database.urls-table")),
 		pq.QuoteIdentifier(viper.GetString("database.countries-table")),
 		pq.QuoteIdentifier(viper.GetString("database.url-categories-table")))
-	rows, err := db.Query(query, co_alpha_2, cat_code)
+	if len(countries) > 0 {
+		query += fmt.Sprintf(`
+			WHERE (cos.alpha_2 = '%s'`, countries[0])
+		for _, country := range countries[1:] {
+			query += fmt.Sprintf(` OR cos.alpha_2 = '%s'`, country)
+		}
+		query += `)`
+	}
+	if len(cat_codes) > 0 {
+		if len(countries) > 0 {
+			query += `
+				AND `
+		} else {
+			query += `
+				WHERE `
+		}
+		query += fmt.Sprintf(`(url_cats.cat_code = '%s'`, cat_codes[0])
+		for _, cat_code := range cat_codes[1:] {
+			query += fmt.Sprintf(` OR url_cats.cat_code = '%s'`, cat_code)
+		}
+		query += `)`
+	}
+	return query, nil
+}
+
+// GetTestInputs returns a slice of test inputs
+func GetTestInputs(countries []string, cat_codes []string, db *sqlx.DB) ([]map[string]string, error) {
+	var (
+		err error
+	)
+	inputs := make([]map[string]string, 0)
+	ctx.Infof("countries: %s", countries)
+	ctx.Infof("cat_codes: %s", cat_codes)
+	query, err := BuildTestInputQuery(countries, cat_codes)
+	if err != nil {
+		return inputs, err
+	}
+	ctx.Infof("query: %s", query)
+	rows, err := db.Query(query)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return inputs, nil
@@ -474,15 +509,16 @@ func GetTestInputs(co_alpha_2 string, cat_code string, db *sqlx.DB) ([]map[strin
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			url string
-			cat string
+			url     string
+			cat     string
+			alpha_2 string
 		)
-		err = rows.Scan(&url, &cat)
+		err = rows.Scan(&url, &cat, &alpha_2)
 		if err != nil {
 			ctx.WithError(err).Error("failed to get test input row (urls)")
 			continue
 		}
-		input := map[string]string{"cat_code": cat, "url": url}
+		input := map[string]string{"cat_code": cat, "url": url, "country": alpha_2}
 		inputs = append(inputs, input)
 	}
 	return inputs, nil
@@ -745,7 +781,19 @@ func Start() {
 					gin.H{"error": "server side error"})
 				return
 			}
-			test_inputs, err := GetTestInputs("AZ", "NEWS", db)
+			countries := []string{}
+			probeCc := c.Query("probe_cc")
+			if probeCc == "" {
+				countries = []string{"XX"}
+			} else {
+				countries = []string{probeCc, "XX"}
+			}
+			cats := []string{}
+			catParam := c.Query("cat_code")
+			if catParam != "" {
+				cats = strings.Split(c.Query("cat_code"), ",")
+			}
+			test_inputs, err := GetTestInputs(countries, cats, db)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError,
 					gin.H{"error": "server side error"})
