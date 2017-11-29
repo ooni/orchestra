@@ -26,7 +26,7 @@ To build all the binaries, run:
 make proteus
 ```
 
-You should now have inside of `./bin` a series of binaries. The ones you are
+You should now have inside of `./bin` a series of binaries. The ones you care
 about are:
 
 ```
@@ -34,20 +34,20 @@ about are:
 ./bin/proteus-registry
 ```
 
-They both take a config file that you are use the
-`proteus-events/proteus-events.toml.example` (or the `-registry` one) as an
-example respectively.
+They both take a config file--you can use
+`proteus-events/proteus-events.toml.example` (or the `-registry` one) as
+examples, respectively.
 
-To aid local testing you should setup a local postgres instance and create users
-and database by running:
+To aid local testing you should set up a local postgres instance with a user
+and a database by running:
 ```
 CREATE USER proteus WITH PASSWORD 'changeme';
 CREATE DATABASE proteus;
 GRANT ALL PRIVILEGES ON DATABASE proteus to proteus;
 ```
 
-You should then change the config line in the `database` section for key `url`
-to something like:
+You should then change the config line in the `database` section for the key
+`url` to something like:
 
 ```
 [database]
