@@ -497,7 +497,6 @@ func GetTestInputs(countries []string, cat_codes []string, db *sqlx.DB) ([]map[s
 	if err != nil {
 		return inputs, err
 	}
-	ctx.Infof("query: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -766,7 +765,7 @@ func Start() {
 	}
 
 	device := v1.Group("/")
-	//device.Use(authMiddleware.MiddlewareFunc(middleware.DeviceAuthorizor))
+	device.Use(authMiddleware.MiddlewareFunc(middleware.DeviceAuthorizor))
 	{
 		device.GET("/rendezvous", func(c *gin.Context) {
 			collectors, err := GetCollectors(db)
