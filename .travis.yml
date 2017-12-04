@@ -2,7 +2,8 @@ language: go
 dist: precise
 go:
   - 1.8.3
-  - tip
+  # XXX temporarily disabled, because tip produces inconsistent go fmt results
+  #- tip
 install:
   # Rename TheTorProject to all lowercase to make imports work properly
   - mv $GOPATH/src/github.com/TheTorProject $GOPATH/src/github.com/thetorproject
