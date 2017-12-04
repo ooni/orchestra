@@ -462,9 +462,9 @@ func BuildTestInputQuery(countries []string, cat_codes []string) (string, error)
 		pq.QuoteIdentifier(viper.GetString("database.url-categories-table")))
 	if len(countries) > 0 {
 		query += fmt.Sprintf(`
-			WHERE (cos.alpha_2 = '%s'`, countries[0])
-		for _, country := range countries[1:] {
-			query += fmt.Sprintf(` OR cos.alpha_2 = '%s'`, country)
+			WHERE (cos.alpha_2 = $1`)
+		for i, _ := range countries[1:] {
+			query += fmt.Sprintf(` OR cos.alpha_2 = $%d`, i+2)
 		}
 		query += `)`
 	}
@@ -476,9 +476,9 @@ func BuildTestInputQuery(countries []string, cat_codes []string) (string, error)
 			query += `
 				WHERE `
 		}
-		query += fmt.Sprintf(`(url_cats.cat_code = '%s'`, cat_codes[0])
-		for _, cat_code := range cat_codes[1:] {
-			query += fmt.Sprintf(` OR url_cats.cat_code = '%s'`, cat_code)
+		query += fmt.Sprintf(`(url_cats.cat_code = $%d`, len(countries)+1)
+		for i, _ := range cat_codes[1:] {
+			query += fmt.Sprintf(` OR url_cats.cat_code = $%d`, len(countries)+2+i)
 		}
 		query += `)`
 	}
@@ -497,7 +497,14 @@ func GetTestInputs(countries []string, cat_codes []string, db *sqlx.DB) ([]map[s
 	if err != nil {
 		return inputs, err
 	}
-	rows, err := db.Query(query)
+	params := append(countries, cat_codes...)
+	params2 := make([]interface{}, len(params))
+	for i, v := range params {
+		params2[i] = v
+	}
+	ctx.Debugf("query: %s", query)
+	ctx.Debugf("params: %v", params2)
+	rows, err := db.Query(query, params2...)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return inputs, nil
