@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -533,11 +534,14 @@ func BuildTestInputQuery(countries []string, cat_codes []string) (string, error)
 		}
 		query += `)`
 	}
+	query += fmt.Sprintf(`
+		ORDER BY random()
+		LIMIT $%d`, len(countries)+len(cat_codes)+1)
 	return query, nil
 }
 
 // GetTestInputs returns a slice of test inputs
-func GetTestInputs(countries []string, cat_codes []string, db *sqlx.DB) ([]map[string]string, error) {
+func GetTestInputs(countries []string, cat_codes []string, count int64, db *sqlx.DB) ([]map[string]string, error) {
 	var (
 		err error
 	)
@@ -547,7 +551,7 @@ func GetTestInputs(countries []string, cat_codes []string, db *sqlx.DB) ([]map[s
 		return inputs, err
 	}
 	params := append(countries, cat_codes...)
-	params2 := make([]interface{}, len(params))
+	params2 := make([]interface{}, len(params)+1)
 	for i, v := range params {
 		params2[i] = v
 	}
@@ -857,7 +861,17 @@ func Start() {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
 			}
-			test_inputs, err := GetTestInputs(countries_upper, cats_upper, db)
+			count_string := c.Query("count")
+			if count_string == "" {
+				count_string = viper.GetString("api.default-inputs-to-return")
+			}
+			var count int64
+			count, err = strconv.ParseInt(count_string, 10, 64)
+			if err != nil || count < 1 || count > 1000 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "bad count"})
+				return
+			}
+			test_inputs, err := GetTestInputs(countries_upper, cats_upper, count, db)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError,
 					gin.H{"error": "server side error"})
