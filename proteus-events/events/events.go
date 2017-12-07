@@ -482,14 +482,13 @@ func GetTestInputs(countries []string, catCodes []string, count int64, db *sqlx.
 		args = append(args, pq.StringArray(catCodes))
 	}
 
-	stmt, err := db.Prepare(query, params2...)
+	stmt, err := db.Prepare(query)
 	if err != nil {
 		ctx.WithError(err).Error("failed to prepare query")
 		return inputs, err
 	}
 	defer stmt.Close()
-	rows, err := stmt.Exec(query, args...)
-	defer rows.Close()
+	rows, err := stmt.Query(args...)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.Debugf("got an empty result")
