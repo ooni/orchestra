@@ -3,6 +3,7 @@ package events
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -208,4 +209,17 @@ func ParseSchedule(s string) (Schedule, error) {
 	}
 	schedule.Duration = d
 	return schedule, nil
+}
+
+func UpperAndWhitelist(ins []string, whitelist map[string]struct{}) ([]string, error) {
+	outs := make([]string, len(ins))
+	for i, v := range ins {
+		outs[i] = strings.ToUpper(v)
+		_, present := whitelist[outs[i]]
+		if !present {
+			errorString := fmt.Sprintf("%s is not valid", v)
+			return nil, errors.New(errorString)
+		}
+	}
+	return outs, nil
 }
