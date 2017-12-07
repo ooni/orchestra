@@ -82,6 +82,19 @@ type JobData struct {
 	CreationTime time.Time `json:"creation_time"`
 }
 
+// DomainFrontedCollector is a {"domain": "a", "front": "b"} map
+type DomainFrontedCollector struct {
+	Domain string `json:"domain"`
+	Front  string `json:"front"`
+}
+
+// Collectors holds the urls of onion, https, and domain-fronted collectors
+type Collectors struct {
+	Onion         []string                 `json:"onion"`
+	Https         []string                 `json:"https"`
+	DomainFronted []DomainFrontedCollector `json:"domain_fronted"`
+}
+
 // AddJob adds a job to the database and run it
 func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 	var (
@@ -354,11 +367,11 @@ var ErrAccessDenied = errors.New("access denied")
 var ErrInconsistentState = errors.New("task already accepted")
 
 // GetCollectors() returns a map of collectors keyed by their type
-func GetCollectors(db *sqlx.DB) (map[string]interface{}, error) {
+func GetCollectors(db *sqlx.DB) (Collectors, error) {
 	var (
-		err error
+		collectors Collectors
+		err        error
 	)
-	collectors := make(map[string]interface{})
 	query := fmt.Sprintf(`SELECT
 		type,
 		address,
@@ -374,11 +387,6 @@ func GetCollectors(db *sqlx.DB) (map[string]interface{}, error) {
 		return collectors, err
 	}
 	defer rows.Close()
-	var (
-		onion_cos   []string
-		https_cos   []string
-		fronted_cos []map[string]string
-	)
 	for rows.Next() {
 		var (
 			ctype    string
@@ -392,26 +400,21 @@ func GetCollectors(db *sqlx.DB) (map[string]interface{}, error) {
 		}
 		switch ctype {
 		case "onion":
-			onion_cos = append(onion_cos, caddress)
+			collectors.Onion = append(collectors.Onion, caddress)
 		case "https":
-			https_cos = append(https_cos, caddress)
+			collectors.Https = append(collectors.Https, caddress)
 		case "domain_fronted":
 			if !cfront.Valid {
 				ctx.Error("domain_fronted collector with bad front domain")
 				continue
 			}
-			fronted_co := map[string]string{}
-			fronted_co["domain"] = caddress
-			fronted_co["front"] = cfront.String
-			fronted_cos = append(fronted_cos, fronted_co)
+			collectors.DomainFronted = append(collectors.DomainFronted,
+				DomainFrontedCollector{caddress, cfront.String})
 		default:
 			ctx.Error("collector with bad type in DB")
 			continue
 		}
 	}
-	collectors["onion"] = onion_cos
-	collectors["https"] = https_cos
-	collectors["domain_fronted"] = fronted_cos
 	return collectors, nil
 }
 
