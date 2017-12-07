@@ -450,7 +450,7 @@ func GetTestHelpers(db *sqlx.DB) (map[string][]string, error) {
 	return helpers, nil
 }
 
-func BuildTestInputQuery(countries []string, catCodes []string) (string) {
+func BuildTestInputQuery(countries []string, catCodes []string) string {
 	query := fmt.Sprintf(`SELECT
 		url,
 		cat_code,
@@ -499,8 +499,8 @@ func GetTestInputs(countries []string, catCodes []string, count int64, db *sqlx.
 	}
 	for rows.Next() {
 		var (
-			url     string
-			cat     string
+			url    string
+			cat    string
 			alpha2 string
 		)
 		err = rows.Scan(&url, &cat, &alpha2)
