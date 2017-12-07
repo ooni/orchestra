@@ -14,6 +14,7 @@ gorush-basic-auth-password = "{{ proteus_notify_basic_auth_password }}"
 [api]
 port = 8082
 address = "127.0.0.1"
+default-inputs-to-return = 10
 
 [database]
 url = "postgres://proteus:changeme@127.0.0.1:32768/proteus?sslmode=disable"

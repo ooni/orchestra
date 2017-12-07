@@ -81,56 +81,56 @@ type JobData struct {
 	CreationTime time.Time `json:"creation_time"`
 }
 
-var all_cat_codes = map[string]bool{"ALDR": true, "REL": true, "PORN": true,
-	"PROV": true, "POLR": true, "HUMR": true, "ENV": true, "MILX": true,
-	"HATE": true, "NEWS": true, "XED": true, "PUBH": true, "GMB": true,
-	"ANON": true, "DATE": true, "GRP": true, "LGBT": true, "FILE": true,
-	"HACK": true, "COMT": true, "MMED": true, "HOST": true, "SRCH": true,
-	"GAME": true, "CULTR": true, "ECON": true, "GOVT": true, "COMM": true,
-	"CTRL": true, "IGO": true, "MISC": true}
+var all_cat_codes = map[string]struct{}{"ALDR": {}, "REL": {}, "PORN": {},
+	"PROV": {}, "POLR": {}, "HUMR": {}, "ENV": {}, "MILX": {},
+	"HATE": {}, "NEWS": {}, "XED": {}, "PUBH": {}, "GMB": {},
+	"ANON": {}, "DATE": {}, "GRP": {}, "LGBT": {}, "FILE": {},
+	"HACK": {}, "COMT": {}, "MMED": {}, "HOST": {}, "SRCH": {},
+	"GAME": {}, "CULTR": {}, "ECON": {}, "GOVT": {}, "COMM": {},
+	"CTRL": {}, "IGO": {}, "MISC": {}}
 
-var all_country_codes = map[string]bool{
-	"AD": true, "AE": true, "AF": true, "AG": true, "AI": true, "AL": true,
-	"AM": true, "AN": true, "AO": true, "AQ": true, "AR": true, "AS": true,
-	"AT": true, "AU": true, "AW": true, "AZ": true, "BA": true, "BB": true,
-	"BD": true, "BE": true, "BF": true, "BG": true, "BH": true, "BI": true,
-	"BJ": true, "BM": true, "BN": true, "BO": true, "BR": true, "BS": true,
-	"BT": true, "BU": true, "BV": true, "BW": true, "BY": true, "BZ": true,
-	"CA": true, "CC": true, "CF": true, "CG": true, "CH": true, "CI": true,
-	"CK": true, "CL": true, "CM": true, "CN": true, "CO": true, "CR": true,
-	"CS": true, "CU": true, "CV": true, "CX": true, "CY": true, "CZ": true,
-	"DD": true, "DE": true, "DJ": true, "DK": true, "DM": true, "DO": true,
-	"DZ": true, "EC": true, "EE": true, "EG": true, "EH": true, "ER": true,
-	"ES": true, "ET": true, "FI": true, "FJ": true, "FK": true, "FM": true,
-	"FO": true, "FR": true, "FX": true, "GA": true, "GB": true, "GD": true,
-	"GE": true, "GF": true, "GH": true, "GI": true, "GL": true, "GM": true,
-	"GN": true, "GP": true, "GQ": true, "GR": true, "GS": true, "GT": true,
-	"GU": true, "GW": true, "GY": true, "HK": true, "HM": true, "HN": true,
-	"HR": true, "HT": true, "HU": true, "ID": true, "IE": true, "IL": true,
-	"IN": true, "IO": true, "IQ": true, "IR": true, "IS": true, "IT": true,
-	"JM": true, "JO": true, "JP": true, "KE": true, "KG": true, "KH": true,
-	"KI": true, "KM": true, "KN": true, "KP": true, "KR": true, "KW": true,
-	"KY": true, "KZ": true, "LA": true, "LB": true, "LC": true, "LI": true,
-	"LK": true, "LR": true, "LS": true, "LT": true, "LU": true, "LV": true,
-	"LY": true, "MA": true, "MC": true, "MD": true, "MG": true, "MH": true,
-	"ML": true, "MN": true, "MM": true, "MO": true, "MP": true, "MQ": true,
-	"MR": true, "MS": true, "MT": true, "MU": true, "MV": true, "MW": true,
-	"MX": true, "MY": true, "MZ": true, "NA": true, "NC": true, "NE": true,
-	"NF": true, "NG": true, "NI": true, "NL": true, "NO": true, "NP": true,
-	"NR": true, "NT": true, "NU": true, "NZ": true, "OM": true, "PA": true,
-	"PE": true, "PF": true, "PG": true, "PH": true, "PK": true, "PL": true,
-	"PM": true, "PN": true, "PR": true, "PT": true, "PW": true, "PY": true,
-	"QA": true, "RE": true, "RO": true, "RU": true, "RW": true, "SA": true,
-	"SB": true, "SC": true, "SD": true, "SE": true, "SG": true, "SH": true,
-	"SI": true, "SJ": true, "SK": true, "SL": true, "SM": true, "SN": true,
-	"SO": true, "SR": true, "ST": true, "SU": true, "SV": true, "SY": true,
-	"SZ": true, "TC": true, "TD": true, "TF": true, "TG": true, "TH": true,
-	"TJ": true, "TK": true, "TM": true, "TN": true, "TO": true, "TP": true,
-	"TR": true, "TT": true, "TV": true, "TW": true, "TZ": true, "UA": true,
-	"UG": true, "UM": true, "US": true, "UY": true, "UZ": true, "VA": true,
-	"VC": true, "VE": true, "VG": true, "VI": true, "VN": true, "VU": true,
-	"WF": true, "WS": true, "YD": true, "YE": true, "YT": true, "YU": true,
-	"ZA": true, "ZM": true, "ZR": true, "ZW": true, "XX": true}
+var all_country_codes = map[string]struct{}{
+	"AD": {}, "AE": {}, "AF": {}, "AG": {}, "AI": {}, "AL": {},
+	"AM": {}, "AN": {}, "AO": {}, "AQ": {}, "AR": {}, "AS": {},
+	"AT": {}, "AU": {}, "AW": {}, "AZ": {}, "BA": {}, "BB": {},
+	"BD": {}, "BE": {}, "BF": {}, "BG": {}, "BH": {}, "BI": {},
+	"BJ": {}, "BM": {}, "BN": {}, "BO": {}, "BR": {}, "BS": {},
+	"BT": {}, "BU": {}, "BV": {}, "BW": {}, "BY": {}, "BZ": {},
+	"CA": {}, "CC": {}, "CF": {}, "CG": {}, "CH": {}, "CI": {},
+	"CK": {}, "CL": {}, "CM": {}, "CN": {}, "CO": {}, "CR": {},
+	"CS": {}, "CU": {}, "CV": {}, "CX": {}, "CY": {}, "CZ": {},
+	"DD": {}, "DE": {}, "DJ": {}, "DK": {}, "DM": {}, "DO": {},
+	"DZ": {}, "EC": {}, "EE": {}, "EG": {}, "EH": {}, "ER": {},
+	"ES": {}, "ET": {}, "FI": {}, "FJ": {}, "FK": {}, "FM": {},
+	"FO": {}, "FR": {}, "FX": {}, "GA": {}, "GB": {}, "GD": {},
+	"GE": {}, "GF": {}, "GH": {}, "GI": {}, "GL": {}, "GM": {},
+	"GN": {}, "GP": {}, "GQ": {}, "GR": {}, "GS": {}, "GT": {},
+	"GU": {}, "GW": {}, "GY": {}, "HK": {}, "HM": {}, "HN": {},
+	"HR": {}, "HT": {}, "HU": {}, "ID": {}, "IE": {}, "IL": {},
+	"IN": {}, "IO": {}, "IQ": {}, "IR": {}, "IS": {}, "IT": {},
+	"JM": {}, "JO": {}, "JP": {}, "KE": {}, "KG": {}, "KH": {},
+	"KI": {}, "KM": {}, "KN": {}, "KP": {}, "KR": {}, "KW": {},
+	"KY": {}, "KZ": {}, "LA": {}, "LB": {}, "LC": {}, "LI": {},
+	"LK": {}, "LR": {}, "LS": {}, "LT": {}, "LU": {}, "LV": {},
+	"LY": {}, "MA": {}, "MC": {}, "MD": {}, "MG": {}, "MH": {},
+	"ML": {}, "MN": {}, "MM": {}, "MO": {}, "MP": {}, "MQ": {},
+	"MR": {}, "MS": {}, "MT": {}, "MU": {}, "MV": {}, "MW": {},
+	"MX": {}, "MY": {}, "MZ": {}, "NA": {}, "NC": {}, "NE": {},
+	"NF": {}, "NG": {}, "NI": {}, "NL": {}, "NO": {}, "NP": {},
+	"NR": {}, "NT": {}, "NU": {}, "NZ": {}, "OM": {}, "PA": {},
+	"PE": {}, "PF": {}, "PG": {}, "PH": {}, "PK": {}, "PL": {},
+	"PM": {}, "PN": {}, "PR": {}, "PT": {}, "PW": {}, "PY": {},
+	"QA": {}, "RE": {}, "RO": {}, "RU": {}, "RW": {}, "SA": {},
+	"SB": {}, "SC": {}, "SD": {}, "SE": {}, "SG": {}, "SH": {},
+	"SI": {}, "SJ": {}, "SK": {}, "SL": {}, "SM": {}, "SN": {},
+	"SO": {}, "SR": {}, "ST": {}, "SU": {}, "SV": {}, "SY": {},
+	"SZ": {}, "TC": {}, "TD": {}, "TF": {}, "TG": {}, "TH": {},
+	"TJ": {}, "TK": {}, "TM": {}, "TN": {}, "TO": {}, "TP": {},
+	"TR": {}, "TT": {}, "TV": {}, "TW": {}, "TZ": {}, "UA": {},
+	"UG": {}, "UM": {}, "US": {}, "UY": {}, "UZ": {}, "VA": {},
+	"VC": {}, "VE": {}, "VG": {}, "VI": {}, "VN": {}, "VU": {},
+	"WF": {}, "WS": {}, "YD": {}, "YE": {}, "YT": {}, "YU": {},
+	"ZA": {}, "ZM": {}, "ZR": {}, "ZW": {}, "XX": {}}
 
 // AddJob adds a job to the database and run it
 func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
@@ -506,16 +506,16 @@ func BuildTestInputQuery(countries []string, cat_codes []string) (string, error)
 		cat_code,
 		alpha_2
 		FROM %s urls
-		INNER JOIN %s cos ON urls.country_no = cos.country_no
+		INNER JOIN %s countries ON urls.country_no = countries.country_no
 		INNER JOIN %s url_cats ON urls.cat_no = url_cats.cat_no`,
 		pq.QuoteIdentifier(viper.GetString("database.urls-table")),
 		pq.QuoteIdentifier(viper.GetString("database.countries-table")),
 		pq.QuoteIdentifier(viper.GetString("database.url-categories-table")))
 	if len(countries) > 0 {
 		query += fmt.Sprintf(`
-			WHERE (cos.alpha_2 = $1`)
+			WHERE (countries.alpha_2 = $1`)
 		for i := range countries[1:] {
-			query += fmt.Sprintf(` OR cos.alpha_2 = $%d`, i+2)
+			query += fmt.Sprintf(` OR countries.alpha_2 = $%d`, i+2) // first thing here is $2
 		}
 		query += `)`
 	}
@@ -527,9 +527,9 @@ func BuildTestInputQuery(countries []string, cat_codes []string) (string, error)
 			query += `
 				WHERE `
 		}
-		query += fmt.Sprintf(`(url_cats.cat_code = $%d`, len(countries)+1)
+		query += fmt.Sprintf(`(url_cats.cat_code = $%d`, len(countries)+1) // all params above here are countries
 		for i := range cat_codes[1:] {
-			query += fmt.Sprintf(` OR url_cats.cat_code = $%d`, len(countries)+2+i)
+			query += fmt.Sprintf(` OR url_cats.cat_code = $%d`, len(countries)+2+i) // starts one past the last one
 		}
 		query += `)`
 	}
@@ -542,8 +542,6 @@ func GetTestInputs(countries []string, cat_codes []string, db *sqlx.DB) ([]map[s
 		err error
 	)
 	inputs := make([]map[string]string, 0)
-	ctx.Infof("countries: %s", countries)
-	ctx.Infof("cat_codes: %s", cat_codes)
 	query, err := BuildTestInputQuery(countries, cat_codes)
 	if err != nil {
 		return inputs, err
@@ -553,8 +551,7 @@ func GetTestInputs(countries []string, cat_codes []string, db *sqlx.DB) ([]map[s
 	for i, v := range params {
 		params2[i] = v
 	}
-	ctx.Debugf("query: %s", query)
-	ctx.Debugf("params: %v", params2)
+	params2[len(params2)-1] = count
 	rows, err := db.Query(query, params2...)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -845,32 +842,20 @@ func Start() {
 			} else {
 				countries = []string{"XX", probeCc}
 			}
-			countries_upper := make([]string, len(countries))
-			for i, co := range countries {
-				countries_upper[i] = strings.ToUpper(co)
-				if !all_country_codes[countries_upper[i]] {
-					errorString := fmt.Sprintf("%s is not a valid probe_cc.",
-						countries_upper[i])
-					c.JSON(http.StatusBadRequest,
-						gin.H{"error": errorString})
-					return
-				}
+			countries_upper, err := UpperAndWhitelist(countries, all_country_codes)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
 			}
 			cats := []string{}
 			catParam := c.Query("cat_code")
 			if catParam != "" {
 				cats = strings.Split(c.Query("cat_code"), ",")
 			}
-			cats_upper := make([]string, len(cats))
-			for i, cat := range cats {
-				cats_upper[i] = strings.ToUpper(cat)
-				if !all_cat_codes[cats_upper[i]] {
-					errorString := fmt.Sprintf("%s is not a valid cat_code.",
-						cats_upper[i])
-					c.JSON(http.StatusBadRequest,
-						gin.H{"error": errorString})
-					return
-				}
+			cats_upper, err := UpperAndWhitelist(cats, all_cat_codes)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
 			}
 			test_inputs, err := GetTestInputs(countries_upper, cats_upper, db)
 			if err != nil {

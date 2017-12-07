@@ -25,7 +25,6 @@ CREATE TYPE COLLECTOR_TYPE AS ENUM (
 );
 
 CREATE SEQUENCE collector_no_seq;
-
 CREATE TABLE IF NOT EXISTS collectors
 (
   collector_no INTEGER DEFAULT nextval('collector_no_seq'::regclass) PRIMARY KEY NOT NULL,
@@ -34,9 +33,19 @@ CREATE TABLE IF NOT EXISTS collectors
   front_domain VARCHAR
 );
 
+
+CREATE SEQUENCE IF NOT EXISTS url_no_seq;
 CREATE TABLE IF NOT EXISTS urls
 (
-
+    url_no INT NOT NULL default nextval('url_no_seq') PRIMARY KEY,
+    url VARCHAR,
+    cat_no INT,
+    country_no INT,
+    date_added TIMESTAMP WITH TIME ZONE,
+    source VARCHAR,
+    notes VARCHAR,
+    active BOOLEAN,
+    UNIQUE (url, country_no)
 );
 
 CREATE SEQUENCE test_helper_no_seq;
@@ -48,9 +57,23 @@ CREATE TABLE IF NOT EXISTS test_helpers
 
 );
 
+CREATE SEQUENCE IF NOT EXISTS country_no_seq;
+CREATE TABLE IF NOT EXISTS countries
+(
+    country_no INT NOT NULL default nextval('country_no_seq') PRIMARY KEY,
+    name VARCHAR UNIQUE NOT NULL,
+    alpha_2 VARCHAR(2) UNIQUE NOT NULL,
+    alpha_3 VARCHAR(3) UNIQUE NOT NULL
+);
+
+CREATE SEQUENCE IF NOT EXISTS cat_no_seq;
 CREATE TABLE IF NOT EXISTS url_categories
 (
-
+    cat_no INT NOT NULL default nextval('cat_no_seq') PRIMARY KEY,
+    cat_code VARCHAR UNIQUE NOT NULL,
+    cat_desc VARCHAR NOT NULL,
+    cat_long_desc VARCHAR,
+    cat_old_codes VARCHAR
 );
 
 -- +migrate StatementEnd
