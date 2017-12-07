@@ -450,7 +450,7 @@ func GetTestHelpers(db *sqlx.DB) (map[string][]string, error) {
 	return helpers, nil
 }
 
-func BuildTestInputQuery(countries []string, cat_codes []string) (string, error) {
+func BuildTestInputQuery(countries []string, catCodes []string) (string) {
 	query := fmt.Sprintf(`SELECT
 		url,
 		cat_code,
@@ -461,71 +461,55 @@ func BuildTestInputQuery(countries []string, cat_codes []string) (string, error)
 		pq.QuoteIdentifier(viper.GetString("database.urls-table")),
 		pq.QuoteIdentifier(viper.GetString("database.countries-table")),
 		pq.QuoteIdentifier(viper.GetString("database.url-categories-table")))
-	if len(countries) > 0 {
-		query += fmt.Sprintf(`
-			WHERE (countries.alpha_2 = $1`)
-		for i := range countries[1:] {
-			query += fmt.Sprintf(` OR countries.alpha_2 = $%d`, i+2) // first thing here is $2
-		}
-		query += `)`
+	// countries is always greater than zero
+	query += " WHERE alpha_2 = ANY($2)"
+	if len(catCodes) > 0 {
+		query += " AND cat_code = ANY($3)"
 	}
-	if len(cat_codes) > 0 {
-		if len(countries) > 0 {
-			query += `
-				AND `
-		} else {
-			query += `
-				WHERE `
-		}
-		query += fmt.Sprintf(`(url_cats.cat_code = $%d`, len(countries)+1) // all params above here are countries
-		for i := range cat_codes[1:] {
-			query += fmt.Sprintf(` OR url_cats.cat_code = $%d`, len(countries)+2+i) // starts one past the last one
-		}
-		query += `)`
-	}
-	query += fmt.Sprintf(`
-		ORDER BY random()
-		LIMIT $%d`, len(countries)+len(cat_codes)+1)
-	return query, nil
+	query += " ORDER BY random() LIMIT $1"
+	return query
 }
 
 // GetTestInputs returns a slice of test inputs
-func GetTestInputs(countries []string, cat_codes []string, count int64, db *sqlx.DB) ([]map[string]string, error) {
+func GetTestInputs(countries []string, catCodes []string, count int64, db *sqlx.DB) ([]map[string]string, error) {
 	var (
 		err error
 	)
 	inputs := make([]map[string]string, 0)
-	query, err := BuildTestInputQuery(countries, cat_codes)
+	query := BuildTestInputQuery(countries, catCodes)
+	args := []interface{}{count, pq.StringArray(countries)}
+	if len(catCodes) > 0 {
+		args = append(args, pq.StringArray(catCodes))
+	}
+
+	stmt, err := db.Prepare(query, params2...)
 	if err != nil {
+		ctx.WithError(err).Error("failed to prepare query")
 		return inputs, err
 	}
-	params := append(countries, cat_codes...)
-	params2 := make([]interface{}, len(params)+1)
-	for i, v := range params {
-		params2[i] = v
-	}
-	params2[len(params2)-1] = count
-	rows, err := db.Query(query, params2...)
+	defer stmt.Close()
+	rows, err := stmt.Exec(query, args...)
+	defer rows.Close()
 	if err != nil {
 		if err == sql.ErrNoRows {
+			ctx.Debugf("got an empty result")
 			return inputs, nil
 		}
 		ctx.WithError(err).Error("failed to get test inputs (urls)")
 		return inputs, err
 	}
-	defer rows.Close()
 	for rows.Next() {
 		var (
 			url     string
 			cat     string
-			alpha_2 string
+			alpha2 string
 		)
-		err = rows.Scan(&url, &cat, &alpha_2)
+		err = rows.Scan(&url, &cat, &alpha2)
 		if err != nil {
 			ctx.WithError(err).Error("failed to get test input row (urls)")
 			continue
 		}
-		input := map[string]string{"cat_code": cat, "url": url, "country": alpha_2}
+		input := map[string]string{"cat_code": cat, "url": url, "country": alpha2}
 		inputs = append(inputs, input)
 	}
 	return inputs, nil

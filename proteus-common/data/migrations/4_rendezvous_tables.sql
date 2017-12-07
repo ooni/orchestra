@@ -38,15 +38,16 @@ CREATE SEQUENCE IF NOT EXISTS url_no_seq;
 CREATE TABLE IF NOT EXISTS urls
 (
     url_no INT NOT NULL default nextval('url_no_seq') PRIMARY KEY,
-    url VARCHAR,
+    url VARCHAR NOT NULL,
     cat_no INT,
-    country_no INT,
-    date_added TIMESTAMP WITH TIME ZONE,
+    country_no INT NOT NULL,
+    date_added TIMESTAMP WITH TIME ZONE NOT NULL,
     source VARCHAR,
     notes VARCHAR,
-    active BOOLEAN,
+    active BOOLEAN NOT NULL,
     UNIQUE (url, country_no)
 );
+comment on table urls is 'Contains information on URLs included in the citizenlab URL list';
 
 CREATE SEQUENCE test_helper_no_seq;
 CREATE TABLE IF NOT EXISTS test_helpers
@@ -61,10 +62,12 @@ CREATE SEQUENCE IF NOT EXISTS country_no_seq;
 CREATE TABLE IF NOT EXISTS countries
 (
     country_no INT NOT NULL default nextval('country_no_seq') PRIMARY KEY,
+    full_name VARCHAR UNIQUE NOT NULL,
     name VARCHAR UNIQUE NOT NULL,
-    alpha_2 VARCHAR(2) UNIQUE NOT NULL,
-    alpha_3 VARCHAR(3) UNIQUE NOT NULL
+    alpha_2 CHAR(2) UNIQUE NOT NULL,
+    alpha_3 CHAR(3) UNIQUE NOT NULL
 );
+comment on table countries is 'Contains country names and ISO codes';
 
 CREATE SEQUENCE IF NOT EXISTS cat_no_seq;
 CREATE TABLE IF NOT EXISTS url_categories
@@ -73,7 +76,7 @@ CREATE TABLE IF NOT EXISTS url_categories
     cat_code VARCHAR UNIQUE NOT NULL,
     cat_desc VARCHAR NOT NULL,
     cat_long_desc VARCHAR,
-    cat_old_codes VARCHAR
+    cat_old_codes VARCHAR[]
 );
 
 -- +migrate StatementEnd
