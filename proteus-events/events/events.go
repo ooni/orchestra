@@ -782,20 +782,20 @@ func Start() {
 					gin.H{"error": "server side error"})
 				return
 			}
-			test_helpers, err := GetTestHelpers(db)
+			testHelpers, err := GetTestHelpers(db)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError,
 					gin.H{"error": "server side error"})
 				return
 			}
-			countries := []string{}
+
+			// We use XX to denote ANY country
+			countries := []string{"XX"}
 			probeCc := c.Query("probe_cc")
-			if probeCc == "" {
-				countries = []string{"XX"}
-			} else {
-				countries = []string{"XX", probeCc}
+			if probeCc != "" {
+				countries = append(countries, probeCc)
 			}
-			countries_upper, err := UpperAndWhitelist(countries, AllCountryCodes)
+			countriesUpper, err := UpperAndWhitelist(countries, AllCountryCodes)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -805,7 +805,7 @@ func Start() {
 			if catParam != "" {
 				cats = strings.Split(c.Query("cat_code"), ",")
 			}
-			cats_upper, err := UpperAndWhitelist(cats, AllCatCodes)
+			catsUpper, err := UpperAndWhitelist(cats, AllCatCodes)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -820,7 +820,7 @@ func Start() {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "bad count"})
 				return
 			}
-			test_inputs, err := GetTestInputs(countries_upper, cats_upper, count, db)
+			testInputs, err := GetTestInputs(countriesUpper, catsUpper, count, db)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError,
 					gin.H{"error": "server side error"})
@@ -828,8 +828,8 @@ func Start() {
 			}
 			c.JSON(http.StatusOK,
 				gin.H{"collectors": collectors,
-					"test_helpers": test_helpers,
-					"inputs":       test_inputs})
+					"test_helpers": testHelpers,
+					"inputs":       testInputs})
 			return
 		})
 
