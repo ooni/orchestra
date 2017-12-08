@@ -8,7 +8,7 @@ import (
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
 	"github.com/thetorproject/proteus/proteus-common/cmd"
-	"github.com/thetorproject/proteus/proteus-events/events"
+	"github.com/thetorproject/proteus/proteus-orchestrate/events"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -26,8 +26,8 @@ var ctx = log.WithFields(log.Fields{
 
 // RootCmd where all commands begin
 var RootCmd = &cobra.Command{
-	Use:   "proteus-events",
-	Short: "I receive events to propagate to probes",
+	Use:   "proteus-orchestrate",
+	Short: "I orchestrate probes",
 	Long:  events.LongDescription,
 }
 
@@ -53,7 +53,7 @@ func init() {
 }
 
 func initConfig() {
-	viper.SetConfigName("proteus-events")
+	viper.SetConfigName("proteus-orchestrate")
 	viper.AddConfigPath("/etc/proteus/")
 	viper.AddConfigPath(".")
 	viper.AutomaticEnv()

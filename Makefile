@@ -6,7 +6,7 @@ BUILD_DATE = `date +%FT%T%z`
 LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common.CommitHash=${COMMIT_HASH} -X ${PACKAGE}/proteus-common.BuildDate=${BUILD_DATE}"
 NOGI_LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common.BuildDate=${BUILD_DATE}"
 ARCH_LIST=linux/amd64 darwin/amd64 linux/386
-TOOL_LIST=registry events notify
+TOOL_LIST=registry orchestrate notify
 RELEASE_OSARCH = -osarch "${ARCH_LIST}"
 OUTPUT_SUFFIX = "${VERSION}.{{.OS}}-{{.Arch}}/{{.Dir}}"
 
@@ -66,10 +66,10 @@ bindata:
 	  rm proteus-$$tool/$$tool/bindata.go.backup;						   \
 	done
 
-build-all: bindata build-events build-notify build-registry
+build-all: bindata build-orchestrate build-notify build-registry
 
-build-events:
-	go build ${LDFLAGS} -o bin/proteus-events proteus-events/main.go
+build-orchestrate:
+	go build ${LDFLAGS} -o bin/proteus-orchestrate proteus-orchestrate/main.go
 build-notify:
 	go build ${LDFLAGS} -o bin/proteus-notify proteus-notify/main.go
 build-registry:
@@ -89,4 +89,4 @@ release: fmt-check bindata
 	gox ${NOGI_LDFLAGS} ${RELEASE_OSARCH} -output dist/proteus-registry-${OUTPUT_SUFFIX} ./proteus-registry
 	for tool in ${TOOL_LIST};do for x in ${ARCH_LIST};do ARCH=$$(echo $$x | sed "s/\//-/");cp LICENSE dist/proteus-$$tool-${VERSION}.$$ARCH/;tar -cvf dist/proteus-$$tool-${VERSION}.$$ARCH.tar.gz -C ./dist/ proteus-$$tool-${VERSION}.$$ARCH/;done;done
 
-.PHONY: vendor build build-events build-notify build-registry release bindata build-all fmt fmt-check check
+.PHONY: vendor build build-orchestrate build-notify build-registry release bindata build-all fmt fmt-check check
