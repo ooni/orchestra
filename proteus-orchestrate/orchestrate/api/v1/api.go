@@ -12,8 +12,8 @@ var ctx = log.WithFields(log.Fields{
 	"pkg": "apiv1",
 })
 
-// MakeRouter bind all the request handlers and middleware
-func BindAPI(router *gin.Engine) error {
+// BindAPI bind all the request handlers and middleware
+func BindAPI(router *gin.Engine, authMiddleware *middleware.GinJWTMiddleware) error {
 	v1 := router.Group("/api/v1")
 
 	admin := v1.Group("/admin")

@@ -197,13 +197,15 @@ func GetTestInputs(countries []string, catCodes []string, count int64, db *sqlx.
 
 // HandleRendezvous handler for /rendezvous
 func HandleRendezvous(c *gin.Context) {
-	collectors, err := GetCollectors(DB)
+	db := c.MustGet("DB").(*sqlx.DB)
+
+	collectors, err := GetCollectors(db)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
 			gin.H{"error": "server side error"})
 		return
 	}
-	testHelpers, err := GetTestHelpers(DB)
+	testHelpers, err := GetTestHelpers(db)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
 			gin.H{"error": "server side error"})
@@ -241,7 +243,7 @@ func HandleRendezvous(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "bad count"})
 		return
 	}
-	testInputs, err := GetTestInputs(countriesUpper, catsUpper, count, DB)
+	testInputs, err := GetTestInputs(countriesUpper, catsUpper, count, db)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
 			gin.H{"error": "server side error"})

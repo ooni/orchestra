@@ -62,6 +62,8 @@ func GetTasksForUser(uID string, since string,
 
 // HandleListTasks lists all the tasks for a user
 func HandleListTasks(c *gin.Context) {
+	db := c.MustGet("DB").(*sqlx.DB)
+
 	userID := c.MustGet("userID").(string)
 	since := c.DefaultQuery("since", "2016-10-20T10:30:00Z")
 	_, err := time.Parse(sched.ISOUTCTimeLayout, since)
@@ -70,7 +72,7 @@ func HandleListTasks(c *gin.Context) {
 			gin.H{"error": "invalid since specified"})
 		return
 	}
-	tasks, err := GetTasksForUser(userID, since, DB)
+	tasks, err := GetTasksForUser(userID, since, db)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
 			gin.H{"error": "server side error"})
@@ -83,9 +85,11 @@ func HandleListTasks(c *gin.Context) {
 
 // HandleGetTask get a specific task
 func HandleGetTask(c *gin.Context) {
+	db := c.MustGet("DB").(*sqlx.DB)
+
 	taskID := c.Param("task_id")
 	userID := c.MustGet("userID").(string)
-	task, err := sched.GetTask(taskID, userID, DB)
+	task, err := sched.GetTask(taskID, userID, db)
 	if err != nil {
 		if err == sched.ErrAccessDenied {
 			c.JSON(http.StatusUnauthorized,
@@ -114,6 +118,8 @@ func HandleGetTask(c *gin.Context) {
 
 // HandleAcceptTask mark a task as accepted
 func HandleAcceptTask(c *gin.Context) {
+	db := c.MustGet("DB").(*sqlx.DB)
+
 	taskID := c.Param("task_id")
 	userID := c.MustGet("userID").(string)
 	err := sched.SetTaskState(taskID,
@@ -121,7 +127,7 @@ func HandleAcceptTask(c *gin.Context) {
 		"accepted",
 		[]string{"ready", "notified"},
 		"accept_time",
-		DB)
+		db)
 	if err != nil {
 		if err == sched.ErrInconsistentState {
 			c.JSON(http.StatusBadRequest,
@@ -146,6 +152,8 @@ func HandleAcceptTask(c *gin.Context) {
 
 // HandleRejectTask reject a certain task
 func HandleRejectTask(c *gin.Context) {
+	db := c.MustGet("DB").(*sqlx.DB)
+
 	taskID := c.Param("task_id")
 	userID := c.MustGet("userID").(string)
 	err := sched.SetTaskState(taskID,
@@ -153,7 +161,7 @@ func HandleRejectTask(c *gin.Context) {
 		"rejected",
 		[]string{"ready", "notified", "accepted"},
 		"done_time",
-		DB)
+		db)
 	if err != nil {
 		if err == sched.ErrInconsistentState {
 			c.JSON(http.StatusBadRequest,
@@ -178,6 +186,8 @@ func HandleRejectTask(c *gin.Context) {
 
 // HandleDoneTask mark a certain task as done
 func HandleDoneTask(c *gin.Context) {
+	db := c.MustGet("DB").(*sqlx.DB)
+
 	taskID := c.Param("task_id")
 	userID := c.MustGet("userID").(string)
 	err := sched.SetTaskState(taskID,
@@ -185,7 +195,7 @@ func HandleDoneTask(c *gin.Context) {
 		"done",
 		[]string{"accepted"},
 		"done_time",
-		DB)
+		db)
 	if err != nil {
 		if err == sched.ErrInconsistentState {
 			c.JSON(http.StatusBadRequest,

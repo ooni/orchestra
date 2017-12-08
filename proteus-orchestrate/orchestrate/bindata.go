@@ -9,7 +9,7 @@
 // proteus-common/data/migrations/2_add_language_column.sql
 // proteus-common/data/migrations/3_add_job_type_tables.sql
 // proteus-common/data/migrations/4_rendezvous_tables.sql
-// proteus-events/data/templates/home.tmpl
+// proteus-orchestrate/data/templates/home.tmpl
 // DO NOT EDIT.
 
 package orchestrate
@@ -252,7 +252,7 @@ func proteusCommonDataMigrations4_rendezvous_tablesSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "proteus-common/data/migrations/4_rendezvous_tables.sql", size: 2129, mode: os.FileMode(420), modTime: time.Unix(1512663381, 0)}
+	info := bindataFileInfo{name: "proteus-common/data/migrations/4_rendezvous_tables.sql", size: 2129, mode: os.FileMode(420), modTime: time.Unix(1512737144, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -329,16 +329,16 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"proteus-common/data/migrations/1_accounts_create.sql":      proteusCommonDataMigrations1_accounts_createSql,
+	"proteus-common/data/migrations/1_accounts_create.sql": proteusCommonDataMigrations1_accounts_createSql,
 	"proteus-common/data/migrations/1_active_probes_create.sql": proteusCommonDataMigrations1_active_probes_createSql,
-	"proteus-common/data/migrations/1_jobs_create.sql":          proteusCommonDataMigrations1_jobs_createSql,
+	"proteus-common/data/migrations/1_jobs_create.sql": proteusCommonDataMigrations1_jobs_createSql,
 	"proteus-common/data/migrations/1_probe_updates_create.sql": proteusCommonDataMigrations1_probe_updates_createSql,
-	"proteus-common/data/migrations/1_tasks_create.sql":         proteusCommonDataMigrations1_tasks_createSql,
-	"proteus-common/data/migrations/2_add_jobs_state.sql":       proteusCommonDataMigrations2_add_jobs_stateSql,
-	"proteus-common/data/migrations/2_add_language_column.sql":  proteusCommonDataMigrations2_add_language_columnSql,
-	"proteus-common/data/migrations/3_add_job_type_tables.sql":  proteusCommonDataMigrations3_add_job_type_tablesSql,
-	"proteus-common/data/migrations/4_rendezvous_tables.sql":    proteusCommonDataMigrations4_rendezvous_tablesSql,
-	"data/templates/home.tmpl":                                  dataTemplatesHomeTmpl,
+	"proteus-common/data/migrations/1_tasks_create.sql": proteusCommonDataMigrations1_tasks_createSql,
+	"proteus-common/data/migrations/2_add_jobs_state.sql": proteusCommonDataMigrations2_add_jobs_stateSql,
+	"proteus-common/data/migrations/2_add_language_column.sql": proteusCommonDataMigrations2_add_language_columnSql,
+	"proteus-common/data/migrations/3_add_job_type_tables.sql": proteusCommonDataMigrations3_add_job_type_tablesSql,
+	"proteus-common/data/migrations/4_rendezvous_tables.sql": proteusCommonDataMigrations4_rendezvous_tablesSql,
+	"data/templates/home.tmpl": dataTemplatesHomeTmpl,
 }
 
 // AssetDir returns the file names below a certain
@@ -380,7 +380,6 @@ type bintree struct {
 	Func     func() (*asset, error)
 	Children map[string]*bintree
 }
-
 var _bintree = &bintree{nil, map[string]*bintree{
 	"data": &bintree{nil, map[string]*bintree{
 		"templates": &bintree{nil, map[string]*bintree{
@@ -390,15 +389,15 @@ var _bintree = &bintree{nil, map[string]*bintree{
 	"proteus-common": &bintree{nil, map[string]*bintree{
 		"data": &bintree{nil, map[string]*bintree{
 			"migrations": &bintree{nil, map[string]*bintree{
-				"1_accounts_create.sql":      &bintree{proteusCommonDataMigrations1_accounts_createSql, map[string]*bintree{}},
+				"1_accounts_create.sql": &bintree{proteusCommonDataMigrations1_accounts_createSql, map[string]*bintree{}},
 				"1_active_probes_create.sql": &bintree{proteusCommonDataMigrations1_active_probes_createSql, map[string]*bintree{}},
-				"1_jobs_create.sql":          &bintree{proteusCommonDataMigrations1_jobs_createSql, map[string]*bintree{}},
+				"1_jobs_create.sql": &bintree{proteusCommonDataMigrations1_jobs_createSql, map[string]*bintree{}},
 				"1_probe_updates_create.sql": &bintree{proteusCommonDataMigrations1_probe_updates_createSql, map[string]*bintree{}},
-				"1_tasks_create.sql":         &bintree{proteusCommonDataMigrations1_tasks_createSql, map[string]*bintree{}},
-				"2_add_jobs_state.sql":       &bintree{proteusCommonDataMigrations2_add_jobs_stateSql, map[string]*bintree{}},
-				"2_add_language_column.sql":  &bintree{proteusCommonDataMigrations2_add_language_columnSql, map[string]*bintree{}},
-				"3_add_job_type_tables.sql":  &bintree{proteusCommonDataMigrations3_add_job_type_tablesSql, map[string]*bintree{}},
-				"4_rendezvous_tables.sql":    &bintree{proteusCommonDataMigrations4_rendezvous_tablesSql, map[string]*bintree{}},
+				"1_tasks_create.sql": &bintree{proteusCommonDataMigrations1_tasks_createSql, map[string]*bintree{}},
+				"2_add_jobs_state.sql": &bintree{proteusCommonDataMigrations2_add_jobs_stateSql, map[string]*bintree{}},
+				"2_add_language_column.sql": &bintree{proteusCommonDataMigrations2_add_language_columnSql, map[string]*bintree{}},
+				"3_add_job_type_tables.sql": &bintree{proteusCommonDataMigrations3_add_job_type_tablesSql, map[string]*bintree{}},
+				"4_rendezvous_tables.sql": &bintree{proteusCommonDataMigrations4_rendezvous_tablesSql, map[string]*bintree{}},
 			}},
 		}},
 	}},
@@ -450,3 +449,4 @@ func _filePath(dir, name string) string {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
 	return filepath.Join(append([]string{dir}, strings.Split(cannonicalName, "/")...)...)
 }
+

@@ -252,7 +252,7 @@ func proteusCommonDataMigrations4_rendezvous_tablesSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "proteus-common/data/migrations/4_rendezvous_tables.sql", size: 2129, mode: os.FileMode(420), modTime: time.Unix(1512663381, 0)}
+	info := bindataFileInfo{name: "proteus-common/data/migrations/4_rendezvous_tables.sql", size: 2129, mode: os.FileMode(420), modTime: time.Unix(1512737144, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

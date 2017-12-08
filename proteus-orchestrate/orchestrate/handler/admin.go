@@ -304,7 +304,9 @@ func DeleteJob(jobID string, db *sqlx.DB, s *sched.Scheduler) error {
 
 // HandleListJobs lists the jobs in the database
 func HandleListJobs(c *gin.Context) {
-	jobList, err := ListJobs(DB, true)
+	db := c.MustGet("DB").(*sqlx.DB)
+
+	jobList, err := ListJobs(db, true)
 	if err != nil {
 		c.JSON(http.StatusBadRequest,
 			gin.H{"error": err.Error()})
@@ -317,6 +319,9 @@ func HandleListJobs(c *gin.Context) {
 
 // HandleAddJob adds a job to the job DB
 func HandleAddJob(c *gin.Context) {
+	db := c.MustGet("DB").(*sqlx.DB)
+	scheduler := c.MustGet("Scheduler").(*sched.Scheduler)
+
 	var jobData JobData
 	err := c.BindJSON(&jobData)
 	if err != nil {
@@ -325,7 +330,7 @@ func HandleAddJob(c *gin.Context) {
 			gin.H{"error": "invalid request"})
 		return
 	}
-	jobID, err := AddJob(DB, jobData, Scheduler)
+	jobID, err := AddJob(db, jobData, scheduler)
 	if err != nil {
 		c.JSON(http.StatusBadRequest,
 			gin.H{"error": err.Error()})
@@ -339,8 +344,11 @@ func HandleAddJob(c *gin.Context) {
 
 // HandleDeleteJob deletes a job
 func HandleDeleteJob(c *gin.Context) {
+	db := c.MustGet("DB").(*sqlx.DB)
+	scheduler := c.MustGet("Scheduler").(*sched.Scheduler)
+
 	jobID := c.Param("job_id")
-	err := DeleteJob(jobID, DB, Scheduler)
+	err := DeleteJob(jobID, db, scheduler)
 	if err != nil {
 		if err == ErrJobNotFound {
 			c.JSON(http.StatusNotFound,
