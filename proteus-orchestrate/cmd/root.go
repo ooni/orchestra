@@ -8,7 +8,7 @@ import (
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
 	"github.com/thetorproject/proteus/proteus-common/cmd"
-	"github.com/thetorproject/proteus/proteus-orchestrate/events"
+	"github.com/thetorproject/proteus/proteus-orchestrate/orchestrate"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

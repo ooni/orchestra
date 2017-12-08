@@ -2,7 +2,7 @@ swagger: '2.0'
 schemes:
   - http
   - https
-host: events.proteus.ooni.io # XXX maybe bikeshed
+host: orchestrate.ooni.io # XXX maybe bikeshed
 basePath: /api/v1
 info:
   description: |
