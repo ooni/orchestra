@@ -612,8 +612,8 @@ func Start() {
 			}
 
 			// We use XX to denote ANY country
-			countries := []string{"XX"}
 			probeCc := c.Query("probe_cc")
+			countries := []string{"XX"}
 			if probeCc != "" {
 				countries = append(countries, probeCc)
 			}
@@ -622,20 +622,20 @@ func Start() {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
 			}
-			cats := []string{}
+
 			catParam := c.Query("cat_code")
+			cats := []string{}
 			if catParam != "" {
-				cats = strings.Split(c.Query("cat_code"), ",")
+				cats = strings.Split(catParam, ",")
 			}
 			catsUpper, err := UpperAndWhitelist(cats, allCatCodes)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
 			}
-			countString := c.Query("count")
-			if countString == "" {
-				countString = viper.GetString("api.default-inputs-to-return")
-			}
+
+			countString := c.DefaultQuery("count",
+				viper.GetString("api.default-inputs-to-return"))
 			var count int64
 			count, err = strconv.ParseInt(countString, 10, 64)
 			if err != nil || count < 1 || count > 1000 {
