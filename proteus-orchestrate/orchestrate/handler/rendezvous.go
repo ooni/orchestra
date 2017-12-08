@@ -1,7 +1,8 @@
-package events
+package handler
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -12,6 +13,21 @@ import (
 	"github.com/lib/pq"
 	"github.com/spf13/viper"
 )
+
+// UpperAndWhitelist checks if a list of strings are uppercased and inside the
+// list, returns the list with only the items present in the whitelist
+func upperAndWhitelist(ins []string, whitelist mapStrStruct) ([]string, error) {
+	outs := make([]string, len(ins))
+	for i, v := range ins {
+		outs[i] = strings.ToUpper(v)
+		_, present := whitelist[outs[i]]
+		if !present {
+			errorString := fmt.Sprintf("%s is not valid", v)
+			return nil, errors.New(errorString)
+		}
+	}
+	return outs, nil
+}
 
 // DomainFrontedCollector is a {"domain": "a", "front": "b"} map
 type DomainFrontedCollector struct {
@@ -179,62 +195,61 @@ func GetTestInputs(countries []string, catCodes []string, count int64, db *sqlx.
 	return inputs, nil
 }
 
-func rendezvousHandlerWithDB(db *sqlx.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		collectors, err := GetCollectors(db)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError,
-				gin.H{"error": "server side error"})
-			return
-		}
-		testHelpers, err := GetTestHelpers(db)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError,
-				gin.H{"error": "server side error"})
-			return
-		}
-
-		// We use XX to denote ANY country
-		probeCc := c.Query("probe_cc")
-		countries := []string{"XX"}
-		if probeCc != "" {
-			countries = append(countries, probeCc)
-		}
-		countriesUpper, err := UpperAndWhitelist(countries, allCountryCodes)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		catParam := c.Query("cat_code")
-		cats := []string{}
-		if catParam != "" {
-			cats = strings.Split(catParam, ",")
-		}
-		catsUpper, err := UpperAndWhitelist(cats, allCatCodes)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		countString := c.DefaultQuery("count",
-			viper.GetString("api.default-inputs-to-return"))
-		var count int64
-		count, err = strconv.ParseInt(countString, 10, 64)
-		if err != nil || count < 1 || count > 1000 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "bad count"})
-			return
-		}
-		testInputs, err := GetTestInputs(countriesUpper, catsUpper, count, db)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError,
-				gin.H{"error": "server side error"})
-			return
-		}
-		c.JSON(http.StatusOK,
-			gin.H{"collectors": collectors,
-				"test_helpers": testHelpers,
-				"inputs":       testInputs})
+// HandleRendezvous handler for /rendezvous
+func HandleRendezvous(c *gin.Context) {
+	collectors, err := GetCollectors(DB)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError,
+			gin.H{"error": "server side error"})
 		return
 	}
+	testHelpers, err := GetTestHelpers(DB)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError,
+			gin.H{"error": "server side error"})
+		return
+	}
+
+	// We use XX to denote ANY country
+	probeCc := c.Query("probe_cc")
+	countries := []string{"XX"}
+	if probeCc != "" {
+		countries = append(countries, probeCc)
+	}
+	countriesUpper, err := upperAndWhitelist(countries, allCountryCodes)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	catParam := c.Query("cat_code")
+	cats := []string{}
+	if catParam != "" {
+		cats = strings.Split(catParam, ",")
+	}
+	catsUpper, err := upperAndWhitelist(cats, allCatCodes)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	countString := c.DefaultQuery("count",
+		viper.GetString("api.default-inputs-to-return"))
+	var count int64
+	count, err = strconv.ParseInt(countString, 10, 64)
+	if err != nil || count < 1 || count > 1000 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad count"})
+		return
+	}
+	testInputs, err := GetTestInputs(countriesUpper, catsUpper, count, DB)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError,
+			gin.H{"error": "server side error"})
+		return
+	}
+	c.JSON(http.StatusOK,
+		gin.H{"collectors": collectors,
+			"test_helpers": testHelpers,
+			"inputs":       testInputs})
+	return
 }
