@@ -23,6 +23,7 @@ var ctx = log.WithFields(log.Fields{
 	"env": "production",
 })
 
+// RootCmd for proteus-registry
 var RootCmd = &cobra.Command{
 	Use:   "proteus-registry",
 	Short: "I know what probes are out there",
@@ -34,6 +35,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 }
 
+// Execute parse command line arguments and run
 func Execute() {
 	RootCmd.AddCommand(cmd.VersionCmd)
 	if err := RootCmd.Execute(); err != nil {

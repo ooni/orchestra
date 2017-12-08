@@ -10,9 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	_ "os/signal"
 	"sync"
-	_ "syscall"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -25,7 +23,7 @@ import (
 // JobTarget the target of a job
 type JobTarget struct {
 	ClientID  string
-	TaskId    *string
+	TaskID    *string
 	TaskData  *TaskData
 	AlertData *AlertData
 	Token     string
@@ -36,7 +34,7 @@ type JobTarget struct {
 func NewJobTarget(cID string, token string, plat string, tid *string, td *TaskData, ad *AlertData) *JobTarget {
 	return &JobTarget{
 		ClientID:  cID,
-		TaskId:    tid,
+		TaskID:    tid,
 		TaskData:  td,
 		AlertData: ad,
 		Token:     token,
@@ -46,7 +44,7 @@ func NewJobTarget(cID string, token string, plat string, tid *string, td *TaskDa
 
 // Job container
 type Job struct {
-	Id       string
+	ID       string
 	Schedule Schedule
 	Delay    int64
 	Comment  string
@@ -107,7 +105,7 @@ func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
 		}
 		now := time.Now().UTC()
 		_, err = stmt.Exec(taskID, cID,
-			j.Id, t.TestName,
+			j.ID, t.TestName,
 			taskArgsStr,
 			"ready",
 			0,
@@ -156,7 +154,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 		WHERE id = $1`,
 		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
 
-	err = jDB.db.QueryRow(query, j.Id).Scan(
+	err = jDB.db.QueryRow(query, j.ID).Scan(
 		pq.Array(&targetCountries),
 		pq.Array(&targetPlatforms),
 		&taskNo,
@@ -249,24 +247,24 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			clientId string
-			taskId   string
+			clientID string
+			taskID   string
 			token    string
 			plat     string
 		)
-		err = rows.Scan(&clientId, &token, &plat)
+		err = rows.Scan(&clientID, &token, &plat)
 		if err != nil {
 			ctx.WithError(err).Error("failed to iterate over targets")
 			return targets
 		}
 		if taskData != nil {
-			taskId, err = j.CreateTask(clientId, taskData, jDB)
+			taskID, err = j.CreateTask(clientID, taskData, jDB)
 			if err != nil {
 				ctx.WithError(err).Error("failed to create task")
 				return targets
 			}
 		}
-		targets = append(targets, NewJobTarget(clientId, token, plat, &taskId, taskData, alertData))
+		targets = append(targets, NewJobTarget(clientID, token, plat, &taskID, taskData, alertData))
 	}
 	return targets
 }
@@ -307,7 +305,7 @@ func (j *Job) WaitAndRun(jDB *JobDB) {
 	j.jobTimer = time.AfterFunc(waitDuration, jobRun)
 }
 
-// NotifyReq
+// NotifyReq is the reuqest for sending this particular notification message
 // XXX this is duplicated in proteus-notify
 type NotifyReq struct {
 	ClientIDs []string               `json:"client_ids"`
@@ -320,7 +318,7 @@ func TaskNotifyProteus(bu string, jt *JobTarget) error {
 	var err error
 	path, _ := url.Parse("/api/v1/notify")
 
-	baseUrl, err := url.Parse(bu)
+	baseURL, err := url.Parse(bu)
 	if err != nil {
 		ctx.WithError(err).Error("invalid base url")
 		return err
@@ -330,7 +328,7 @@ func TaskNotifyProteus(bu string, jt *JobTarget) error {
 		ClientIDs: []string{jt.ClientID},
 		Event: map[string]interface{}{
 			"type":    "run_task",
-			"task_id": jt.TaskId,
+			"task_id": jt.TaskID,
 		},
 	}
 	jsonStr, err := json.Marshal(notifyReq)
@@ -338,10 +336,14 @@ func TaskNotifyProteus(bu string, jt *JobTarget) error {
 		ctx.WithError(err).Error("failed to marshal data")
 		return err
 	}
-	u := baseUrl.ResolveReference(path)
+	u := baseURL.ResolveReference(path)
 	req, err := http.NewRequest("POST",
 		u.String(),
 		bytes.NewBuffer(jsonStr))
+	if err != nil {
+		ctx.WithError(err).Error("failed send request")
+		return err
+	}
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -389,7 +391,7 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 
 	path, _ := url.Parse("/api/push")
 
-	baseUrl, err := url.Parse(bu)
+	baseURL, err := url.Parse(bu)
 	if err != nil {
 		ctx.WithError(err).Error("invalid base url")
 		return err
@@ -415,7 +417,7 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 		notification.Data = map[string]interface{}{
 			"type": "run_task",
 			"payload": map[string]string{
-				"task_id": *jt.TaskId,
+				"task_id": *jt.TaskID,
 			},
 		}
 		notification.ContentAvailable = true
@@ -450,11 +452,15 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 		ctx.WithError(err).Error("failed to marshal data")
 		return err
 	}
-	u := baseUrl.ResolveReference(path)
+	u := baseURL.ResolveReference(path)
 	ctx.Debugf("sending notify request: %s", jsonStr)
 	req, err := http.NewRequest("POST",
 		u.String(),
 		bytes.NewBuffer(jsonStr))
+	if err != nil {
+		ctx.WithError(err).Error("failed to send request")
+		return err
+	}
 	req.Header.Set("Content-Type", "application/json")
 	if viper.IsSet("auth.gorush-basic-auth-user") {
 		req.SetBasicAuth(viper.GetString("auth.gorush-basic-auth-user"),
@@ -481,6 +487,7 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 	return nil
 }
 
+// Notify send a notification for the given JobTarget
 func Notify(jt *JobTarget, jDB *JobDB) error {
 	var err error
 	if jt.Platform != "android" && jt.Platform != "ios" {
@@ -507,7 +514,7 @@ func Notify(jt *JobTarget, jDB *JobDB) error {
 		return err
 	}
 	if jt.TaskData != nil {
-		err = SetTaskState(jt.TaskData.Id,
+		err = SetTaskState(jt.TaskData.ID,
 			jt.ClientID,
 			"notified",
 			[]string{"ready"},
@@ -521,6 +528,7 @@ func Notify(jt *JobTarget, jDB *JobDB) error {
 	return nil
 }
 
+// Run the given job
 func (j *Job) Run(jDB *JobDB) {
 	j.lock.Lock()
 	defer j.lock.Unlock()
@@ -565,6 +573,7 @@ func (j *Job) Run(jDB *JobDB) {
 	}
 }
 
+// Save the job to the job database
 func (j *Job) Save(jDB *JobDB) error {
 	tx, err := jDB.db.Begin()
 	if err != nil {
@@ -583,7 +592,7 @@ func (j *Job) Save(jDB *JobDB) error {
 		ctx.WithError(err).Error("failed to prepare update jobs query")
 		return err
 	}
-	_, err = stmt.Exec(j.Id,
+	_, err = stmt.Exec(j.ID,
 		j.TimesRun,
 		j.NextRunAt.UTC(),
 		j.IsDone)
@@ -600,6 +609,7 @@ func (j *Job) Save(jDB *JobDB) error {
 	return nil
 }
 
+// ShouldWait returns true if the job is not done
 func (j *Job) ShouldWait() bool {
 	if j.IsDone {
 		return false
@@ -607,6 +617,7 @@ func (j *Job) ShouldWait() bool {
 	return true
 }
 
+// ShouldRun checks if we should run this job
 func (j *Job) ShouldRun() bool {
 	ctx.Debugf("should run? ran already %d", j.TimesRun)
 	now := time.Now().UTC()
@@ -631,10 +642,12 @@ func (j *Job) ShouldRun() bool {
 	return false
 }
 
+// JobDB keep track of the Job database
 type JobDB struct {
 	db *sqlx.DB
 }
 
+// GetAll returns a list of all jobs in the database
 func (db *JobDB) GetAll() ([]*Job, error) {
 	allJobs := []*Job{}
 	query := fmt.Sprintf(`SELECT
@@ -658,7 +671,7 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 			schedule     string
 			nextRunAtStr string
 		)
-		err := rows.Scan(&j.Id,
+		err := rows.Scan(&j.ID,
 			&j.Comment,
 			&schedule,
 			&j.Delay,
@@ -685,12 +698,14 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 	return allJobs, nil
 }
 
+// Scheduler is the datastructure for the scheduler
 type Scheduler struct {
 	jobDB       JobDB
 	runningJobs map[string]*Job
 	stopped     chan os.Signal
 }
 
+// NewScheduler creates a new instance of the scheduler
 func NewScheduler(db *sqlx.DB) *Scheduler {
 	return &Scheduler{
 		stopped:     make(chan os.Signal),
@@ -698,6 +713,7 @@ func NewScheduler(db *sqlx.DB) *Scheduler {
 		jobDB:       JobDB{db: db}}
 }
 
+// DeleteJob will remove the job by removing it from the running jobs
 func (s *Scheduler) DeleteJob(jobID string) error {
 	job, ok := s.runningJobs[jobID]
 	if !ok {
@@ -708,12 +724,14 @@ func (s *Scheduler) DeleteJob(jobID string) error {
 	return nil
 }
 
+// RunJob checks if we should wait on the job and if not will run it
 func (s *Scheduler) RunJob(j *Job) {
 	if j.ShouldWait() {
 		j.WaitAndRun(&s.jobDB)
 	}
 }
 
+// Start the scheduler
 func (s *Scheduler) Start() {
 	ctx.Debug("starting scheduler")
 	// XXX currently when jobs are deleted the allJobs list will not be
@@ -725,12 +743,12 @@ func (s *Scheduler) Start() {
 		return
 	}
 	for _, j := range allJobs {
-		s.runningJobs[j.Id] = j
+		s.runningJobs[j.ID] = j
 		s.RunJob(j)
 	}
 }
 
+// Shutdown do all the shutdown logic
 func (s *Scheduler) Shutdown() {
-	// Do all the shutdown logic
 	os.Exit(0)
 }

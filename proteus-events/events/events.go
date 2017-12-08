@@ -48,7 +48,7 @@ type Target struct {
 
 // AlertData is the alert message
 type AlertData struct {
-	Id      string                 `json:"id"`
+	ID      string                 `json:"id"`
 	Message string                 `json:"message" binding:"required"`
 	Extra   map[string]interface{} `json:"extra"`
 }
@@ -62,7 +62,7 @@ type URLTestArg struct {
 
 // TaskData is the data for the task
 type TaskData struct {
-	Id        string                 `json:"id"`
+	ID        string                 `json:"id"`
 	TestName  string                 `json:"test_name" binding:"required"`
 	Arguments map[string]interface{} `json:"arguments"`
 	State     string
@@ -70,7 +70,7 @@ type TaskData struct {
 
 // JobData struct for containing all Job metadata (both alert and tasks)
 type JobData struct {
-	Id        string     `json:"id"`
+	ID        string     `json:"id"`
 	Schedule  string     `json:"schedule" binding:"required"`
 	Delay     int64      `json:"delay"`
 	Comment   string     `json:"comment" binding:"required"`
@@ -100,7 +100,7 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 		return "", err
 	}
 
-	jd.Id = uuid.NewV4().String()
+	jd.ID = uuid.NewV4().String()
 	{
 		if jd.AlertData != nil {
 			query := fmt.Sprintf(`INSERT INTO %s (
@@ -191,7 +191,7 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 		}
 		defer stmt.Close()
 
-		_, err = stmt.Exec(jd.Id, jd.Comment,
+		_, err = stmt.Exec(jd.ID, jd.Comment,
 			jd.Schedule, jd.Delay,
 			pq.Array(jd.Target.Countries),
 			pq.Array(jd.Target.Platforms),
@@ -214,7 +214,7 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 		return "", err
 	}
 	j := Job{
-		Id:        jd.Id,
+		ID:        jd.ID,
 		Comment:   jd.Comment,
 		Schedule:  schedule,
 		Delay:     jd.Delay,
@@ -225,7 +225,7 @@ func AddJob(db *sqlx.DB, jd JobData, s *Scheduler) (string, error) {
 	}
 	go s.RunJob(&j)
 
-	return jd.Id, nil
+	return jd.ID, nil
 }
 
 // ListJobs list all the jobs present in the database
@@ -271,7 +271,7 @@ func ListJobs(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
 			taskTestName sql.NullString
 			taskArgs     types.JSONText
 		)
-		err := rows.Scan(&jd.Id, &jd.Comment,
+		err := rows.Scan(&jd.ID, &jd.Comment,
 			&jd.CreationTime,
 			&jd.Schedule, &jd.Delay,
 			pq.Array(&jd.Target.Countries),
@@ -357,7 +357,7 @@ var ErrInconsistentState = errors.New("task already accepted")
 func GetTask(tID string, uID string, db *sqlx.DB) (TaskData, error) {
 	var (
 		err      error
-		probeId  string
+		probeID  string
 		taskArgs types.JSONText
 	)
 	task := TaskData{}
@@ -371,8 +371,8 @@ func GetTask(tID string, uID string, db *sqlx.DB) (TaskData, error) {
 		WHERE id = $1`,
 		pq.QuoteIdentifier(viper.GetString("database.tasks-table")))
 	err = db.QueryRow(query, tID).Scan(
-		&task.Id,
-		&probeId,
+		&task.ID,
+		&probeID,
 		&task.TestName,
 		&taskArgs,
 		&task.State)
@@ -383,7 +383,7 @@ func GetTask(tID string, uID string, db *sqlx.DB) (TaskData, error) {
 		ctx.WithError(err).Error("failed to get task")
 		return task, err
 	}
-	if probeId != uID {
+	if probeID != uID {
 		return task, ErrAccessDenied
 	}
 	err = taskArgs.Unmarshal(&task.Arguments)
@@ -425,7 +425,7 @@ func GetTasksForUser(uID string, since string,
 			taskArgs types.JSONText
 			task     TaskData
 		)
-		rows.Scan(&task.Id, &task.TestName, &taskArgs)
+		rows.Scan(&task.ID, &task.TestName, &taskArgs)
 		if err != nil {
 			ctx.WithError(err).Error("failed to get task")
 			return tasks, err
@@ -632,12 +632,12 @@ func Start() {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
 			}
-			count_string := c.Query("count")
-			if count_string == "" {
-				count_string = viper.GetString("api.default-inputs-to-return")
+			countString := c.Query("count")
+			if countString == "" {
+				countString = viper.GetString("api.default-inputs-to-return")
 			}
 			var count int64
-			count, err = strconv.ParseInt(count_string, 10, 64)
+			count, err = strconv.ParseInt(countString, 10, 64)
 			if err != nil || count < 1 || count > 1000 {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "bad count"})
 				return
@@ -656,7 +656,7 @@ func Start() {
 		})
 
 		device.GET("/tasks", func(c *gin.Context) {
-			userId := c.MustGet("userID").(string)
+			userID := c.MustGet("userID").(string)
 			since := c.DefaultQuery("since", "2016-10-20T10:30:00Z")
 			_, err := time.Parse(ISOUTCTimeLayout, since)
 			if err != nil {
@@ -664,7 +664,7 @@ func Start() {
 					gin.H{"error": "invalid since specified"})
 				return
 			}
-			tasks, err := GetTasksForUser(userId, since, db)
+			tasks, err := GetTasksForUser(userID, since, db)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError,
 					gin.H{"error": "server side error"})
@@ -676,8 +676,8 @@ func Start() {
 
 		device.GET("/task/:task_id", func(c *gin.Context) {
 			taskID := c.Param("task_id")
-			userId := c.MustGet("userID").(string)
-			task, err := GetTask(taskID, userId, db)
+			userID := c.MustGet("userID").(string)
+			task, err := GetTask(taskID, userID, db)
 			if err != nil {
 				if err == ErrAccessDenied {
 					c.JSON(http.StatusUnauthorized,
@@ -698,16 +698,16 @@ func Start() {
 				return
 			}
 			c.JSON(http.StatusOK,
-				gin.H{"id": task.Id,
+				gin.H{"id": task.ID,
 					"test_name": task.TestName,
 					"arguments": task.Arguments})
 			return
 		})
 		device.POST("/task/:task_id/accept", func(c *gin.Context) {
 			taskID := c.Param("task_id")
-			userId := c.MustGet("userID").(string)
+			userID := c.MustGet("userID").(string)
 			err := SetTaskState(taskID,
-				userId,
+				userID,
 				"accepted",
 				[]string{"ready", "notified"},
 				"accept_time",
@@ -735,9 +735,9 @@ func Start() {
 		})
 		device.POST("/task/:task_id/reject", func(c *gin.Context) {
 			taskID := c.Param("task_id")
-			userId := c.MustGet("userID").(string)
+			userID := c.MustGet("userID").(string)
 			err := SetTaskState(taskID,
-				userId,
+				userID,
 				"rejected",
 				[]string{"ready", "notified", "accepted"},
 				"done_time",
@@ -765,9 +765,9 @@ func Start() {
 		})
 		device.POST("/task/:task_id/done", func(c *gin.Context) {
 			taskID := c.Param("task_id")
-			userId := c.MustGet("userID").(string)
+			userID := c.MustGet("userID").(string)
 			err := SetTaskState(taskID,
-				userId,
+				userID,
 				"done",
 				[]string{"accepted"},
 				"done_time",
