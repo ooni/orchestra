@@ -17,7 +17,7 @@ func RunMigrations(db *sqlx.DB) error {
 	migrations := &migrate.AssetMigrationSource{
 		Asset:    common.Asset,
 		AssetDir: common.AssetDir,
-		Dir:      "proteus-common/data/migrations",
+		Dir:      "data/migrations",
 	}
 	n, err := migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
 	if err != nil {
