@@ -617,7 +617,7 @@ func Start() {
 			if probeCc != "" {
 				countries = append(countries, probeCc)
 			}
-			countriesUpper, err := UpperAndWhitelist(countries, AllCountryCodes)
+			countriesUpper, err := UpperAndWhitelist(countries, allCountryCodes)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -627,7 +627,7 @@ func Start() {
 			if catParam != "" {
 				cats = strings.Split(c.Query("cat_code"), ",")
 			}
-			catsUpper, err := UpperAndWhitelist(cats, AllCatCodes)
+			catsUpper, err := UpperAndWhitelist(cats, allCatCodes)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
