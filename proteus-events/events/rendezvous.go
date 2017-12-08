@@ -3,7 +3,11 @@ package events
 import (
 	"database/sql"
 	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/spf13/viper"
@@ -173,4 +177,64 @@ func GetTestInputs(countries []string, catCodes []string, count int64, db *sqlx.
 		inputs = append(inputs, input)
 	}
 	return inputs, nil
+}
+
+func rendezvousHandlerWithDB(db *sqlx.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		collectors, err := GetCollectors(db)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError,
+				gin.H{"error": "server side error"})
+			return
+		}
+		testHelpers, err := GetTestHelpers(db)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError,
+				gin.H{"error": "server side error"})
+			return
+		}
+
+		// We use XX to denote ANY country
+		probeCc := c.Query("probe_cc")
+		countries := []string{"XX"}
+		if probeCc != "" {
+			countries = append(countries, probeCc)
+		}
+		countriesUpper, err := UpperAndWhitelist(countries, allCountryCodes)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		catParam := c.Query("cat_code")
+		cats := []string{}
+		if catParam != "" {
+			cats = strings.Split(catParam, ",")
+		}
+		catsUpper, err := UpperAndWhitelist(cats, allCatCodes)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		countString := c.DefaultQuery("count",
+			viper.GetString("api.default-inputs-to-return"))
+		var count int64
+		count, err = strconv.ParseInt(countString, 10, 64)
+		if err != nil || count < 1 || count > 1000 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "bad count"})
+			return
+		}
+		testInputs, err := GetTestInputs(countriesUpper, catsUpper, count, db)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError,
+				gin.H{"error": "server side error"})
+			return
+		}
+		c.JSON(http.StatusOK,
+			gin.H{"collectors": collectors,
+				"test_helpers": testHelpers,
+				"inputs":       testInputs})
+		return
+	}
 }
