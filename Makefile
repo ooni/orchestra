@@ -33,7 +33,7 @@ fmt-check:
 		exit 1;                                  \
 	fi
 
-lint: PACKAGES = $(shell govendor list -no-status +local)
+lint: PACKAGES = $(shell govendor list -no-status +local | grep -v proteus-notify)
 lint:
 	@hash golint > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
 		go get -u github.com/golang/lint/golint; \
