@@ -9,8 +9,10 @@ import (
 	"time"
 )
 
+// ISOUTCTimeLayout format string for ISO standard time
 const ISOUTCTimeLayout = "2006-01-02T15:04:05Z"
 
+// ScheduleDuration datastructure for scheduling information
 type ScheduleDuration struct {
 	Years   float64
 	Months  float64
@@ -21,6 +23,7 @@ type ScheduleDuration struct {
 	Seconds float64
 }
 
+// ToDuration convert to a time.Duration
 func (d *ScheduleDuration) ToDuration() time.Duration {
 	day := float64(time.Hour) * 24.0
 	year := day * 365.0
@@ -49,10 +52,10 @@ func (d *ScheduleDuration) getMonthDuration() time.Duration {
 	value := time.Duration(0)
 	i := 0
 	for ; i < int(d.Months); i++ {
-		currentMonth += 1
+		currentMonth++
 		if currentMonth == 13 {
 			currentMonth = 1
-			currentYear += 1
+			currentYear++
 		}
 		value += time.Hour * 24 * time.Duration(daysInMonth(currentYear, currentMonth))
 	}
@@ -75,6 +78,7 @@ func daysInMonth(year, month int) int {
 	return 28
 }
 
+// IntInSlice checks if a int is inside of a certain slice of ints
 func IntInSlice(num int, slice []int) bool {
 	for i := range slice {
 		if slice[i] == num {
@@ -84,6 +88,7 @@ func IntInSlice(num int, slice []int) bool {
 	return false
 }
 
+// Schedule metadata about a schedule
 type Schedule struct {
 	Repeat    int64
 	StartTime time.Time
@@ -107,6 +112,7 @@ func leadingFloat(s string) (float64, string, error) {
 	return v, s[i:], nil
 }
 
+// ParseDuration parses a duration string
 func ParseDuration(s string) (ScheduleDuration, error) {
 	timePart := false
 	d := ScheduleDuration{Years: 0,
@@ -166,6 +172,7 @@ func ParseDuration(s string) (ScheduleDuration, error) {
 	return d, nil
 }
 
+// ParseSchedule parse a schedule string
 func ParseSchedule(s string) (Schedule, error) {
 	var schedule Schedule
 	var err error
@@ -211,6 +218,8 @@ func ParseSchedule(s string) (Schedule, error) {
 	return schedule, nil
 }
 
+// UpperAndWhitelist checks if a list of strings are uppercased and inside the
+// list, returns the list with only the items present in the whitelist
 func UpperAndWhitelist(ins []string, whitelist mapStrStruct) ([]string, error) {
 	outs := make([]string, len(ins))
 	for i, v := range ins {

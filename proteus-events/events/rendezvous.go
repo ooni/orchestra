@@ -3,6 +3,7 @@ package events
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/spf13/viper"
@@ -17,11 +18,11 @@ type DomainFrontedCollector struct {
 // Collectors holds the urls of onion, https, and domain-fronted collectors
 type Collectors struct {
 	Onion         []string                 `json:"onion"`
-	Https         []string                 `json:"https"`
+	HTTPS         []string                 `json:"https"`
 	DomainFronted []DomainFrontedCollector `json:"domain_fronted"`
 }
 
-// GetCollectors() returns a map of collectors keyed by their type
+// GetCollectors returns a map of collectors keyed by their type
 func GetCollectors(db *sqlx.DB) (Collectors, error) {
 	var (
 		collectors Collectors
@@ -57,7 +58,7 @@ func GetCollectors(db *sqlx.DB) (Collectors, error) {
 		case "onion":
 			collectors.Onion = append(collectors.Onion, caddress)
 		case "https":
-			collectors.Https = append(collectors.Https, caddress)
+			collectors.HTTPS = append(collectors.HTTPS, caddress)
 		case "domain_fronted":
 			if !cfront.Valid {
 				ctx.Error("domain_fronted collector with bad front domain")
@@ -73,7 +74,7 @@ func GetCollectors(db *sqlx.DB) (Collectors, error) {
 	return collectors, nil
 }
 
-// GetTestHelpers() returns a map of test helpers keyed by the test name
+// GetTestHelpers returns a map of test helpers keyed by the test name
 func GetTestHelpers(db *sqlx.DB) (map[string][]string, error) {
 	var (
 		err error
@@ -95,20 +96,22 @@ func GetTestHelpers(db *sqlx.DB) (map[string][]string, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			test_name string
-			address   string
+			testName string
+			address  string
 		)
-		err = rows.Scan(&test_name, &address)
+		err = rows.Scan(&testName, &address)
 		if err != nil {
 			ctx.WithError(err).Error("failed to get test_helper row")
 			continue
 		}
-		helpers[test_name] = append(helpers[test_name], address)
+		helpers[testName] = append(helpers[testName], address)
 	}
 	return helpers, nil
 }
 
-func BuildTestInputQuery(countries []string, catCodes []string) string {
+// buildTestInputQuery returns the query string to get all the inputs for the
+// given countries and category codes
+func buildTestInputQuery(countries []string, catCodes []string) string {
 	query := fmt.Sprintf(`SELECT
 		url,
 		cat_code,
@@ -134,7 +137,7 @@ func GetTestInputs(countries []string, catCodes []string, count int64, db *sqlx.
 		err error
 	)
 	inputs := make([]map[string]string, 0)
-	query := BuildTestInputQuery(countries, catCodes)
+	query := buildTestInputQuery(countries, catCodes)
 	args := []interface{}{count, pq.StringArray(countries)}
 	if len(catCodes) > 0 {
 		args = append(args, pq.StringArray(catCodes))

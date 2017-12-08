@@ -24,12 +24,14 @@ var ctx = log.WithFields(log.Fields{
 	"env": viper.GetString("environment"),
 })
 
+// RootCmd the root command
 var RootCmd = &cobra.Command{
 	Use:   "proteus-notify",
 	Short: "I tell probes what to do",
 	Long:  ``,
 }
 
+// Execute run the command
 func Execute() {
 	RootCmd.AddCommand(cmd.VersionCmd)
 	if err := RootCmd.Execute(); err != nil {

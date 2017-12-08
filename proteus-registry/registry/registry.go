@@ -34,6 +34,7 @@ func initDatabase() (*sqlx.DB, error) {
 	return db, err
 }
 
+// ClientData metadata about a client
 type ClientData struct {
 	ProbeCC  string `json:"probe_cc" binding:"required"`
 	ProbeASN string `json:"probe_asn" binding:"required"`
@@ -55,6 +56,7 @@ type ClientData struct {
 	Password string `json:"password"`
 }
 
+// IsClientRegistered checks is a client is registered
 func IsClientRegistered(db *sqlx.DB, clientID string) (bool, error) {
 	var found string
 	query := fmt.Sprintf(`SELECT id FROM %s WHERE id = $1`,
@@ -69,6 +71,7 @@ func IsClientRegistered(db *sqlx.DB, clientID string) (bool, error) {
 	return true, nil
 }
 
+// Update the metadata for a client
 func Update(db *sqlx.DB, clientID string, req ClientData) error {
 	tx, err := db.Begin()
 	if err != nil {
@@ -176,6 +179,7 @@ func Update(db *sqlx.DB, clientID string, req ClientData) error {
 	return nil
 }
 
+// Register a new client
 func Register(db *sqlx.DB, req ClientData) (string, error) {
 	if (req.Platform == "ios" || req.Platform == "android") && req.Token == "" {
 		return "", errors.New("missing device token")
@@ -330,6 +334,7 @@ func Register(db *sqlx.DB, req ClientData) (string, error) {
 	return clientID, nil
 }
 
+// ActiveClient metadata about an active client
 type ActiveClient struct {
 	ClientID string `json:"client_id"`
 
@@ -354,6 +359,7 @@ type ActiveClient struct {
 	CreationTime time.Time `json:"creation_time"`
 }
 
+// ListClients lists all the clients in the database
 func ListClients(db *sqlx.DB) ([]ActiveClient, error) {
 	var activeClients []ActiveClient
 	query := fmt.Sprintf(`SELECT
@@ -515,6 +521,7 @@ func initRouterEngine(db *sqlx.DB) *gin.Engine {
 	return router
 }
 
+// Start the registry server
 func Start() {
 	db, err := initDatabase()
 
