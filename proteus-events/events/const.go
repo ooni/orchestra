@@ -1,8 +1,10 @@
 package events
 
-type MapStrStruct map[string]struct{}
+type mapStrStruct map[string]struct{}
 
-var AllCatCodes = MapStrStruct{"ALDR": {}, "REL": {}, "PORN": {},
+// The list of all the supported category codes from the citizenlab test-list.
+// See: https://github.com/citizenlab/test-lists/blob/master/lists/00-LEGEND-new_category_codes.csv
+var allCatCodes = mapStrStruct{"ALDR": {}, "REL": {}, "PORN": {},
 	"PROV": {}, "POLR": {}, "HUMR": {}, "ENV": {}, "MILX": {},
 	"HATE": {}, "NEWS": {}, "XED": {}, "PUBH": {}, "GMB": {},
 	"ANON": {}, "DATE": {}, "GRP": {}, "LGBT": {}, "FILE": {},
@@ -10,7 +12,10 @@ var AllCatCodes = MapStrStruct{"ALDR": {}, "REL": {}, "PORN": {},
 	"GAME": {}, "CULTR": {}, "ECON": {}, "GOVT": {}, "COMM": {},
 	"CTRL": {}, "IGO": {}, "MISC": {}}
 
-var AllCountryCodes = MapStrStruct{
+// Official ISO 3166-2 alpha 2 country codes (https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)
+// We also use the user-assignable ZZ and XX country codes to indicate "Unknown
+// country" and "All countries" respectively .
+var allCountryCodes = mapStrStruct{
 	"AD": {}, "AE": {}, "AF": {}, "AG": {}, "AI": {}, "AL": {},
 	"AM": {}, "AN": {}, "AO": {}, "AQ": {}, "AR": {}, "AS": {},
 	"AT": {}, "AU": {}, "AW": {}, "AZ": {}, "BA": {}, "BB": {},

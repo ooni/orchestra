@@ -211,7 +211,7 @@ func ParseSchedule(s string) (Schedule, error) {
 	return schedule, nil
 }
 
-func UpperAndWhitelist(ins []string, whitelist MapStrStruct) ([]string, error) {
+func UpperAndWhitelist(ins []string, whitelist mapStrStruct) ([]string, error) {
 	outs := make([]string, len(ins))
 	for i, v := range ins {
 		outs[i] = strings.ToUpper(v)
