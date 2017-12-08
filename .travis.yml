@@ -12,3 +12,4 @@ install:
   - make vendor
 script:
   - make check
+  - make lint
