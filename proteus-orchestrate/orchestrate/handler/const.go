@@ -4,6 +4,7 @@ import "github.com/apex/log"
 
 var ctx = log.WithFields(log.Fields{
 	"pkg": "handler",
+	"cmd": "proteus-orchestrate",
 })
 
 type mapStrStruct map[string]struct{}

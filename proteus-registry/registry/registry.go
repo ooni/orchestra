@@ -23,7 +23,8 @@ import (
 )
 
 var ctx = log.WithFields(log.Fields{
-	"cmd": "registry",
+	"pkg": "registry",
+	"cmd": "proteus-registry",
 })
 
 func initDatabase() (*sqlx.DB, error) {

@@ -21,6 +21,7 @@ import (
 
 var ctx = log.WithFields(log.Fields{
 	"pkg": "orchestrate",
+	"cmd": "proteus-orchestrate",
 })
 
 func initDatabase() (*sqlx.DB, error) {

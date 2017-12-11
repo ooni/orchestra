@@ -20,7 +20,8 @@ var (
 )
 
 var ctx = log.WithFields(log.Fields{
-	"env": "production",
+	"pkg": "cmd",
+	"cmd": "proteus-registry",
 })
 
 // RootCmd for proteus-registry

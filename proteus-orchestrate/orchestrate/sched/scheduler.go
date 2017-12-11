@@ -24,6 +24,7 @@ import (
 
 var ctx = log.WithFields(log.Fields{
 	"pkg": "sched",
+	"cmd": "proteus-orchestrate",
 })
 
 // AlertData is the alert message

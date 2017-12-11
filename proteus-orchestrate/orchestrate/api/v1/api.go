@@ -10,6 +10,7 @@ import (
 
 var ctx = log.WithFields(log.Fields{
 	"pkg": "apiv1",
+	"cmd": "proteus-orchestrate",
 })
 
 // BindAPI bind all the request handlers and middleware

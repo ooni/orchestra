@@ -21,7 +21,8 @@ var (
 )
 
 var ctx = log.WithFields(log.Fields{
-	"env": "production",
+	"pkg": "cmd",
+	"cmd": "proteus-orchestrate",
 })
 
 // RootCmd where all commands begin
