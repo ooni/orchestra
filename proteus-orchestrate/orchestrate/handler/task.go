@@ -10,7 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
 	"github.com/lib/pq"
-	"github.com/spf13/viper"
+	common "github.com/thetorproject/proteus/proteus-common"
 	"github.com/thetorproject/proteus/proteus-orchestrate/orchestrate/sched"
 )
 
@@ -29,7 +29,7 @@ func GetTasksForUser(uID string, since string,
 		WHERE
 		state = 'ready' AND
 		probe_id = $1 AND creation_time >= $2`,
-		pq.QuoteIdentifier(viper.GetString("database.tasks-table")))
+		pq.QuoteIdentifier(common.TasksTable))
 
 	rows, err := db.Query(query, uID, since)
 	if err != nil {

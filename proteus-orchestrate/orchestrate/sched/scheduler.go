@@ -19,6 +19,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/satori/go.uuid"
 	"github.com/spf13/viper"
+	"github.com/thetorproject/proteus/proteus-common"
 )
 
 var ctx = log.WithFields(log.Fields{
@@ -123,7 +124,7 @@ func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
 			$10,
 			$11,
 			$12)`,
-			pq.QuoteIdentifier(viper.GetString("database.tasks-table")))
+			pq.QuoteIdentifier(common.TasksTable))
 		stmt, err := tx.Prepare(query)
 		if err != nil {
 			ctx.WithError(err).Error("failed to prepare task create query")
@@ -186,7 +187,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 		alert_no
 		FROM %s
 		WHERE id = $1`,
-		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
+		pq.QuoteIdentifier(common.JobsTable))
 
 	err = jDB.db.QueryRow(query, j.ID).Scan(
 		pq.Array(&targetCountries),
@@ -211,7 +212,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 			extra
 			FROM %s
 			WHERE alert_no = $1`,
-			pq.QuoteIdentifier(viper.GetString("database.job-alerts-table")))
+			pq.QuoteIdentifier(common.JobAlertsTable))
 		err = jDB.db.QueryRow(query, alertNo.Int64).Scan(
 			&ad.Message,
 			&alertExtra)
@@ -235,7 +236,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 			arguments
 			FROM %s
 			WHERE task_no = $1`,
-			pq.QuoteIdentifier(viper.GetString("database.job-tasks-table")))
+			pq.QuoteIdentifier(common.JobTasksTable))
 		err = jDB.db.QueryRow(query, taskNo.Int64).Scan(
 			&td.TestName,
 			&taskArgs)
@@ -256,7 +257,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	// XXX this is really ghetto. There is probably a much better way of doing
 	// it.
 	query = fmt.Sprintf("SELECT id, token, platform FROM %s",
-		pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
+		pq.QuoteIdentifier(common.ActiveProbesTable))
 	if len(targetCountries) > 0 && len(targetPlatforms) > 0 {
 		query += " WHERE probe_cc = ANY($1) AND platform = ANY($2)"
 		rows, err = jDB.db.Query(query,
@@ -546,7 +547,7 @@ func GetTask(tID string, uID string, db *sqlx.DB) (TaskData, error) {
 		COALESCE(state, 'ready')
 		FROM %s
 		WHERE id = $1`,
-		pq.QuoteIdentifier(viper.GetString("database.tasks-table")))
+		pq.QuoteIdentifier(common.TasksTable))
 	err = db.QueryRow(query, tID).Scan(
 		&task.ID,
 		&probeID,
@@ -597,7 +598,7 @@ func SetTaskState(tID string, uID string,
 		%s = $3,
 		last_updated = $3
 		WHERE id = $1`,
-		pq.QuoteIdentifier(viper.GetString("database.tasks-table")),
+		pq.QuoteIdentifier(common.TasksTable),
 		updateTimeCol)
 
 	_, err = db.Exec(query, tID, state, time.Now().UTC())
@@ -706,7 +707,7 @@ func (j *Job) Save(jDB *JobDB) error {
 		next_run_at = $3,
 		is_done = $4
 		WHERE id = $1`,
-		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
+		pq.QuoteIdentifier(common.JobsTable))
 
 	stmt, err := tx.Prepare(query)
 	if err != nil {
@@ -779,7 +780,7 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 		is_done
 		FROM %s
 		WHERE state = 'active'`,
-		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
+		pq.QuoteIdentifier(common.JobsTable))
 	rows, err := db.db.Query(query)
 	if err != nil {
 		ctx.WithError(err).Error("failed to list jobs")

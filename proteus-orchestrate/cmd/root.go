@@ -48,8 +48,6 @@ func init() {
 	RootCmd.PersistentFlags().StringP("db-url", "", "", "Set the url of the postgres database (ex. postgres://username:password@host/dbname?sslmode=verify-full)")
 	viper.BindPFlag("database.url", RootCmd.PersistentFlags().Lookup("db-url"))
 	viper.BindPFlag("core.log-level", RootCmd.PersistentFlags().Lookup("log-level"))
-	viper.SetDefault("database.active-probes-table", "active_probes")
-	viper.SetDefault("database.probe-updates-table", "probe_updates")
 }
 
 func initConfig() {

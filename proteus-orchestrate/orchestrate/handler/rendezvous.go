@@ -12,6 +12,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/spf13/viper"
+	common "github.com/thetorproject/proteus/proteus-common"
 )
 
 // UpperAndWhitelist checks if a list of strings are uppercased and inside the
@@ -53,7 +54,7 @@ func GetCollectors(db *sqlx.DB) (Collectors, error) {
 		address,
 		front_domain
 		FROM %s`,
-		pq.QuoteIdentifier(viper.GetString("database.collectors-table")))
+		pq.QuoteIdentifier(common.CollectorsTable))
 	rows, err := db.Query(query)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -104,7 +105,7 @@ func GetTestHelpers(db *sqlx.DB) (map[string][]string, error) {
 		test_name,
 		address
 		FROM %s`,
-		pq.QuoteIdentifier(viper.GetString("database.test-helpers-table")))
+		pq.QuoteIdentifier(common.TestHelpersTable))
 	rows, err := db.Query(query)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -139,9 +140,9 @@ func buildTestInputQuery(countries []string, catCodes []string) string {
 		FROM %s urls
 		INNER JOIN %s countries ON urls.country_no = countries.country_no
 		INNER JOIN %s url_cats ON urls.cat_no = url_cats.cat_no`,
-		pq.QuoteIdentifier(viper.GetString("database.urls-table")),
-		pq.QuoteIdentifier(viper.GetString("database.countries-table")),
-		pq.QuoteIdentifier(viper.GetString("database.url-categories-table")))
+		pq.QuoteIdentifier(common.URLsTable),
+		pq.QuoteIdentifier(common.CountriesTable),
+		pq.QuoteIdentifier(common.URLCategoriesTable))
 	// countries is always greater than zero
 	query += " WHERE alpha_2 = ANY($2)"
 	if len(catCodes) > 0 {

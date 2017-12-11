@@ -18,15 +18,3 @@ default-inputs-to-return = 10
 
 [database]
 url = "postgres://proteus:changeme@127.0.0.1:32768/proteus?sslmode=disable"
-active-probes-table = "active_probes"
-probe-updates-table = "probe_updates"
-jobs-table = "jobs"
-job-alerts-table = "job_alerts"
-job-tasks-table = "job_tasks"
-tasks-table = "tasks"
-accounts-table = "accounts"
-collectors-table = "collectors"
-test-helpers-table = "test_helpers"
-urls-table = "urls"
-countries-table = "countries"
-url-categories-table = "url_categories"

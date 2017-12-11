@@ -13,8 +13,8 @@ import (
 	"github.com/jmoiron/sqlx/types"
 	"github.com/lib/pq"
 	uuid "github.com/satori/go.uuid"
-	"github.com/spf13/viper"
 
+	common "github.com/thetorproject/proteus/proteus-common"
 	"github.com/thetorproject/proteus/proteus-orchestrate/orchestrate/sched"
 )
 
@@ -73,7 +73,7 @@ func AddJob(db *sqlx.DB, jd JobData, s *sched.Scheduler) (string, error) {
 				extra
 			) VALUES (DEFAULT, $1, $2)
 			RETURNING alert_no;`,
-				pq.QuoteIdentifier(viper.GetString("database.job-alerts-table")))
+				pq.QuoteIdentifier(common.JobAlertsTable))
 			stmt, err := tx.Prepare(query)
 			if err != nil {
 				ctx.WithError(err).Error("failed to prepare jobs-alerts query")
@@ -99,7 +99,7 @@ func AddJob(db *sqlx.DB, jd JobData, s *sched.Scheduler) (string, error) {
 				arguments
 			) VALUES (DEFAULT, $1, $2)
 			RETURNING task_no;`,
-				pq.QuoteIdentifier(viper.GetString("database.job-tasks-table")))
+				pq.QuoteIdentifier(common.JobTasksTable))
 			stmt, err := tx.Prepare(query)
 			if err != nil {
 				ctx.WithError(err).Error("failed to prepare jobs-tasks query")
@@ -146,7 +146,7 @@ func AddJob(db *sqlx.DB, jd JobData, s *sched.Scheduler) (string, error) {
 			$11,
 			$12,
 			$13)`,
-			pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
+			pq.QuoteIdentifier(common.JobsTable))
 
 		stmt, err := tx.Prepare(query)
 		if err != nil {
@@ -208,7 +208,7 @@ func ListJobs(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
 		FROM %s
 		LEFT OUTER JOIN job_alerts ON (job_alerts.alert_no = jobs.alert_no)
 		LEFT OUTER JOIN job_tasks ON (job_tasks.task_no = jobs.task_no)`,
-		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
+		pq.QuoteIdentifier(common.JobsTable))
 	if showDeleted == false {
 		query += " WHERE state = 'active'"
 	}
@@ -285,7 +285,7 @@ func DeleteJob(jobID string, db *sqlx.DB, s *sched.Scheduler) error {
 	query := fmt.Sprintf(`UPDATE %s SET
 		state = $2
 		WHERE id = $1`,
-		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
+		pq.QuoteIdentifier(common.JobsTable))
 	_, err := db.Exec(query, jobID, "deleted")
 	if err != nil {
 		// XXX I am not actually sure this is the correct error

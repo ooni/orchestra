@@ -13,6 +13,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/spf13/viper"
+	common "github.com/thetorproject/proteus/proteus-common"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/dgrijalva/jwt-go.v3"
 )
@@ -418,7 +419,7 @@ func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 			query := fmt.Sprintf(`SELECT
 							password_hash, role
 							FROM %s WHERE username = $1`,
-				pq.QuoteIdentifier(viper.GetString("database.accounts-table")))
+				pq.QuoteIdentifier(common.AccountsTable))
 			err := db.QueryRow(query, userId).Scan(
 				&passwordHash,
 				&account.Role)
