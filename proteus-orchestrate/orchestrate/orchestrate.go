@@ -20,7 +20,7 @@ import (
 )
 
 var ctx = log.WithFields(log.Fields{
-	"cmd": "events",
+	"pkg": "orchestrate",
 })
 
 func initDatabase() (*sqlx.DB, error) {
