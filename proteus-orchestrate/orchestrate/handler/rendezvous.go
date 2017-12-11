@@ -15,7 +15,7 @@ import (
 	common "github.com/thetorproject/proteus/proteus-common"
 )
 
-// UpperAndWhitelist checks if a list of strings are uppercased and inside the
+// upperAndWhitelist checks if a list of strings are uppercased and inside the
 // list, returns the list with only the items present in the whitelist
 func upperAndWhitelist(ins []string, whitelist mapStrStruct) ([]string, error) {
 	outs := make([]string, len(ins))
