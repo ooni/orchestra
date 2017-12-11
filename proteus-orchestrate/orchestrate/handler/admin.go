@@ -288,7 +288,6 @@ func DeleteJob(jobID string, db *sqlx.DB, s *sched.Scheduler) error {
 		pq.QuoteIdentifier(common.JobsTable))
 	_, err := db.Exec(query, jobID, "deleted")
 	if err != nil {
-		// XXX I am not actually sure this is the correct error
 		if err == sql.ErrNoRows {
 			return ErrJobNotFound
 		}
