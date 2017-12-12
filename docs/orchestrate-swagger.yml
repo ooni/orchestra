@@ -2,11 +2,11 @@ swagger: '2.0'
 schemes:
   - http
   - https
-host: orchestrate.ooni.io # XXX maybe bikeshed
+host: orchestrate.ooni.io
 basePath: /api/v1
 info:
   description: |
-    This is an the OpenAPI spec for proteus events
+    This is an the OpenAPI spec for proteus orchestrate
   version: '2.0.0'
 produces:
   - application/json
@@ -92,23 +92,18 @@ paths:
           schema:
             type: string
 
-  /rendezvous:
+  /urls:
     get:
       parameters:
-        - name: probe_cc
+        - name: limit
+          in: query
+          type: integer
+          description: How many URLs to return
+        - name: country_code
           in: query
           type: string
           description: The two letter country code
-        - name: probe_asn
-          in: query
-          type: string
-          description: the Autonomous system number in the format "ASXXX"
-        - name: input_type
-          in: query
-          type: string
-          enum:
-            - url
-        - name: cat_code
+        - name: category_code
           in: query
           type: array
           collectionFormat: csv
@@ -117,104 +112,153 @@ paths:
           description: |
             The list of category codes to return URLs for. If not specified, will
             return urls of ANY category code.
-        - name: test_helpers
-          in: query
+      responses:
+        '200':
+          description: |
+            Returns the list of URLs for the specified query
+          schema:
+            $ref: "#/definitions/URLs"
+
+  /test-helpers:
+    get:
+      parameters:
+        - name: name
           type: array
           collectionFormat: csv
           items:
             type: string
           description: |
             The list of test helpers we should return addresses for.
-
       responses:
         '200':
           description: |
-            Returns the directions of where measurements are
-            submitted and what inputs should be used.
+            Returns the list of test helpers
           schema:
-            $ref: "#/definitions/Rendezvous"
+            $ref: "#/definitions/TestHelpers"
+
+
+  /collectors:
+    get:
+      parameters:
+        - name: type
+          type: array
+          collectionFormat: csv
+          items:
+            type: string
+            enum:
+              - onion
+              - domain_fronted
+              - https
+          description: |
+            The list of test helpers we should return addresses for.
+      responses:
+        '200':
+          description: |
+            Returns the list of collectors
+          schema:
+            $ref: "#/definitions/Collectors"
 
 definitions:
-  # client sends:
-  # probe_cc,
-  # probe_asn,
-  # cat_codes,
-  # test_helpers: [
-  #   'nome_a',
-  #   'nome_b'
-  # ]
-
-  # backend responds:
-  # - collector
-  # - test helper
-  # - list of inputs
-  CollectorList:
+  Collector:
     properties:
-      onion:
-        type: array
-        items:
+      type:
+        type: string
+        enum:
+          - onion
+          - domain_fronted
+          - https
+        address:
           type: string
 
-      https:
-        type: array
-        items:
-          type: string
-
-      domain_fronted:
-        type: array
-        items:
-          $ref: '#/definitions/DomainFrontAddress'
-
-  DomainFrontAddress:
+  UrlInput:
     properties:
-      domain:
-        type: string
-        description: 'The actual domain you want to connect to'
-      front:
-        type: string
-        description: 'The front to use to connect to the domain'
-
-  UrlInputList:
-    properties:
-      cat_code:
+      category_code:
         type: string
         description: 'The citizenlab category code'
-      url:
+      country_code:
+        type: string
+        description: 'The two letter country code (XX means GLOBAL)'
+      address:
         type: string
         description: 'The Url to test'
 
-  Rendezvous:
+  TestHelpers:
+    type: object
+    description: List of requested test helpers
+    properties:
+      metadata:
+        type: object
+      results:
+        type: array
+        items:
+          type: object
+    example:
+      metadata:
+        count: 10
+        current_page: 1
+        limit: 100
+        offset: 0
+        pages: 1
+        next_url: https://orchestrate.ooni.io/api/v1/test-helpers?offset=100&limit=100
+      results:
+        - name: some-name
+          type: https
+          address: https://foo.comz
+
+  URLs:
     type: object
     properties:
-      collectors:
-        description: List of collectors to submit measurements
-        $ref: '#/definitions/CollectorList'
-      test_helpers:
-        description: List of requested test helpers
+      metadata:
         type: object
-      inputs:
-        description: List of inputs to test
-        $ref: '#/definitions/UrlInputList'
+      results:
+        type: array
+        items:
+          description: List of inputs to test
+          $ref: '#/definitions/UrlInput'
     example:
-      collectors:
-        onion:
-          - example.onion
-        https:
-          - https://example.com
-        domain_fronted:
-          - front: cdn.aws.com
-            domain: example.com
-          - front: cdn2.aws.com
-            domain: example2.com
-      test_helpers:
-        name_a:
-          - https://foo.com
-        name_b:
-          - https://bar.com
-      inputs:
-        - cat_code: 'SRCH'
+      metadata:
+        count: 10
+        current_page: 1
+        limit: 100
+        offset: 0
+        pages: 1
+        next_url: https://orchestrate.ooni.io/api/v1/urls?offset=100&limit=100
+
+      items:
+        - category_code: 'SRCH'
+          country_code: 'IT'
           url: https://google.com
-        - cat_code: 'SRCH'
+        - category_code: 'SRCH'
+          country_code: 'IT'
           url: https://facebook.com
-        - cat_code: 'ALDR'
+        - category_code: 'ALDR'
+          country_code: 'XX'
           url: https://google.com
+
+  Collectors:
+    type: object
+    description: List of collectors to submit measurements
+    properties:
+      metadata:
+        type: object
+      results:
+        type: array
+        items:
+          $ref: '#/definitions/Collector'
+    example:
+      metadata:
+        count: 10
+        current_page: 1
+        limit: 100
+        offset: 0
+        pages: 1
+        next_url: https://orchestrate.ooni.io/api/v1/collectors?offset=100&limit=100
+      items:
+        - type: onion
+          address: http://example.onion
+        - type: https
+          address: https://example.com
+        - type: domain_fronted
+          address: example.com@cdn.aws.com
+        - type: domain_fronted
+          address: example2.com@cdn2.google.com
