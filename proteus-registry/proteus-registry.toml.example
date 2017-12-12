@@ -11,6 +11,3 @@ address = "127.0.0.1"
 
 [database]
 url = "postgres://user:pass@hostname:port/dbname?sslmode=disable"
-active-probes-table = "active_probes"
-probe-updates-table = "probe_updates"
-accounts-table = "accounts"

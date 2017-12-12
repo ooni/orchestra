@@ -3,12 +3,12 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
 
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
 	"github.com/thetorproject/proteus/proteus-common/cmd"
+	"github.com/thetorproject/proteus/proteus-orchestrate/orchestrate"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -21,17 +21,18 @@ var (
 )
 
 var ctx = log.WithFields(log.Fields{
-	"env": viper.GetString("environment"),
+	"pkg": "cmd",
+	"cmd": "proteus-orchestrate",
 })
 
-// RootCmd the root command
+// RootCmd where all commands begin
 var RootCmd = &cobra.Command{
-	Use:   "proteus-notify",
-	Short: "I tell probes what to do",
-	Long:  ``,
+	Use:   "proteus-orchestrate",
+	Short: "I orchestrate probes",
+	Long:  orchestrate.LongDescription,
 }
 
-// Execute run the command
+// Execute parse the command arguments
 func Execute() {
 	RootCmd.AddCommand(cmd.VersionCmd)
 	if err := RootCmd.Execute(); err != nil {
@@ -43,22 +44,15 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /etc/proteus/proteus-notify.toml)")
-	RootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info", "Set the log level")
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /etc/proteus/proteus-orchestrate.yaml)")
+	RootCmd.PersistentFlags().StringP("log-level", "", "info", "Set the log level")
 	RootCmd.PersistentFlags().StringP("db-url", "", "", "Set the url of the postgres database (ex. postgres://username:password@host/dbname?sslmode=verify-full)")
 	viper.BindPFlag("database.url", RootCmd.PersistentFlags().Lookup("db-url"))
 	viper.BindPFlag("core.log-level", RootCmd.PersistentFlags().Lookup("log-level"))
-	viper.SetDefault("database.active-probes-table", "active_probes")
-	viper.SetDefault("database.probe-updates-table", "probe_updates")
-	viper.SetDefault("fcm.max-retries", 5)
-	viper.SetDefault("fcm.max-retries", 5)
-	viper.SetDefault("core.environment", "production")
-	viper.SetDefault("core.worker-num", runtime.NumCPU())
-	viper.SetDefault("core.queue-size", 2048)
 }
 
 func initConfig() {
-	viper.SetConfigName("proteus-notify")
+	viper.SetConfigName("proteus-orchestrate")
 	viper.AddConfigPath("/etc/proteus/")
 	viper.AddConfigPath(".")
 	viper.AutomaticEnv()
@@ -72,13 +66,13 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		ctx.Infof("using config file: %s", viper.ConfigFileUsed())
 	} else {
-		ctx.WithError(err).Errorf("failed to read config file: %s", viper.ConfigFileUsed())
+		ctx.WithError(err).Errorf("failed to load config file")
 	}
 
 	log.SetHandler(cli.Default)
 	level, err := log.ParseLevel(viper.GetString("core.log-level"))
 	if err != nil {
-		ctx.Error("Invalid log level. Must be one of debug, info, warn, error, fatal")
+		fmt.Println("Invalid log level. Must be one of debug, info, warn, error, fatal")
 	}
 	log.SetLevel(level)
 }

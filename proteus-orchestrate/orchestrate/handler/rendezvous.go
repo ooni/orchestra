@@ -1,13 +1,34 @@
-package events
+package handler
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/spf13/viper"
+	common "github.com/thetorproject/proteus/proteus-common"
 )
+
+// upperAndWhitelist checks if a list of strings are uppercased and inside the
+// list, returns the list with only the items present in the whitelist
+func upperAndWhitelist(ins []string, whitelist mapStrStruct) ([]string, error) {
+	outs := make([]string, len(ins))
+	for i, v := range ins {
+		outs[i] = strings.ToUpper(v)
+		_, present := whitelist[outs[i]]
+		if !present {
+			errorString := fmt.Sprintf("%s is not valid", v)
+			return nil, errors.New(errorString)
+		}
+	}
+	return outs, nil
+}
 
 // DomainFrontedCollector is a {"domain": "a", "front": "b"} map
 type DomainFrontedCollector struct {
@@ -33,7 +54,7 @@ func GetCollectors(db *sqlx.DB) (Collectors, error) {
 		address,
 		front_domain
 		FROM %s`,
-		pq.QuoteIdentifier(viper.GetString("database.collectors-table")))
+		pq.QuoteIdentifier(common.CollectorsTable))
 	rows, err := db.Query(query)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -84,7 +105,7 @@ func GetTestHelpers(db *sqlx.DB) (map[string][]string, error) {
 		test_name,
 		address
 		FROM %s`,
-		pq.QuoteIdentifier(viper.GetString("database.test-helpers-table")))
+		pq.QuoteIdentifier(common.TestHelpersTable))
 	rows, err := db.Query(query)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -119,9 +140,9 @@ func buildTestInputQuery(countries []string, catCodes []string) string {
 		FROM %s urls
 		INNER JOIN %s countries ON urls.country_no = countries.country_no
 		INNER JOIN %s url_cats ON urls.cat_no = url_cats.cat_no`,
-		pq.QuoteIdentifier(viper.GetString("database.urls-table")),
-		pq.QuoteIdentifier(viper.GetString("database.countries-table")),
-		pq.QuoteIdentifier(viper.GetString("database.url-categories-table")))
+		pq.QuoteIdentifier(common.URLsTable),
+		pq.QuoteIdentifier(common.CountriesTable),
+		pq.QuoteIdentifier(common.URLCategoriesTable))
 	// countries is always greater than zero
 	query += " WHERE alpha_2 = ANY($2)"
 	if len(catCodes) > 0 {
@@ -173,4 +194,65 @@ func GetTestInputs(countries []string, catCodes []string, count int64, db *sqlx.
 		inputs = append(inputs, input)
 	}
 	return inputs, nil
+}
+
+// HandleRendezvous handler for /rendezvous
+func HandleRendezvous(c *gin.Context) {
+	db := c.MustGet("DB").(*sqlx.DB)
+
+	collectors, err := GetCollectors(db)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError,
+			gin.H{"error": "server side error"})
+		return
+	}
+	testHelpers, err := GetTestHelpers(db)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError,
+			gin.H{"error": "server side error"})
+		return
+	}
+
+	// We use XX to denote ANY country
+	probeCc := c.Query("probe_cc")
+	countries := []string{"XX"}
+	if probeCc != "" {
+		countries = append(countries, probeCc)
+	}
+	countriesUpper, err := upperAndWhitelist(countries, allCountryCodes)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	catParam := c.Query("cat_code")
+	cats := []string{}
+	if catParam != "" {
+		cats = strings.Split(catParam, ",")
+	}
+	catsUpper, err := upperAndWhitelist(cats, allCatCodes)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	countString := c.DefaultQuery("count",
+		viper.GetString("api.default-inputs-to-return"))
+	var count int64
+	count, err = strconv.ParseInt(countString, 10, 64)
+	if err != nil || count < 1 || count > 1000 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad count"})
+		return
+	}
+	testInputs, err := GetTestInputs(countriesUpper, catsUpper, count, db)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError,
+			gin.H{"error": "server side error"})
+		return
+	}
+	c.JSON(http.StatusOK,
+		gin.H{"collectors": collectors,
+			"test_helpers": testHelpers,
+			"inputs":       testInputs})
+	return
 }

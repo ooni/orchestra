@@ -3,9 +3,10 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/thetorproject/proteus/proteus-notify/notify"
+	"github.com/thetorproject/proteus/proteus-orchestrate/orchestrate"
 )
 
+// startCmd represents the start command
 var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Start the server",
@@ -16,14 +17,18 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		notify.StartServer()
+		orchestrate.Start()
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(startCmd)
 
-	startCmd.PersistentFlags().IntP("port", "", 8080, "Which port we should bind to")
+	// Here you will define your flags and configuration settings.
+
+	// Cobra supports Persistent Flags which will work for this command
+	// and all subcommands, e.g.:
+	startCmd.PersistentFlags().IntP("port", "", 8082, "Which port we should bind to")
 	startCmd.PersistentFlags().StringP("address", "", "127.0.0.1", "Which interface we should listen on")
 	viper.BindPFlag("api.port", startCmd.PersistentFlags().Lookup("port"))
 	viper.BindPFlag("api.address", startCmd.PersistentFlags().Lookup("address"))

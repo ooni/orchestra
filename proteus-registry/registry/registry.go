@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	common "github.com/thetorproject/proteus/proteus-common"
 	"github.com/thetorproject/proteus/proteus-common/middleware"
 
 	"github.com/apex/log"
@@ -22,7 +23,8 @@ import (
 )
 
 var ctx = log.WithFields(log.Fields{
-	"cmd": "registry",
+	"pkg": "registry",
+	"cmd": "proteus-registry",
 })
 
 func initDatabase() (*sqlx.DB, error) {
@@ -60,7 +62,7 @@ type ClientData struct {
 func IsClientRegistered(db *sqlx.DB, clientID string) (bool, error) {
 	var found string
 	query := fmt.Sprintf(`SELECT id FROM %s WHERE id = $1`,
-		pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
+		pq.QuoteIdentifier(common.ActiveProbesTable))
 	err := db.QueryRow(query, clientID).Scan(&found)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -101,7 +103,7 @@ func Update(db *sqlx.DB, clientID string, req ClientData) error {
 			$12,
 			$13, $14,
 			$15, $16)`,
-			pq.QuoteIdentifier(viper.GetString("database.probe-updates-table")))
+			pq.QuoteIdentifier(common.ProbeUpdatesTable))
 
 		stmt, err := tx.Prepare(query)
 		if err != nil {
@@ -143,7 +145,7 @@ func Update(db *sqlx.DB, clientID string, req ClientData) error {
 			probe_family = $13,
 			probe_id = $14
 			WHERE id = $1`,
-			pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
+			pq.QuoteIdentifier(common.ActiveProbesTable))
 
 		stmt, err := tx.Prepare(query)
 		if err != nil {
@@ -217,7 +219,7 @@ func Register(db *sqlx.DB, req ClientData) (string, error) {
 			$12,
 			$13, $14,
 			$15)`,
-			pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
+			pq.QuoteIdentifier(common.ActiveProbesTable))
 
 		stmt, err := tx.Prepare(query)
 		if err != nil {
@@ -263,7 +265,7 @@ func Register(db *sqlx.DB, req ClientData) (string, error) {
 			$12,
 			$13, $14,
 			$15, $16)`,
-			pq.QuoteIdentifier(viper.GetString("database.probe-updates-table")))
+			pq.QuoteIdentifier(common.ProbeUpdatesTable))
 
 		stmt, err := tx.Prepare(query)
 		if err != nil {
@@ -300,7 +302,7 @@ func Register(db *sqlx.DB, req ClientData) (string, error) {
 			$2,
 			$3,
 			$4)`,
-			pq.QuoteIdentifier(viper.GetString("database.accounts-table")))
+			pq.QuoteIdentifier(common.AccountsTable))
 
 		passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 		if err != nil {
@@ -372,7 +374,7 @@ func ListClients(db *sqlx.DB) ([]ActiveClient, error) {
 			lang_code,
 			token, probe_family,
 			probe_id FROM %s`,
-		pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
+		pq.QuoteIdentifier(common.ActiveProbesTable))
 
 	rows, err := db.Query(query)
 	if err != nil {

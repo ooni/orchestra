@@ -1,9 +1,8 @@
-package events
+package sched
 
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -216,19 +215,4 @@ func ParseSchedule(s string) (Schedule, error) {
 	}
 	schedule.Duration = d
 	return schedule, nil
-}
-
-// UpperAndWhitelist checks if a list of strings are uppercased and inside the
-// list, returns the list with only the items present in the whitelist
-func UpperAndWhitelist(ins []string, whitelist mapStrStruct) ([]string, error) {
-	outs := make([]string, len(ins))
-	for i, v := range ins {
-		outs[i] = strings.ToUpper(v)
-		_, present := whitelist[outs[i]]
-		if !present {
-			errorString := fmt.Sprintf("%s is not valid", v)
-			return nil, errors.New(errorString)
-		}
-	}
-	return outs, nil
 }

@@ -1,4 +1,4 @@
-package events
+package sched
 
 import (
 	"bytes"
@@ -13,12 +13,34 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apex/log"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
 	"github.com/lib/pq"
 	"github.com/satori/go.uuid"
 	"github.com/spf13/viper"
+	"github.com/thetorproject/proteus/proteus-common"
 )
+
+var ctx = log.WithFields(log.Fields{
+	"pkg": "sched",
+	"cmd": "proteus-orchestrate",
+})
+
+// AlertData is the alert message
+type AlertData struct {
+	ID      string                 `json:"id"`
+	Message string                 `json:"message" binding:"required"`
+	Extra   map[string]interface{} `json:"extra"`
+}
+
+// TaskData is the data for the task
+type TaskData struct {
+	ID        string                 `json:"id"`
+	TestName  string                 `json:"test_name" binding:"required"`
+	Arguments map[string]interface{} `json:"arguments"`
+	State     string
+}
 
 // JobTarget the target of a job
 type JobTarget struct {
@@ -57,6 +79,20 @@ type Job struct {
 	IsDone   bool
 }
 
+// NewJob create a new job
+func NewJob(jID string, comment string, schedule Schedule, delay int64) *Job {
+	return &Job{
+		ID:        jID,
+		Comment:   comment,
+		Schedule:  schedule,
+		Delay:     delay,
+		TimesRun:  0,
+		lock:      sync.RWMutex{},
+		IsDone:    false,
+		NextRunAt: schedule.StartTime,
+	}
+}
+
 // CreateTask creates a new task and stores it in the JobDB
 func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
 	tx, err := jDB.db.Begin()
@@ -89,7 +125,7 @@ func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
 			$10,
 			$11,
 			$12)`,
-			pq.QuoteIdentifier(viper.GetString("database.tasks-table")))
+			pq.QuoteIdentifier(common.TasksTable))
 		stmt, err := tx.Prepare(query)
 		if err != nil {
 			ctx.WithError(err).Error("failed to prepare task create query")
@@ -152,7 +188,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 		alert_no
 		FROM %s
 		WHERE id = $1`,
-		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
+		pq.QuoteIdentifier(common.JobsTable))
 
 	err = jDB.db.QueryRow(query, j.ID).Scan(
 		pq.Array(&targetCountries),
@@ -177,7 +213,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 			extra
 			FROM %s
 			WHERE alert_no = $1`,
-			pq.QuoteIdentifier(viper.GetString("database.job-alerts-table")))
+			pq.QuoteIdentifier(common.JobAlertsTable))
 		err = jDB.db.QueryRow(query, alertNo.Int64).Scan(
 			&ad.Message,
 			&alertExtra)
@@ -201,7 +237,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 			arguments
 			FROM %s
 			WHERE task_no = $1`,
-			pq.QuoteIdentifier(viper.GetString("database.job-tasks-table")))
+			pq.QuoteIdentifier(common.JobTasksTable))
 		err = jDB.db.QueryRow(query, taskNo.Int64).Scan(
 			&td.TestName,
 			&taskArgs)
@@ -222,7 +258,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	// XXX this is really ghetto. There is probably a much better way of doing
 	// it.
 	query = fmt.Sprintf("SELECT id, token, platform FROM %s",
-		pq.QuoteIdentifier(viper.GetString("database.active-probes-table")))
+		pq.QuoteIdentifier(common.ActiveProbesTable))
 	if len(targetCountries) > 0 && len(targetPlatforms) > 0 {
 		query += " WHERE probe_cc = ANY($1) AND platform = ANY($2)"
 		rows, err = jDB.db.Query(query,
@@ -487,6 +523,93 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 	return nil
 }
 
+// ErrInconsistentState when you try to accept an already accepted task
+var ErrInconsistentState = errors.New("task already accepted")
+
+// ErrTaskNotFound could not find the referenced task
+var ErrTaskNotFound = errors.New("task not found")
+
+// ErrAccessDenied not enough permissions
+var ErrAccessDenied = errors.New("access denied")
+
+// GetTask returns the specified task with the ID
+func GetTask(tID string, uID string, db *sqlx.DB) (TaskData, error) {
+	var (
+		err      error
+		probeID  string
+		taskArgs types.JSONText
+	)
+	task := TaskData{}
+	query := fmt.Sprintf(`SELECT
+		id,
+		probe_id,
+		test_name,
+		arguments,
+		COALESCE(state, 'ready')
+		FROM %s
+		WHERE id = $1`,
+		pq.QuoteIdentifier(common.TasksTable))
+	err = db.QueryRow(query, tID).Scan(
+		&task.ID,
+		&probeID,
+		&task.TestName,
+		&taskArgs,
+		&task.State)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return task, ErrTaskNotFound
+		}
+		ctx.WithError(err).Error("failed to get task")
+		return task, err
+	}
+	if probeID != uID {
+		return task, ErrAccessDenied
+	}
+	err = taskArgs.Unmarshal(&task.Arguments)
+	if err != nil {
+		ctx.WithError(err).Error("failed to unmarshal json")
+		return task, err
+	}
+	return task, nil
+}
+
+// SetTaskState sets the state of the task
+func SetTaskState(tID string, uID string,
+	state string, validStates []string,
+	updateTimeCol string,
+	db *sqlx.DB) error {
+	var err error
+	task, err := GetTask(tID, uID, db)
+	if err != nil {
+		return err
+	}
+	stateConsistent := false
+	for _, s := range validStates {
+		if task.State == s {
+			stateConsistent = true
+			break
+		}
+	}
+	if !stateConsistent {
+		return ErrInconsistentState
+	}
+
+	query := fmt.Sprintf(`UPDATE %s SET
+		state = $2,
+		%s = $3,
+		last_updated = $3
+		WHERE id = $1`,
+		pq.QuoteIdentifier(common.TasksTable),
+		updateTimeCol)
+
+	_, err = db.Exec(query, tID, state, time.Now().UTC())
+	if err != nil {
+		ctx.WithError(err).Error("failed to get task")
+		return err
+	}
+	return nil
+}
+
 // Notify send a notification for the given JobTarget
 func Notify(jt *JobTarget, jDB *JobDB) error {
 	var err error
@@ -585,7 +708,7 @@ func (j *Job) Save(jDB *JobDB) error {
 		next_run_at = $3,
 		is_done = $4
 		WHERE id = $1`,
-		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
+		pq.QuoteIdentifier(common.JobsTable))
 
 	stmt, err := tx.Prepare(query)
 	if err != nil {
@@ -658,7 +781,7 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 		is_done
 		FROM %s
 		WHERE state = 'active'`,
-		pq.QuoteIdentifier(viper.GetString("database.jobs-table")))
+		pq.QuoteIdentifier(common.JobsTable))
 	rows, err := db.db.Query(query)
 	if err != nil {
 		ctx.WithError(err).Error("failed to list jobs")
