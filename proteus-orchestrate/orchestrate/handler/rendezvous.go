@@ -196,8 +196,8 @@ func GetTestInputs(countries []string, catCodes []string, count int64, db *sqlx.
 	return inputs, nil
 }
 
-// HandleRendezvous handler for /rendezvous
-func HandleRendezvous(c *gin.Context) {
+// RendezvousHandler handler for /rendezvous
+func RendezvousHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
 	collectors, err := GetCollectors(db)
