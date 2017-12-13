@@ -11,7 +11,7 @@ type mapStrStruct map[string]struct{}
 
 // The list of all the supported category codes from the citizenlab test-list.
 // See: https://github.com/citizenlab/test-lists/blob/master/lists/00-LEGEND-new_category_codes.csv
-var allCatCodes = mapStrStruct{"ALDR": {}, "REL": {}, "PORN": {},
+var allCategoryCodes = mapStrStruct{"ALDR": {}, "REL": {}, "PORN": {},
 	"PROV": {}, "POLR": {}, "HUMR": {}, "ENV": {}, "MILX": {},
 	"HATE": {}, "NEWS": {}, "XED": {}, "PUBH": {}, "GMB": {},
 	"ANON": {}, "DATE": {}, "GRP": {}, "LGBT": {}, "FILE": {},

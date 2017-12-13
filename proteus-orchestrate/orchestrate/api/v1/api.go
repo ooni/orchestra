@@ -26,10 +26,11 @@ func BindAPI(router *gin.Engine, authMiddleware *middleware.GinJWTMiddleware) er
 	}
 
 	rendezvous := v1.Group("/")
+	// XXX we should make authentication here optional
 	{
-		rendezvous.GET("/urls", handler.RendezvousHandler)
-		rendezvous.GET("/collectors", handler.RendezvousHandler)
-		rendezvous.GET("/test-helpers", handler.RendezvousHandler)
+		rendezvous.GET("/urls", handler.URLsHandler)
+		rendezvous.GET("/collectors", handler.CollectorsHandler)
+		rendezvous.GET("/test-helpers", handler.TestHelpersHandler)
 	}
 
 	device := v1.Group("/")
