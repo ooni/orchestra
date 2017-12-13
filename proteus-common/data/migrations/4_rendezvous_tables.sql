@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS urls
 (
     url_no INT NOT NULL default nextval('url_no_seq') PRIMARY KEY,
     url VARCHAR NOT NULL,
-    cat_no INT,
+    cat_no INT NOT NULL,
     country_no INT NOT NULL,
     date_added TIMESTAMP WITH TIME ZONE NOT NULL,
     source VARCHAR,
@@ -53,8 +53,9 @@ CREATE SEQUENCE test_helper_no_seq;
 CREATE TABLE IF NOT EXISTS test_helpers
 (
     test_helper_no INTEGER DEFAULT nextval('test_helper_no_seq'::regclass) PRIMARY KEY NOT NULL,
-    test_name VARCHAR,
-    address VARCHAR
+    name VARCHAR NOT NULL,
+    address VARCHAR NOT NULL,
+    type VARCHAR
 
 );
 

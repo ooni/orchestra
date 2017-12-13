@@ -49,11 +49,11 @@ func TestGetTestHelpers(t *testing.T) {
 	defer mockDB.Close()
 	db := sqlx.NewDb(mockDB, "sqlmock")
 
-	rows := sqlmock.NewRows([]string{"test_name", "address"}).
+	rows := sqlmock.NewRows([]string{"name", "address"}).
 		AddRow("example",
 			"http://example.com")
 
-	mock.ExpectQuery("^SELECT test_name, address").
+	mock.ExpectQuery("^SELECT name, address").
 		WillReturnRows(rows)
 
 	th, err := GetTestHelpers(db)

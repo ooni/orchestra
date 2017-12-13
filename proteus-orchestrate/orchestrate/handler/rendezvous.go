@@ -86,7 +86,8 @@ func GetTestHelpers(db *sqlx.DB) ([]TestHelperInfo, error) {
 	)
 	testHelpers := make([]TestHelperInfo, 0)
 	query := fmt.Sprintf(`SELECT
-		test_name,
+		name,
+		type,
 		address
 		FROM %s`,
 		pq.QuoteIdentifier(common.TestHelpersTable))
@@ -100,19 +101,13 @@ func GetTestHelpers(db *sqlx.DB) ([]TestHelperInfo, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var (
-			testName string
-			address  string
-		)
-		err = rows.Scan(&testName, &address)
+		var testHelper TestHelperInfo
+		err = rows.Scan(&testHelper.Name, &testHelper.Address, &testHelper.Type)
 		if err != nil {
 			ctx.WithError(err).Error("failed to get test_helper row")
 			continue
 		}
-		testHelpers = append(testHelpers, TestHelperInfo{
-			Name:    testName,
-			Address: address,
-		})
+		testHelpers = append(testHelpers, testHelper)
 	}
 	return testHelpers, nil
 }
