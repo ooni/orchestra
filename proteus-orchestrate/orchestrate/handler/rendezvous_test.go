@@ -53,7 +53,7 @@ func TestGetTestHelpers(t *testing.T) {
 		AddRow("example",
 			"http://example.com")
 
-	mock.ExpectQuery("^SELECT name, address").
+	mock.ExpectQuery("^SELECT name, type, address").
 		WillReturnRows(rows)
 
 	th, err := GetTestHelpers("onion", db)
