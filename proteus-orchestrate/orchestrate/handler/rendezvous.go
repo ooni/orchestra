@@ -203,13 +203,15 @@ func GetURLs(q URLsQuery, db *sqlx.DB) ([]URLInfo, error) {
 	return urls, nil
 }
 
-// RequestQuery are commong query parameters to all requests
-type RequestQuery struct {
-	Limit int64 `form:"limit" binding:"max=1000"`
+// URLsQuery is the user issued request for URLs
+type URLsQuery struct {
+	Limit         int64  `form:"limit" binding:"max=1000"`
+	CountryCode   string `form:"country_code"`
+	CategoryCodes string `form:"category_codes"`
 }
 
 // MakeMetadata generates the metadata for the request
-func (q RequestQuery) MakeMetadata() map[string]interface{} {
+func (q URLsQuery) MakeMetadata() map[string]interface{} {
 	// XXX populate this with real data
 	return map[string]interface{}{
 		"count":        -1,
@@ -218,13 +220,6 @@ func (q RequestQuery) MakeMetadata() map[string]interface{} {
 		"pages":        -1,
 		"next_url":     "",
 	}
-}
-
-// URLsQuery is the user issued request for URLs
-type URLsQuery struct {
-	RequestQuery
-	CountryCode   string `form:"country_code"`
-	CategoryCodes string `form:"category_codes"`
 }
 
 func validateCSVMapStr(csvStr string, m mapStrStruct) bool {
