@@ -49,9 +49,9 @@ func TestGetTestHelpers(t *testing.T) {
 	defer mockDB.Close()
 	db := sqlx.NewDb(mockDB, "sqlmock")
 
-	rows := sqlmock.NewRows([]string{"name", "address"}).
-		AddRow("example",
-			"http://example.com")
+	rows := sqlmock.NewRows([]string{"name", "type", "address"}).
+		AddRow("example", "https",
+			"https://example.com")
 
 	mock.ExpectQuery("^SELECT name, type, address").
 		WillReturnRows(rows)
