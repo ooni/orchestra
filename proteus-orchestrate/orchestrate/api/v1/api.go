@@ -26,7 +26,8 @@ func BindAPI(router *gin.Engine, authMiddleware *middleware.GinJWTMiddleware) er
 	}
 
 	rendezvous := v1.Group("/")
-	// XXX we should make authentication here optional
+	// This means that authentication is optional
+	rendezvous.Use(authMiddleware.MiddlewareFunc(middleware.NullAuthorizor))
 	{
 		rendezvous.GET("/urls", handler.URLsHandler)
 		rendezvous.GET("/collectors", handler.CollectorsHandler)

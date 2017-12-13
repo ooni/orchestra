@@ -462,3 +462,9 @@ func DeviceAuthorizor(account Account, c *gin.Context) bool {
 	}
 	return false
 }
+
+// NullAuthorizor is used for routes where authentication is optional and it
+// returns always true
+func NullAuthorizor(account Account, c *gin.Context) bool {
+	return true
+}
