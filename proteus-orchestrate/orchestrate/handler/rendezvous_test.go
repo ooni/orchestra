@@ -56,7 +56,7 @@ func TestGetTestHelpers(t *testing.T) {
 	mock.ExpectQuery("^SELECT name, address").
 		WillReturnRows(rows)
 
-	th, err := GetTestHelpers(db)
+	th, err := GetTestHelpers("onion", db)
 	if err != nil {
 		t.Errorf("error in calling GetTestHelpers: %s", err)
 	}
@@ -84,7 +84,7 @@ func TestGetCollectors(t *testing.T) {
 	mock.ExpectQuery("^SELECT type, address, front_domain").
 		WillReturnRows(rows)
 
-	th, err := GetCollectors(db)
+	th, err := GetCollectors("", db)
 	if err != nil {
 		t.Errorf("error in calling GetTestHelpers: %s", err)
 	}
