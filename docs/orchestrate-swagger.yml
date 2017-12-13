@@ -122,7 +122,7 @@ paths:
   /test-helpers:
     get:
       parameters:
-        - name: name
+        - name: names
           type: array
           collectionFormat: csv
           items:
@@ -140,7 +140,7 @@ paths:
   /collectors:
     get:
       parameters:
-        - name: type
+        - name: types
           type: array
           collectionFormat: csv
           items:

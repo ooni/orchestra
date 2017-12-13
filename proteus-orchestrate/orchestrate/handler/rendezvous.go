@@ -24,18 +24,24 @@ type CollectorInfo struct {
 	Address string `json:"address"`
 }
 
-// GetCollectors returns a map of collectors keyed by their type
-func GetCollectors(db *sqlx.DB) ([]CollectorInfo, error) {
+// GetCollectors returns the list of collectors available
+func GetCollectors(types string, db *sqlx.DB) ([]CollectorInfo, error) {
 	var (
-		err error
+		err  error
+		args []interface{}
 	)
 	collectors := make([]CollectorInfo, 0)
+
 	query := fmt.Sprintf(`SELECT
 		type,
 		address,
 		front_domain
 		FROM %s`,
 		pq.QuoteIdentifier(common.CollectorsTable))
+	if types != "" {
+		query += " WHERE type = ANY($1)"
+		args = append(args, pq.StringArray(strings.Split(types, ",")))
+	}
 	rows, err := db.Query(query)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -79,10 +85,11 @@ type TestHelperInfo struct {
 	Address string `json:"address"`
 }
 
-// GetTestHelpers returns a map of test helpers keyed by the test name
-func GetTestHelpers(db *sqlx.DB) ([]TestHelperInfo, error) {
+// GetTestHelpers returns a list of test helpers
+func GetTestHelpers(names string, db *sqlx.DB) ([]TestHelperInfo, error) {
 	var (
-		err error
+		err  error
+		args []interface{}
 	)
 	testHelpers := make([]TestHelperInfo, 0)
 	query := fmt.Sprintf(`SELECT
@@ -91,7 +98,11 @@ func GetTestHelpers(db *sqlx.DB) ([]TestHelperInfo, error) {
 		address
 		FROM %s`,
 		pq.QuoteIdentifier(common.TestHelpersTable))
-	rows, err := db.Query(query)
+	if names != "" {
+		query += " WHERE name = ANY($1)"
+		args = append(args, pq.StringArray(strings.Split(names, ",")))
+	}
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return testHelpers, nil
@@ -278,7 +289,9 @@ func URLsHandler(c *gin.Context) {
 // CollectorsHandler returns the list of requested collectors
 func CollectorsHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
-	collectors, err := GetCollectors(db)
+
+	types := c.Query("types")
+	collectors, err := GetCollectors(types, db)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
 			gin.H{"error": "server side error"})
@@ -294,7 +307,8 @@ func CollectorsHandler(c *gin.Context) {
 func TestHelpersHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
-	testHelpers, err := GetTestHelpers(db)
+	names := c.Query("names")
+	testHelpers, err := GetTestHelpers(names, db)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
 			gin.H{"error": "server side error"})
