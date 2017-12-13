@@ -194,9 +194,23 @@ definitions:
           type: object
     example:
       results:
-        - name: some-name
+        - name: http-return-json-headers
+          address: http://93.95.227.200
+        - name: tcp-echo
+          address: 213.138.109.232
+        - name: web-connectivity
           type: https
-          address: https://foo.comz
+          address: https://b.web-connectivity.th.ooni.io:443
+        - name: web-connectivity
+          type: domain_fronted
+          address: d2vt18apel48hw.cloudfront.net@a0.awsstatic.com
+        - name: web-connectivity
+          type: onion
+          address: http://y3zq5fwelrzkkv3s.onion
+        - name: ssl
+          address: https://37.218.247.110
+        - name: dns
+          address: 37.218.247.110:57004
 
   URLs:
     type: object
