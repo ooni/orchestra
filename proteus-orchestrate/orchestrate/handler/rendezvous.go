@@ -54,7 +54,7 @@ func GetCollectors(db *sqlx.DB) ([]CollectorInfo, error) {
 		err = rows.Scan(&ctype, &caddress, &cfront)
 		if err != nil {
 			ctx.WithError(err).Error("failed to get collector row")
-			// XXX should we fail fast? I think so
+			// In this case we fail fast
 			return collectors, err
 		}
 		if ctype == "domain_fronted" {
@@ -117,8 +117,7 @@ func GetTestHelpers(db *sqlx.DB) ([]TestHelperInfo, error) {
 	return testHelpers, nil
 }
 
-// upperAndWhitelist checks if a list of strings are uppercased and inside the
-// list, returns the list with only the items present in the whitelist
+// mapToUppercase returns the list with all the strings uppercased
 func mapToUppercase(vs []string) []string {
 	vso := make([]string, len(vs))
 	for i, v := range vs {
