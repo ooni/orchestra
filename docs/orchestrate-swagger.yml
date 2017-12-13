@@ -103,7 +103,7 @@ paths:
           in: query
           type: string
           description: The two letter country code
-        - name: category_code
+        - name: category_codes
           in: query
           type: array
           collectionFormat: csv
@@ -193,13 +193,6 @@ definitions:
         items:
           type: object
     example:
-      metadata:
-        count: 10
-        current_page: 1
-        limit: 100
-        offset: 0
-        pages: 1
-        next_url: https://orchestrate.ooni.io/api/v1/test-helpers?offset=100&limit=100
       results:
         - name: some-name
           type: https
@@ -224,7 +217,7 @@ definitions:
         pages: 1
         next_url: https://orchestrate.ooni.io/api/v1/urls?offset=100&limit=100
 
-      items:
+      results:
         - category_code: 'SRCH'
           country_code: 'IT'
           url: https://google.com
@@ -246,14 +239,7 @@ definitions:
         items:
           $ref: '#/definitions/Collector'
     example:
-      metadata:
-        count: 10
-        current_page: 1
-        limit: 100
-        offset: 0
-        pages: 1
-        next_url: https://orchestrate.ooni.io/api/v1/collectors?offset=100&limit=100
-      items:
+      results:
         - type: onion
           address: http://example.onion
         - type: https
