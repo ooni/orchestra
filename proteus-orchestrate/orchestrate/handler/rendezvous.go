@@ -2,33 +2,15 @@ package handler
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/spf13/viper"
 	common "github.com/thetorproject/proteus/proteus-common"
 )
-
-// upperAndWhitelist checks if a list of strings are uppercased and inside the
-// list, returns the list with only the items present in the whitelist
-func upperAndWhitelist(ins []string, whitelist mapStrStruct) ([]string, error) {
-	outs := make([]string, len(ins))
-	for i, v := range ins {
-		outs[i] = strings.ToUpper(v)
-		_, present := whitelist[outs[i]]
-		if !present {
-			errorString := fmt.Sprintf("%s is not valid", v)
-			return nil, errors.New(errorString)
-		}
-	}
-	return outs, nil
-}
 
 // DomainFrontedCollector is a {"domain": "a", "front": "b"} map
 type DomainFrontedCollector struct {
@@ -36,25 +18,30 @@ type DomainFrontedCollector struct {
 	Front  string `json:"front"`
 }
 
-// Collectors holds the urls of onion, https, and domain-fronted collectors
-type Collectors struct {
-	Onion         []string                 `json:"onion"`
-	HTTPS         []string                 `json:"https"`
-	DomainFronted []DomainFrontedCollector `json:"domain_fronted"`
+// CollectorInfo holds the type and address of a collector
+type CollectorInfo struct {
+	Type    string `json:"type"`
+	Address string `json:"address"`
 }
 
-// GetCollectors returns a map of collectors keyed by their type
-func GetCollectors(db *sqlx.DB) (Collectors, error) {
+// GetCollectors returns the list of collectors available
+func GetCollectors(types string, db *sqlx.DB) ([]CollectorInfo, error) {
 	var (
-		collectors Collectors
-		err        error
+		err  error
+		args []interface{}
 	)
+	collectors := make([]CollectorInfo, 0)
+
 	query := fmt.Sprintf(`SELECT
 		type,
 		address,
 		front_domain
 		FROM %s`,
 		pq.QuoteIdentifier(common.CollectorsTable))
+	if types != "" {
+		query += " WHERE type = ANY($1)"
+		args = append(args, pq.StringArray(strings.Split(types, ",")))
+	}
 	rows, err := db.Query(query)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -73,66 +60,91 @@ func GetCollectors(db *sqlx.DB) (Collectors, error) {
 		err = rows.Scan(&ctype, &caddress, &cfront)
 		if err != nil {
 			ctx.WithError(err).Error("failed to get collector row")
-			continue
+			// In this case we fail fast
+			return collectors, err
 		}
-		switch ctype {
-		case "onion":
-			collectors.Onion = append(collectors.Onion, caddress)
-		case "https":
-			collectors.HTTPS = append(collectors.HTTPS, caddress)
-		case "domain_fronted":
+		if ctype == "domain_fronted" {
 			if !cfront.Valid {
 				ctx.Error("domain_fronted collector with bad front domain")
-				continue
+				return collectors, err
 			}
-			collectors.DomainFronted = append(collectors.DomainFronted,
-				DomainFrontedCollector{caddress, cfront.String})
-		default:
-			ctx.Error("collector with bad type in DB")
-			continue
+			caddress = fmt.Sprintf("%s@%s", caddress, cfront.String)
 		}
+		collectors = append(collectors, CollectorInfo{
+			Type:    ctype,
+			Address: caddress,
+		})
 	}
 	return collectors, nil
 }
 
-// GetTestHelpers returns a map of test helpers keyed by the test name
-func GetTestHelpers(db *sqlx.DB) (map[string][]string, error) {
+// TestHelperInfo holds the name, type and address of a test helper
+type TestHelperInfo struct {
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Address string `json:"address"`
+}
+
+// GetTestHelpers returns a list of test helpers
+func GetTestHelpers(names string, db *sqlx.DB) ([]TestHelperInfo, error) {
 	var (
-		err error
+		err  error
+		args []interface{}
 	)
-	helpers := make(map[string][]string)
+	testHelpers := make([]TestHelperInfo, 0)
 	query := fmt.Sprintf(`SELECT
-		test_name,
+		name,
+		type,
 		address
 		FROM %s`,
 		pq.QuoteIdentifier(common.TestHelpersTable))
-	rows, err := db.Query(query)
+	if names != "" {
+		query += " WHERE name = ANY($1)"
+		args = append(args, pq.StringArray(strings.Split(names, ",")))
+	}
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return helpers, nil
+			return testHelpers, nil
 		}
 		ctx.WithError(err).Error("failed to get test helpers")
-		return helpers, err
+		return testHelpers, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var (
-			testName string
-			address  string
-		)
-		err = rows.Scan(&testName, &address)
+		var testHelper TestHelperInfo
+		err = rows.Scan(&testHelper.Name, &testHelper.Address, &testHelper.Type)
 		if err != nil {
 			ctx.WithError(err).Error("failed to get test_helper row")
 			continue
 		}
-		helpers[testName] = append(helpers[testName], address)
+		testHelpers = append(testHelpers, testHelper)
 	}
-	return helpers, nil
+	return testHelpers, nil
 }
 
-// buildTestInputQuery returns the query string to get all the inputs for the
+// mapToUppercase returns the list with all the strings uppercased
+func mapToUppercase(vs []string) []string {
+	vso := make([]string, len(vs))
+	for i, v := range vs {
+		vso[i] = strings.ToUpper(v)
+	}
+	return vso
+}
+
+// prepareURLsQuery returns the statement to get all the inputs for the
 // given countries and category codes
-func buildTestInputQuery(countries []string, catCodes []string) string {
+func prepareURLsQuery(q URLsQuery, db *sqlx.DB) (*sql.Stmt, []interface{}, error) {
+	var (
+		countryCodes []string
+		args         []interface{}
+	)
+	args = append(args, q.Limit)
+	countryCodes = append(countryCodes, "XX")
+	if q.CountryCode != "" {
+		countryCodes = append(countryCodes, strings.ToUpper(q.CountryCode))
+	}
+
 	query := fmt.Sprintf(`SELECT
 		url,
 		cat_code,
@@ -145,114 +157,165 @@ func buildTestInputQuery(countries []string, catCodes []string) string {
 		pq.QuoteIdentifier(common.URLCategoriesTable))
 	// countries is always greater than zero
 	query += " WHERE alpha_2 = ANY($2)"
-	if len(catCodes) > 0 {
+	args = append(args, pq.StringArray(countryCodes))
+	if q.CategoryCodes != "" {
 		query += " AND cat_code = ANY($3)"
+		args = append(args, pq.StringArray(
+			mapToUppercase(strings.Split(q.CategoryCodes, ","))))
 	}
 	query += " ORDER BY random() LIMIT $1"
-	return query
+	stmt, err := db.Prepare(query)
+	return stmt, args, err
 }
 
-// GetTestInputs returns a slice of test inputs
-func GetTestInputs(countries []string, catCodes []string, count int64, db *sqlx.DB) ([]map[string]string, error) {
+// URLInfo holds the name, type and address of a test helper
+type URLInfo struct {
+	CategoryCode string `json:"category_code"`
+	URL          string `json:"url"`
+	CountryCode  string `json:"country_code"`
+}
+
+// GetURLs returns a slice of test inputs
+func GetURLs(q URLsQuery, db *sqlx.DB) ([]URLInfo, error) {
 	var (
 		err error
 	)
-	inputs := make([]map[string]string, 0)
-	query := buildTestInputQuery(countries, catCodes)
-	args := []interface{}{count, pq.StringArray(countries)}
-	if len(catCodes) > 0 {
-		args = append(args, pq.StringArray(catCodes))
-	}
-
-	stmt, err := db.Prepare(query)
+	urls := make([]URLInfo, 0)
+	stmt, args, err := prepareURLsQuery(q, db)
 	if err != nil {
 		ctx.WithError(err).Error("failed to prepare query")
-		return inputs, err
+		return urls, err
 	}
 	defer stmt.Close()
 	rows, err := stmt.Query(args...)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.Debugf("got an empty result")
-			return inputs, nil
+			return urls, nil
 		}
 		ctx.WithError(err).Error("failed to get test inputs (urls)")
-		return inputs, err
+		return urls, err
 	}
 	for rows.Next() {
-		var (
-			url    string
-			cat    string
-			alpha2 string
-		)
-		err = rows.Scan(&url, &cat, &alpha2)
+		var url URLInfo
+		err = rows.Scan(&url.URL, &url.CategoryCode, &url.CountryCode)
 		if err != nil {
 			ctx.WithError(err).Error("failed to get test input row (urls)")
 			continue
 		}
-		input := map[string]string{"cat_code": cat, "url": url, "country": alpha2}
-		inputs = append(inputs, input)
+		urls = append(urls, url)
 	}
-	return inputs, nil
+	return urls, nil
 }
 
-// HandleRendezvous handler for /rendezvous
-func HandleRendezvous(c *gin.Context) {
+// URLsQuery is the user issued request for URLs
+type URLsQuery struct {
+	Limit         int64  `form:"limit" binding:"max=1000"`
+	CountryCode   string `form:"country_code"`
+	CategoryCodes string `form:"category_codes"`
+}
+
+// MakeMetadata generates the metadata for the request
+func (q URLsQuery) MakeMetadata() map[string]interface{} {
+	// XXX populate this with real data
+	return map[string]interface{}{
+		"count":        -1,
+		"current_page": -1,
+		"limit":        q.Limit,
+		"pages":        -1,
+		"next_url":     "",
+	}
+}
+
+func validateCSVMapStr(csvStr string, m mapStrStruct) bool {
+	if csvStr == "" {
+		// It's ok if the value is missing
+		return true
+	}
+	for _, v := range strings.Split(csvStr, ",") {
+		_, present := m[strings.ToUpper(v)]
+		if !present {
+			return false
+		}
+	}
+	return true
+}
+
+// URLsHandler returns the list of requested URLs
+func URLsHandler(c *gin.Context) {
+	var (
+		err       error
+		urlsQuery URLsQuery
+	)
+	// This is equivalent to setting the default value
+	urlsQuery.Limit = 100
+
+	if validateCSVMapStr(urlsQuery.CountryCode, allCountryCodes) == false {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid country_code"})
+		return
+	}
+	if validateCSVMapStr(urlsQuery.CategoryCodes, allCategoryCodes) == false {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid category_codes"})
+		return
+	}
+
 	db := c.MustGet("DB").(*sqlx.DB)
 
-	collectors, err := GetCollectors(db)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError,
-			gin.H{"error": "server side error"})
+	// XXX maybe we can make this stricter by calling c.BindQuery, but that has
+	// yet to land in a stable release of gin.
+	// See: https://github.com/gin-gonic/gin/pull/1029
+	if err = c.Bind(&urlsQuery); err != nil {
+		c.JSON(http.StatusBadRequest,
+			gin.H{"error": err.Error()})
 		return
 	}
-	testHelpers, err := GetTestHelpers(db)
+
+	urls, err := GetURLs(urlsQuery, db)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
 			gin.H{"error": "server side error"})
 		return
 	}
 
-	// We use XX to denote ANY country
-	probeCc := c.Query("probe_cc")
-	countries := []string{"XX"}
-	if probeCc != "" {
-		countries = append(countries, probeCc)
-	}
-	countriesUpper, err := upperAndWhitelist(countries, allCountryCodes)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	catParam := c.Query("cat_code")
-	cats := []string{}
-	if catParam != "" {
-		cats = strings.Split(catParam, ",")
-	}
-	catsUpper, err := upperAndWhitelist(cats, allCatCodes)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	countString := c.DefaultQuery("count",
-		viper.GetString("api.default-inputs-to-return"))
-	var count int64
-	count, err = strconv.ParseInt(countString, 10, 64)
-	if err != nil || count < 1 || count > 1000 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "bad count"})
-		return
-	}
-	testInputs, err := GetTestInputs(countriesUpper, catsUpper, count, db)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError,
-			gin.H{"error": "server side error"})
-		return
-	}
+	metadata := urlsQuery.MakeMetadata()
 	c.JSON(http.StatusOK,
-		gin.H{"collectors": collectors,
-			"test_helpers": testHelpers,
-			"inputs":       testInputs})
+		gin.H{
+			"metadata": metadata,
+			"results":  urls,
+		})
+	return
+}
+
+// CollectorsHandler returns the list of requested collectors
+func CollectorsHandler(c *gin.Context) {
+	db := c.MustGet("DB").(*sqlx.DB)
+
+	types := c.Query("types")
+	collectors, err := GetCollectors(types, db)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError,
+			gin.H{"error": "server side error"})
+		return
+	}
+
+	c.JSON(http.StatusOK,
+		gin.H{"results": collectors})
+	return
+}
+
+// TestHelpersHandler returns the list of requested test helpers
+func TestHelpersHandler(c *gin.Context) {
+	db := c.MustGet("DB").(*sqlx.DB)
+
+	names := c.Query("names")
+	testHelpers, err := GetTestHelpers(names, db)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError,
+			gin.H{"error": "server side error"})
+		return
+	}
+
+	c.JSON(http.StatusOK,
+		gin.H{"results": testHelpers})
 	return
 }

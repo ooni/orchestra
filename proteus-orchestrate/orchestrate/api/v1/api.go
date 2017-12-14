@@ -20,22 +20,29 @@ func BindAPI(router *gin.Engine, authMiddleware *middleware.GinJWTMiddleware) er
 	admin := v1.Group("/admin")
 	admin.Use(authMiddleware.MiddlewareFunc(middleware.AdminAuthorizor))
 	{
-		admin.GET("/jobs", handler.HandleListJobs)
-		admin.POST("/job", handler.HandleAddJob)
-		admin.DELETE("/job/:job_id", handler.HandleDeleteJob)
+		admin.GET("/jobs", handler.ListJobsHandler)
+		admin.POST("/job", handler.AddJobHandler)
+		admin.DELETE("/job/:job_id", handler.DeleteJobHandler)
+	}
+
+	rendezvous := v1.Group("/")
+	// This means that authentication is optional
+	rendezvous.Use(authMiddleware.MiddlewareFunc(middleware.NullAuthorizor))
+	{
+		rendezvous.GET("/urls", handler.URLsHandler)
+		rendezvous.GET("/collectors", handler.CollectorsHandler)
+		rendezvous.GET("/test-helpers", handler.TestHelpersHandler)
 	}
 
 	device := v1.Group("/")
 	device.Use(authMiddleware.MiddlewareFunc(middleware.DeviceAuthorizor))
 	{
-		device.GET("/rendezvous", handler.HandleRendezvous)
+		device.GET("/tasks", handler.ListTasksHandler)
 
-		device.GET("/tasks", handler.HandleListTasks)
-
-		device.GET("/task/:task_id", handler.HandleGetTask)
-		device.POST("/task/:task_id/accept", handler.HandleAcceptTask)
-		device.POST("/task/:task_id/reject", handler.HandleRejectTask)
-		device.POST("/task/:task_id/done", handler.HandleDoneTask)
+		device.GET("/task/:task_id", handler.GetTaskHandler)
+		device.POST("/task/:task_id/accept", handler.AcceptTaskHandler)
+		device.POST("/task/:task_id/reject", handler.RejectTaskHandler)
+		device.POST("/task/:task_id/done", handler.DoneTaskHandler)
 	}
 	return nil
 }

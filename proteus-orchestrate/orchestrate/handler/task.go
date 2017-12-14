@@ -60,8 +60,8 @@ func GetTasksForUser(uID string, since string,
 	return tasks, nil
 }
 
-// HandleListTasks lists all the tasks for a user
-func HandleListTasks(c *gin.Context) {
+// ListTasksHandler lists all the tasks for a user
+func ListTasksHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
 	userID := c.MustGet("userID").(string)
@@ -83,8 +83,8 @@ func HandleListTasks(c *gin.Context) {
 	return
 }
 
-// HandleGetTask get a specific task
-func HandleGetTask(c *gin.Context) {
+// GetTaskHandler get a specific task
+func GetTaskHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
 	taskID := c.Param("task_id")
@@ -116,8 +116,8 @@ func HandleGetTask(c *gin.Context) {
 	return
 }
 
-// HandleAcceptTask mark a task as accepted
-func HandleAcceptTask(c *gin.Context) {
+// AcceptTaskHandler mark a task as accepted
+func AcceptTaskHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
 	taskID := c.Param("task_id")
@@ -150,8 +150,8 @@ func HandleAcceptTask(c *gin.Context) {
 	return
 }
 
-// HandleRejectTask reject a certain task
-func HandleRejectTask(c *gin.Context) {
+// RejectTaskHandler reject a certain task
+func RejectTaskHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
 	taskID := c.Param("task_id")
@@ -184,8 +184,8 @@ func HandleRejectTask(c *gin.Context) {
 	return
 }
 
-// HandleDoneTask mark a certain task as done
-func HandleDoneTask(c *gin.Context) {
+// DoneTaskHandler mark a certain task as done
+func DoneTaskHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
 	taskID := c.Param("task_id")

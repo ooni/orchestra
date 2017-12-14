@@ -44,7 +44,7 @@ test: PACKAGES = $(shell govendor list -no-status +local)
 test: fmt-check
 	echo "mode: count" > coverage-all.txt
 	$(foreach pkg,$(PACKAGES),                                             \
-		govendor test -coverprofile=coverage.txt -covermode=count $(pkg);  \
+		govendor test -coverprofile=coverage.txt -covermode=count $(pkg) || exit 1  \
 		tail -n +2 coverage.txt >> coverage-all.txt;)
 	go tool cover -html=coverage-all.txt
 

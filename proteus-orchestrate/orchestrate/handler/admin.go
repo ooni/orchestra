@@ -301,8 +301,8 @@ func DeleteJob(jobID string, db *sqlx.DB, s *sched.Scheduler) error {
 	return nil
 }
 
-// HandleListJobs lists the jobs in the database
-func HandleListJobs(c *gin.Context) {
+// ListJobsHandler lists the jobs in the database
+func ListJobsHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
 	jobList, err := ListJobs(db, true)
@@ -316,8 +316,8 @@ func HandleListJobs(c *gin.Context) {
 	return
 }
 
-// HandleAddJob adds a job to the job DB
-func HandleAddJob(c *gin.Context) {
+// AddJobHandler adds a job to the job DB
+func AddJobHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 	scheduler := c.MustGet("Scheduler").(*sched.Scheduler)
 
@@ -341,8 +341,8 @@ func HandleAddJob(c *gin.Context) {
 	return
 }
 
-// HandleDeleteJob deletes a job
-func HandleDeleteJob(c *gin.Context) {
+// DeleteJobHandler deletes a job
+func DeleteJobHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 	scheduler := c.MustGet("Scheduler").(*sched.Scheduler)
 
