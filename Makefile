@@ -86,6 +86,6 @@ proteus-no-gitinfo: vendor proteus
 
 release: fmt-check bindata
 	go get github.com/goreleaser/goreleaser
-	GITHUB_TOKEN=`cat .GITHUB_TOKEN` goreleaser
+	GITHUB_TOKEN=`cat .GITHUB_TOKEN` goreleaser --rm-dist
 
 .PHONY: vendor build build-orchestrate build-registry release bindata build-all fmt fmt-check check
