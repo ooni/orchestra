@@ -3,6 +3,7 @@
 Changes:
 
 * Rename proteus-events to proteus-orchestrate
+* Remove the deprecated proteus-notify
 
 Adds:
 
