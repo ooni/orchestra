@@ -1,0 +1,20 @@
+builds:
+  - main: proteus-orchestrate/main.go
+    binary: proteus-orchestrate
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+  - main: proteus-registry/main.go
+    binary: proteus-registry
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+# Archive customization
+archive:
+  format: tar.gz
+  files:
+    - LICENSE
