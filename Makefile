@@ -86,6 +86,9 @@ proteus-no-gitinfo: vendor proteus
 
 release: fmt-check bindata
 	go get github.com/goreleaser/goreleaser
+	# XXX Not a fan of how it autogens the release notes, we should probably
+	# extract them from our changelog and embed them using:
+	# https://goreleaser.com/#releasing.custom_release_notes
 	GITHUB_TOKEN=`cat .GITHUB_TOKEN` goreleaser --rm-dist
 
 .PHONY: vendor build build-orchestrate build-registry release bindata build-all fmt fmt-check check
