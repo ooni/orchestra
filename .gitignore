@@ -2,3 +2,4 @@
 dist/
 coverage*.txt
 private/
+.GITHUB_TOKEN
