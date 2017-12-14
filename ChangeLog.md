@@ -1,3 +1,13 @@
+# proteus 0.2.0-rc.1 [2017-12-14]
+
+Changes:
+
+* Rename proteus-events to proteus-orchestrate
+
+Adds:
+
+* New orchestrate endpoints for /test-helpers, /collectors and /urls
+
 # proteus 0.1.0-rc.1 [2017-09-29]
 
 Changes:

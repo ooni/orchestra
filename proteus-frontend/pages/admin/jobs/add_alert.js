@@ -248,7 +248,7 @@ export default class AdminJobsAdd extends React.Component {
   }
 
   onAdd () {
-    let req = this.state.session.createRequest({baseURL: process.env.EVENTS_URL})
+    let req = this.state.session.createRequest({baseURL: process.env.ORCHESTRATE_URL})
     let alertExtra = {}
     if (this.state.href != '') {
       alertExtra['href'] = this.state.href
