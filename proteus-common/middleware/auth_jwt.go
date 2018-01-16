@@ -179,7 +179,7 @@ func (mw *GinJWTMiddleware) middlewareImpl(auth Authorizator, c *gin.Context) {
 	if err == MissingToken {
 		var defaultAccount = Account{
 			Username: "",
-			Role: "unauthenticated",
+			Role:     "unauthenticated",
 		}
 		if !auth(defaultAccount, c) {
 			mw.unauthorized(c, http.StatusUnauthorized, err.Error())
