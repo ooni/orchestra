@@ -1,5 +1,4 @@
 PACKAGE = github.com/thetorproject/proteus
-VERSION="0.1.0-rc.1"
 GOFILES := $(shell find . -name "*.go" -type f -not -path "./vendor/*" -not -name "bindata.go")
 COMMIT_HASH = `git rev-parse --short HEAD 2>/dev/null`
 BUILD_DATE = `date +%FT%T%z`
@@ -8,7 +7,6 @@ NOGI_LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common.BuildDate=${BUILD_DATE}"
 ARCH_LIST=linux/amd64 darwin/amd64 linux/386
 TOOL_LIST=registry orchestrate
 RELEASE_OSARCH = -osarch "${ARCH_LIST}"
-OUTPUT_SUFFIX = "${VERSION}.{{.OS}}-{{.Arch}}/{{.Dir}}"
 
 vendor:
 	@hash govendor > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
