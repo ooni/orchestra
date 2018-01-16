@@ -1,0 +1,25 @@
+builds:
+  - main: proteus-orchestrate/main.go
+    binary: proteus-orchestrate
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+  - main: proteus-registry/main.go
+    binary: proteus-registry
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+# Archive customization
+archive:
+  format: tar.gz
+  name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  files:
+    - LICENSE
+# This doesn't actually work, though it's documented to work:
+# https://goreleaser.com/#checksum
+#checksum:
+#  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"

@@ -162,7 +162,7 @@ export default class AdminJobsIndex extends React.Component {
   }
 
   onDelete (jobId) {
-    let req = this.state.session.createRequest({baseURL: process.env.EVENTS_URL})
+    let req = this.state.session.createRequest({baseURL: process.env.ORCHESTRATE_URL})
     req.delete(`/api/v1/admin/job/${jobId}`)
       .then((res) => {
         const newJobList = this.state.jobList.filter((job) => (job.id !== jobId))
@@ -179,7 +179,7 @@ export default class AdminJobsIndex extends React.Component {
     if (this.state.session.redirectIfInvalid()) {
       return
     }
-    let req = this.state.session.createRequest({baseURL: process.env.EVENTS_URL})
+    let req = this.state.session.createRequest({baseURL: process.env.ORCHESTRATE_URL})
     req.get('/api/v1/admin/jobs')
       .then((res) => {
         this.setState({

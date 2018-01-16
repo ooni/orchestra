@@ -85,11 +85,10 @@ proteus-no-gitinfo: LDFLAGS = ${NOGI_LDFLAGS}
 proteus-no-gitinfo: vendor proteus
 
 release: fmt-check bindata
-	go get github.com/mitchellh/gox
-	mkdir -p ./dist
-	rm -rf ./dist/*
-	gox ${NOGI_LDFLAGS} ${RELEASE_OSARCH} -output dist/proteus-events-${OUTPUT_SUFFIX} ./proteus-events
-	gox ${NOGI_LDFLAGS} ${RELEASE_OSARCH} -output dist/proteus-registry-${OUTPUT_SUFFIX} ./proteus-registry
-	for tool in ${TOOL_LIST};do for x in ${ARCH_LIST};do ARCH=$$(echo $$x | sed "s/\//-/");cp LICENSE dist/proteus-$$tool-${VERSION}.$$ARCH/;tar -cvf dist/proteus-$$tool-${VERSION}.$$ARCH.tar.gz -C ./dist/ proteus-$$tool-${VERSION}.$$ARCH/;done;done
+	go get github.com/goreleaser/goreleaser
+	# XXX Not a fan of how it autogens the release notes, we should probably
+	# extract them from our changelog and embed them using:
+	# https://goreleaser.com/#releasing.custom_release_notes
+	GITHUB_TOKEN=`cat .GITHUB_TOKEN` goreleaser --rm-dist
 
 .PHONY: vendor build build-orchestrate build-registry release bindata build-all fmt fmt-check check

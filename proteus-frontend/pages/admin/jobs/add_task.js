@@ -265,7 +265,7 @@ export default class AdminJobsAdd extends React.Component {
   }
 
   onAdd () {
-    let req = this.state.session.createRequest({baseURL: process.env.EVENTS_URL})
+    let req = this.state.session.createRequest({baseURL: process.env.ORCHESTRATE_URL})
     let task_arguments = {}
     let platforms = this.state.targetPlatforms.map((platform) => (platform.value))
     if (platforms.indexOf('any') !== -1) {

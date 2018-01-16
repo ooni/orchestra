@@ -14,7 +14,7 @@ module.exports = {
     config.plugins.push(
       new webpack.DefinePlugin({
         'process.env.REGISTRY_URL': JSON.stringify(process.env.REGISTRY_URL),
-        'process.env.EVENTS_URL': JSON.stringify(process.env.EVENTS_URL)
+        'process.env.ORCHESTRATE_URL': JSON.stringify(process.env.ORCHESTRATE_URL)
       })
     )
     return config

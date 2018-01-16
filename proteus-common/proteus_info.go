@@ -33,7 +33,7 @@ func proteusVersion(major int, minor int, patchVersion int, suffix string) strin
 // CurrentProteusVersion is the current version of proteus. Remember to change this before making a release
 var CurrentProteusVersion = ProteusVersion{
 	Major:  0,
-	Minor:  1,
+	Minor:  2,
 	Patch:  0,
 	Suffix: "-rc.1",
 }
