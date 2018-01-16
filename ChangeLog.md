@@ -1,3 +1,9 @@
+# proteus 0.2.0-rc.2 [2018-01-16]
+
+Fixes:
+
+* Make unauthenticated endpoints work without auth header
+
 # proteus 0.2.0-rc.1 [2017-12-14]
 
 Changes:
