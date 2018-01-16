@@ -176,7 +176,7 @@ func (mw *GinJWTMiddleware) middlewareImpl(auth Authorizator, c *gin.Context) {
 	// When the token is missing we still run the auth function to support the
 	// NullAuthorizor It's very important that when you implement an Authorizor
 	// you take this into account and that the default is that it returns false
-	if err == MissingToken {
+	if err == ErrMissingToken {
 		var defaultAccount = Account{
 			Username: "",
 			Role:     "unauthenticated",
@@ -330,13 +330,14 @@ func (mw *GinJWTMiddleware) TokenGenerator(userID string, role string) string {
 	return tokenString
 }
 
-var MissingToken = errors.New("JWT Token is missing")
+// ErrMissingToken when the auth token is missing in the headers, query paramters or cookies
+var ErrMissingToken = errors.New("JWT Token is missing")
 
 func (mw *GinJWTMiddleware) jwtFromHeader(c *gin.Context, key string) (string, error) {
 	authHeader := c.Request.Header.Get(key)
 
 	if authHeader == "" {
-		return "", MissingToken
+		return "", ErrMissingToken
 	}
 
 	parts := strings.SplitN(authHeader, " ", 2)
@@ -351,7 +352,7 @@ func (mw *GinJWTMiddleware) jwtFromQuery(c *gin.Context, key string) (string, er
 	token := c.Query(key)
 
 	if token == "" {
-		return "", MissingToken
+		return "", ErrMissingToken
 	}
 
 	return token, nil
@@ -361,7 +362,7 @@ func (mw *GinJWTMiddleware) jwtFromCookie(c *gin.Context, key string) (string, e
 	cookie, _ := c.Cookie(key)
 
 	if cookie == "" {
-		return "", MissingToken
+		return "", ErrMissingToken
 	}
 
 	return cookie, nil
