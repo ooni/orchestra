@@ -82,7 +82,7 @@ proteus: vendor build-all
 proteus-no-gitinfo: LDFLAGS = ${NOGI_LDFLAGS}
 proteus-no-gitinfo: vendor proteus
 
-release: fmt-check bindata
+release: fmt-check
 	go get github.com/goreleaser/goreleaser
 	# XXX Not a fan of how it autogens the release notes, we should probably
 	# extract them from our changelog and embed them using:
