@@ -1,3 +1,9 @@
+# proteus 0.2.0 [2018-01-25]
+
+Fixes:
+
+* Update next.js in proteus-frontend to 3.2.3 to remediate: https://github.com/zeit/next.js/releases/tag/4.2.3 (the fix has been backported to 3.2.3 too)
+
 # proteus 0.2.0-rc.2 [2018-01-16]
 
 Fixes:

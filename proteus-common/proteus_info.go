@@ -35,7 +35,7 @@ var CurrentProteusVersion = ProteusVersion{
 	Major:  0,
 	Minor:  2,
 	Patch:  0,
-	Suffix: "-rc.2",
+	Suffix: "",
 }
 
 // ProteusInfo contains information for the current proteus build
