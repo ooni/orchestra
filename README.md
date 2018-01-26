@@ -17,7 +17,7 @@ You will also need to install:
 
 ```
 go get github.com/kardianos/govendor
-go get -u github.com/jteeuwen/go-bindata/...
+go get -u github.com/shuLhan/go-bindata/...
 ```
 
 To build all the binaries, run:
