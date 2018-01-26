@@ -1,4 +1,4 @@
-package registry
+package handler
 
 import (
 	"database/sql"
