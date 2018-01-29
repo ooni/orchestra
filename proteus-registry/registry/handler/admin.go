@@ -92,13 +92,10 @@ func getResultCount(q ClientsQuery, db *sqlx.DB) (int64, error) {
 		args  []interface{}
 		err   error
 	)
-	args = append(args, q.Limit)
-	args = append(args, q.Offset)
 
 	query := fmt.Sprintf(`SELECT COUNT(*) FROM %s`,
 		pq.QuoteIdentifier(common.ActiveProbesTable))
 	query, args = filterClients(q, query, args)
-	query += " ORDER BY creation_time ASC LIMIT $1 OFFSET $2"
 
 	stmt, err := db.Prepare(query)
 	if err != nil {
@@ -212,11 +209,9 @@ type Dict map[string]interface{}
 
 // MakeMetadata generates the metadata for the request
 func (q ClientsQuery) MakeMetadata(db *sqlx.DB) (Dict, error) {
-	var (
-		err      error
-		metadata Dict
-	)
+	var err error
 
+	metadata := make(Dict)
 	clientCountries, err := getClientCountries(db)
 	if err != nil {
 		return metadata, err
