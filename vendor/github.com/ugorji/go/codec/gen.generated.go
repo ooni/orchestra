@@ -25,7 +25,7 @@ if {{var "bh"}}.MapValueReset {
 	{{else if not decElemKindImmutable}}{{var "mg"}} = true
 	{{end}} }
 if {{var "l"}} != 0 {
-{{var "hl"}} := {{var "l"}} > 0
+{{var "hl"}} := {{var "l"}} > 0 
 	for {{var "j"}} := 0; ({{var "hl"}} && {{var "j"}} < {{var "l"}}) || !({{var "hl"}} || r.CheckBreak()); {{var "j"}}++ {
 	r.ReadMapElemKey() {{/* z.DecSendContainerState(codecSelfer_containerMapKey{{ .Sfx }}) */}}
 	{{ $x := printf "%vmk%v" .TempVar .Rand }}{{ decLineVarK $x }}
@@ -34,7 +34,7 @@ if {{var "l"}} != 0 {
 	}{{ end }}{{if decElemKindPtr}}
 	{{var "ms"}} = true{{end}}
 	if {{var "mg"}} {
-		{{if decElemKindPtr}}{{var "mv"}}, {{var "mok"}} = {{var "v"}}[{{var "mk"}}]
+		{{if decElemKindPtr}}{{var "mv"}}, {{var "mok"}} = {{var "v"}}[{{var "mk"}}] 
 		if {{var "mok"}} {
 			{{var "ms"}} = false
 		} {{else}}{{var "mv"}} = {{var "v"}}[{{var "mk"}}] {{end}}
@@ -85,8 +85,8 @@ if {{var "l"}} == 0 {
 		{{var "c"}} = true
 	}
 	} {{end}}
-	var {{var "j"}} int
-    // var {{var "dn"}} bool
+	var {{var "j"}} int 
+    // var {{var "dn"}} bool 
 	for ; ({{var "hl"}} && {{var "j"}} < {{var "l"}}) || !({{var "hl"}} || r.CheckBreak()); {{var "j"}}++ {
 		{{if not isArray}} if {{var "j"}} == 0 && len({{var "v"}}) == 0 {
 			if {{var "hl"}} {
@@ -95,7 +95,7 @@ if {{var "l"}} == 0 {
 				{{var "rl"}} = 8
 			}
 			{{var "v"}} = make([]{{ .Typ }}, {{var "rl"}})
-			{{var "c"}} = true
+			{{var "c"}} = true 
 		}{{end}}
 		{{var "h"}}.ElemContainerState({{var "j"}})
         // {{var "dn"}} = r.TryDecodeAsNil()
@@ -126,8 +126,9 @@ if {{var "l"}} == 0 {
 	} {{end}}
 }
 {{var "h"}}.End()
-{{if not isArray }}if {{var "c"}} {
+{{if not isArray }}if {{var "c"}} { 
 	*{{ .Varname }} = {{var "v"}}
 }{{end}}
 
 `
+
