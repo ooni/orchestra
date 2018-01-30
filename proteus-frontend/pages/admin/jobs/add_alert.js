@@ -62,14 +62,15 @@ class JobCreateConfirm extends React.Component {
       targetPlatforms
     } = this.props
 
-    let durationCaption = <div>
-      {RepeatString({duration, repeatCount})}
-      ({ToScheduleString({
+    const DurationCaption = ({duration, repeatCount, startMoment}) => (<div>
+      <RepeatString duration={duration} repeatCount={repeatCount} />
+      {ToScheduleString({
         duration: duration,
         startMoment: startMoment,
         repeatCount: repeatCount
-      })})
+      })}
     </div>
+    )
 
     let startTimeCaption = startMoment.calendar()
     startTimeCaption += ' ('
@@ -89,21 +90,16 @@ class JobCreateConfirm extends React.Component {
             ripple={false}
             caption={href}
             legend="Link" />
-          {altHref && altHref.split('\n')
-            .map((v, i) => {
-              return <ListItem
-                ripple={false}
-                caption={v}
-                legend={`Alt Link #${i}`} />
-            })
-          }
           <ListItem
             ripple={false}
             caption={startTimeCaption}
             legend="Start time" />
           <ListItem
             ripple={false}
-            caption={durationCaption}
+            caption={<DurationCaption
+                        duration={duration}
+                        repeatCount={repeatCount}
+                        startMoment={startMoment} />}
             legend="Duration" />
 
           <ListItem
@@ -236,6 +232,7 @@ export default class AdminJobsAdd extends React.Component {
   }
 
   onSubmit () {
+    console.log('on submit')
     this.setState({
       submitted: true
     })
@@ -248,6 +245,7 @@ export default class AdminJobsAdd extends React.Component {
   }
 
   onAdd () {
+    console.log('on add')
     let req = this.state.session.createRequest({baseURL: process.env.ORCHESTRATE_URL})
     let alertExtra = {}
     if (this.state.href != '') {

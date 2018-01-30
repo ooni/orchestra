@@ -31,10 +31,10 @@ export default class Session {
   }
 
   createRequest(config = {}) {
+    console.log('creating request')
     config.headers = {
       'Authorization': `Bearer ${this._session.token}`
     }
-    console.log('creating with config', config)
     return axios.create(config)
   }
 
