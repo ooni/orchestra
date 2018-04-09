@@ -1,14 +1,11 @@
-// Copyright © 2017 NAME HERE <EMAIL ADDRESS>
-//
-
 package cmd
 
 import (
-	"os"
-	"io/ioutil"
-	"strings"
 	"crypto/rsa"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
@@ -40,7 +37,7 @@ func verify(tokenString string, pubKey *rsa.PublicKey) {
 var verifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Used to verify that a signed token is valid",
-	Long: `Takes from stdin the signed token and says if the token is valid or not`,
+	Long:  `Takes from stdin the signed token and says if the token is valid or not`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if terminal.IsTerminal(0) {
 			fmt.Println("I require some pipe")

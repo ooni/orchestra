@@ -1,14 +1,11 @@
-// Copyright © 2017 NAME HERE <EMAIL ADDRESS>
-//
-
 package cmd
 
 import (
-	"os"
 	"encoding/base64"
 	"encoding/json"
-	"io/ioutil"
 	"fmt"
+	"io/ioutil"
+	"os"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
@@ -18,8 +15,8 @@ import (
 var privKeyPath string
 
 type ProteusClaims struct {
-    Foo string `json:"foo"`
-    jwt.StandardClaims
+	Foo string `json:"foo"`
+	jwt.StandardClaims
 }
 
 func sign(claims ProteusClaims) {
@@ -45,7 +42,7 @@ func sign(claims ProteusClaims) {
 var signCmd = &cobra.Command{
 	Use:   "sign",
 	Short: "Used to sign orchestration commands",
-	Long: `Usually this command is run with the output given from the proteus web interface`,
+	Long:  `Usually this command is run with the output given from the proteus web interface`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if terminal.IsTerminal(0) {
 			// Example:
