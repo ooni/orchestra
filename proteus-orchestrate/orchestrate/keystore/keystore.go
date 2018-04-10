@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"crypto/rsa"
 	"crypto/sha256"
-	"errors"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"math/big"
 	"syscall"
 
-	"golang.org/x/crypto/ssh/terminal"
 	"github.com/miekg/pkcs11"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 const (
@@ -49,13 +50,18 @@ func SetupHSM(libPath string) (*pkcs11.Ctx, pkcs11.SessionHandle, error) {
 		defer p.Finalize()
 		return nil, 0, fmt.Errorf("loaded library %s, but no slots found", libPath)
 	}
-	fmt.Printf("Using slot #%s\n", slots[0])
+
+	fmt.Printf("Slot list: \n")
+	for _, slot := range slots {
+		fmt.Printf("- #%d\n", slot)
+	}
+	fmt.Printf("Using slot #%d\n", slots[0])
 	session, err := p.OpenSession(slots[0], pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 	if err != nil {
 		defer p.Destroy()
 		defer p.Finalize()
 		defer p.CloseSession(session)
-		return nil, 0, fmt.Errorf("loaded library %s, but failed to start session %s", err)
+		return nil, 0, fmt.Errorf("loaded library, but failed to start session %s", err)
 	}
 	return p, session, nil
 }
@@ -70,7 +76,7 @@ func LoginPrompt(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, userFlag uint) e
 	} else {
 		pinType = "User"
 	}
-	for attempts := 0; attempts <= maxAttempts ; attempts++ {
+	for attempts := 0; attempts <= maxAttempts; attempts++ {
 		fmt.Printf("Enter your %s pin: ", pinType)
 		pinBytes, err := terminal.ReadPassword(int(syscall.Stdin))
 		if err != nil {
@@ -124,14 +130,14 @@ func getKeyID(privKey *rsa.PrivateKey) (string, error) {
 	return keyID, nil
 }
 
-func AddKey(libPath string, privKey *rsa.PrivateKey) error {
+func AddKey(libPath string, privKey *rsa.PrivateKey, certBytes []byte) error {
 	/*
-	keyID, err := getKeyID(privKey)
-	if err != nil {
-		return err
-	}
+		keyID, err := getKeyID(privKey)
+		if err != nil {
+			return err
+		}
 	*/
-	keyID := 2
+	keyID := 11
 
 	ctx, session, err := SetupHSM(libPath)
 	if err != nil {
@@ -141,38 +147,51 @@ func AddKey(libPath string, privKey *rsa.PrivateKey) error {
 	defer ctx.Finalize()
 	defer ctx.CloseSession(session)
 
-	//if err := LoginPrompt(ctx, session, pkcs11.CKU_SO); err != nil {
-	if err := LoginPrompt(ctx, session, pkcs11.CKU_USER); err != nil {
+	if err = LoginPrompt(ctx, session, pkcs11.CKU_SO); err != nil {
 		return err
 	}
 
 	defer ctx.Logout(session)
 	// XXX check if the key is already on the token
 
-	template := []*pkcs11.Attribute{
-		// Taken from: http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html#_Toc416959720
+	privTemplate := []*pkcs11.Attribute{
+		// Taken from: http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html#_toc416959720
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
 		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
+
 		pkcs11.NewAttribute(pkcs11.CKA_ID, keyID),
-		pkcs11.NewAttribute(pkcs11.CKA_MODULUS, privKey.PublicKey.N.Bytes()),
-		pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, privKey.PublicKey.E),
-		pkcs11.NewAttribute(pkcs11.CKA_PRIVATE_EXPONENT, privKey.D.Bytes()),
+		pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, big.NewInt(int64(privKey.PublicKey.E)).Bytes()), // XXX this is a big ghetto
 		pkcs11.NewAttribute(pkcs11.CKA_PRIME_1, privKey.Primes[0].Bytes()),
 		pkcs11.NewAttribute(pkcs11.CKA_PRIME_2, privKey.Primes[1].Bytes()),
 		pkcs11.NewAttribute(pkcs11.CKA_EXPONENT_1, privKey.Precomputed.Dp.Bytes()),
 		pkcs11.NewAttribute(pkcs11.CKA_EXPONENT_2, privKey.Precomputed.Dq.Bytes()),
 		pkcs11.NewAttribute(pkcs11.CKA_COEFFICIENT, privKey.Precomputed.Qinv.Bytes()),
+		pkcs11.NewAttribute(pkcs11.CKA_VENDOR_DEFINED, yubikeyKeymode),
+		/*
+			pkcs11.NewAttribute(pkcs11.CKA_MODULUS, privKey.PublicKey.N.Bytes()),
+			pkcs11.NewAttribute(pkcs11.CKA_PRIVATE_EXPONENT, privKey.D.Bytes()),
+		*/
 		// This is yubikey specific
-		//pkcs11.NewAttribute(pkcs11.CKA_VENDOR_DEFINED, yubikeyKeymode),
 	}
-	_, err = ctx.CreateObject(session, template)
+	certTemplate := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
+		pkcs11.NewAttribute(pkcs11.CKA_VALUE, certBytes),
+		pkcs11.NewAttribute(pkcs11.CKA_ID, keyID),
+	}
+	_, err = ctx.CreateObject(session, certTemplate)
+	if err != nil {
+		return fmt.Errorf("error importing: %v", err)
+	}
+
+	_, err = ctx.CreateObject(session, privTemplate)
 	if err != nil {
 		return fmt.Errorf("error importing key: %v", err)
 	}
 	return nil
 }
 
-func ListKeys(libPath string) (error) {
+func ListKeys(libPath string) error {
 	fmt.Println("Listing keys")
 	ctx, session, err := SetupHSM(libPath)
 	if err != nil {
@@ -181,44 +200,42 @@ func ListKeys(libPath string) (error) {
 	defer ctx.Destroy()
 	defer ctx.Finalize()
 	defer ctx.CloseSession(session)
-	
+
+	if err = LoginPrompt(ctx, session, pkcs11.CKU_SO); err != nil {
+		return err
+	}
+
 	findTemplate := []*pkcs11.Attribute{
-		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
+		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
 	}
 	attrTemplate := []*pkcs11.Attribute{
-		pkcs11.NewAttribute(pkcs11.CKA_ID, []byte{0}),
+		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, []byte{0}),
 	}
 
 	if err = ctx.FindObjectsInit(session, findTemplate); err != nil {
 		return err
 	}
-	objs, _, err := ctx.FindObjects(session, 4)
-	for err == nil {
-		var o []pkcs11.ObjectHandle
-		o, _, err = ctx.FindObjects(session, 4)
-		if err != nil {
-			continue
-		}
-		if len(o) == 0 {
-			break
-		}
-		objs = append(objs, o...)
+	objs, _, err := ctx.FindObjects(session, 100)
+	if err != nil {
+		return err
 	}
+
 	if err = ctx.FindObjectsFinal(session); err != nil {
 		return err
 	}
-	fmt.Printf("Found %d objects\n", len(objs))
-	for _, obj := range objs {
-		attr, err := ctx.GetAttributeValue(session, obj, attrTemplate)
-		if err != nil {
-			continue
-		}
-		fmt.Println()
-		fmt.Printf("obj: %v\n", obj)
-		for _, a := range attr {
-			fmt.Printf("aatr: %v", a)
-		}
-		fmt.Println()
+	fmt.Printf("Len: %d\n", len(objs))
+	if len(objs) != 1 {
+		fmt.Printf("Len: %d\n", len(objs))
 	}
+
+	attr, err := ctx.GetAttributeValue(session, objs[0], attrTemplate)
+	if err != nil {
+		fmt.Printf("Failed to get Attribute for: %v (%v)\n", objs[0], err)
+		return err
+	}
+	for _, a := range attr {
+		fmt.Printf("%v: %v\n", a.Type, a.Value)
+	}
+
 	return nil
 }

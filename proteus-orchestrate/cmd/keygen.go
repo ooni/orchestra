@@ -1,30 +1,57 @@
 package cmd
 
 import (
-	"os"
-	"strings"
-	"io/ioutil"
-	"crypto/rsa"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
+	"math/big"
+	"os"
+	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/thetorproject/proteus/proteus-orchestrate/orchestrate/keystore"
 )
 
+const PKS11LibPath = "/usr/local/lib/libykcs11.dylib"
+
 var outputFile string
 
-func keygen(writePrivKey bool) (*rsa.PrivateKey, error) {
+func newCertificate(commonName string, startTime, endTime time.Time) (*x509.Certificate, error) {
+	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate new certificate: %v", err)
+	}
+
+	return &x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			CommonName: commonName,
+		},
+		NotBefore: startTime,
+		NotAfter:  endTime,
+
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+		BasicConstraintsValid: true,
+	}, nil
+}
+
+func keygen(writePrivKey bool) (*rsa.PrivateKey, []byte, error) {
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	privKeyBytes := x509.MarshalPKCS1PrivateKey(privKey)
 	pubKeyBytes, err := x509.MarshalPKIXPublicKey(&privKey.PublicKey)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	pemPriv := pem.EncodeToMemory(
 		&pem.Block{Type: "RSA PRIVATE KEY", Bytes: privKeyBytes},
@@ -35,8 +62,21 @@ func keygen(writePrivKey bool) (*rsa.PrivateKey, error) {
 	if writePrivKey == true {
 		ioutil.WriteFile(outputFile, pemPriv, 0600)
 	}
-	ioutil.WriteFile(outputFile + ".pub", pemPub, 0644)
-	return privKey, nil
+
+	// 10 years
+	startTime := time.Now()
+	template, err := newCertificate("ooni-operator", startTime, startTime.AddDate(10, 0, 0))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create the certificate template: %v", err)
+	}
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, template, template, &privKey.PublicKey, privKey)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create the certificate: %v", err)
+	}
+
+	ioutil.WriteFile(outputFile+".pub", pemPub, 0644)
+	return privKey, certBytes, nil
 }
 
 func askForConfirm() bool {
@@ -45,7 +85,7 @@ func askForConfirm() bool {
 	if err != nil {
 		panic(err)
 	}
-	if (strings.ToLower(string(response[0])) == "y") {
+	if strings.ToLower(string(response[0])) == "y" {
 		return true
 	}
 	return false
@@ -55,7 +95,7 @@ func askForConfirm() bool {
 var keygenCmd = &cobra.Command{
 	Use:   "keygen",
 	Short: "Generate a keypair for use with proteus orchestration",
-	Long: ``,
+	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		if _, err := os.Stat(outputFile); !os.IsNotExist(err) {
 			// XXX add confirmation dialog
@@ -67,16 +107,16 @@ var keygenCmd = &cobra.Command{
 			}
 			fmt.Println("overwriting...")
 		}
-		privKey, err := keygen(true)
+		privKey, certBytes, err := keygen(true)
 		if err != nil {
 			fmt.Printf("failed to generate key pair: %v", err)
 		}
 		//sh, err := orchestrate.SetupHSM("/usr/local/lib/softhsm/libsofthsm2.so")
-		err = keystore.AddKey("/usr/local/lib/softhsm/libsofthsm2.so", privKey)
+		err = keystore.AddKey(PKS11LibPath, privKey, certBytes)
 		if err != nil {
 			fmt.Printf("failed to add key: %v\n", err)
 		}
-		err = keystore.ListKeys("/usr/local/lib/softhsm/libsofthsm2.so")
+		err = keystore.ListKeys(PKS11LibPath)
 		if err != nil {
 			fmt.Printf("failed to list keys: %v\n", err)
 		}

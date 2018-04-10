@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/thetorproject/proteus/proteus-orchestrate/orchestrate/keystore"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/dgrijalva/jwt-go.v3"
 )
@@ -19,7 +20,26 @@ type ProteusClaims struct {
 	jwt.StandardClaims
 }
 
-func sign(claims ProteusClaims) {
+func signLocal(claims ProteusClaims) {
+	keyPEM, err := ioutil.ReadFile(privKeyPath)
+	if err != nil {
+		panic(err)
+	}
+	privKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyPEM)
+	if err != nil {
+		panic(err)
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
+	ss, err := token.SignedString(privKey)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Signed claims: ")
+	fmt.Printf("%v", ss)
+	fmt.Println("")
+}
+
+func signHSM(claims ProteusClaims) {
 	keyPEM, err := ioutil.ReadFile(privKeyPath)
 	if err != nil {
 		panic(err)
@@ -68,7 +88,13 @@ var signCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		sign(claims)
+		//signLocal(claims)
+
+		err = keystore.ListKeys(PKS11LibPath)
+		if err != nil {
+			fmt.Printf("failed to list keys: %v\n", err)
+		}
+		signHSM(claims)
 	},
 }
 
