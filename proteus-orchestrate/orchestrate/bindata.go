@@ -400,7 +400,7 @@ func proteusCommonDataMigrations4_rendezvous_tablesSql() (*asset, error) {
 	return a, nil
 }
 
-var _usersXGolangSrcGithubComThetorprojectProteusDataTemplatesHomeTmpl = []byte(
+var _proteusOrchestrateDataTemplatesHomeTmpl = []byte(
 	"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x7c\x54\x41\x73\xdb\x36\x13\x3d\x93\xbf\x62\x3f\xe4\xf6\x8d\x68\x4a\x69" +
 	"\xd3\xda\x34\xc9\x43\xec\x66\x92\x43\xed\x4c\x9d\x1c\x7a\x04\xc1\x25\x89\x06\xc4\x72\x80\x95\x2c\xc5\xa3\xff\xde" +
 	"\x01\x28\x31\xaa\x3b\xd3\x93\x76\x1f\x76\xdf\x7b\x5a\x60\x59\xfe\xef\xfe\xf1\xee\xcb\x9f\x9f\x7f\x83\x81\x47\x53" +
@@ -427,20 +427,20 @@ var _usersXGolangSrcGithubComThetorprojectProteusDataTemplatesHomeTmpl = []byte(
 	"\x18\xbc\x62\x72\x93\xa3\xbf\x50\xf1\x15\xb9\x3e\x17\xf5\x7f\x9d\x96\xb9\xac\x17\xd1\x32\x3f\x4f\xb3\xcc\xe7\x11" +
 	"\x97\xf9\xfc\x7d\xfb\x3b\x00\x00\xff\xff\xec\xc7\xc0\x2a\xf0\x04\x00\x00")
 
-func usersXGolangSrcGithubComThetorprojectProteusDataTemplatesHomeTmplBytes() ([]byte, error) {
+func proteusOrchestrateDataTemplatesHomeTmplBytes() ([]byte, error) {
 	return bindataRead(
-		_usersXGolangSrcGithubComThetorprojectProteusDataTemplatesHomeTmpl,
-		"Users/x/golang/src/github.com/thetorproject/proteus/data/templates/home.tmpl",
+		_proteusOrchestrateDataTemplatesHomeTmpl,
+		"proteus-orchestrate/data/templates/home.tmpl",
 	)
 }
 
-func usersXGolangSrcGithubComThetorprojectProteusDataTemplatesHomeTmpl() (*asset, error) {
-	bytes, err := usersXGolangSrcGithubComThetorprojectProteusDataTemplatesHomeTmplBytes()
+func proteusOrchestrateDataTemplatesHomeTmpl() (*asset, error) {
+	bytes, err := proteusOrchestrateDataTemplatesHomeTmplBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "Users/x/golang/src/github.com/thetorproject/proteus/data/templates/home.tmpl", size: 0, md5checksum: "", mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "proteus-orchestrate/data/templates/home.tmpl", size: 0, md5checksum: "", mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -499,16 +499,16 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"proteus-common/data/migrations/1_accounts_create.sql":                         proteusCommonDataMigrations1_accounts_createSql,
-	"proteus-common/data/migrations/1_active_probes_create.sql":                    proteusCommonDataMigrations1_active_probes_createSql,
-	"proteus-common/data/migrations/1_jobs_create.sql":                             proteusCommonDataMigrations1_jobs_createSql,
-	"proteus-common/data/migrations/1_probe_updates_create.sql":                    proteusCommonDataMigrations1_probe_updates_createSql,
-	"proteus-common/data/migrations/1_tasks_create.sql":                            proteusCommonDataMigrations1_tasks_createSql,
-	"proteus-common/data/migrations/2_add_jobs_state.sql":                          proteusCommonDataMigrations2_add_jobs_stateSql,
-	"proteus-common/data/migrations/2_add_language_column.sql":                     proteusCommonDataMigrations2_add_language_columnSql,
-	"proteus-common/data/migrations/3_add_job_type_tables.sql":                     proteusCommonDataMigrations3_add_job_type_tablesSql,
-	"proteus-common/data/migrations/4_rendezvous_tables.sql":                       proteusCommonDataMigrations4_rendezvous_tablesSql,
-	"Users/x/golang/src/github.com/thetorproject/proteus/data/templates/home.tmpl": usersXGolangSrcGithubComThetorprojectProteusDataTemplatesHomeTmpl,
+	"proteus-common/data/migrations/1_accounts_create.sql":      proteusCommonDataMigrations1_accounts_createSql,
+	"proteus-common/data/migrations/1_active_probes_create.sql": proteusCommonDataMigrations1_active_probes_createSql,
+	"proteus-common/data/migrations/1_jobs_create.sql":          proteusCommonDataMigrations1_jobs_createSql,
+	"proteus-common/data/migrations/1_probe_updates_create.sql": proteusCommonDataMigrations1_probe_updates_createSql,
+	"proteus-common/data/migrations/1_tasks_create.sql":         proteusCommonDataMigrations1_tasks_createSql,
+	"proteus-common/data/migrations/2_add_jobs_state.sql":       proteusCommonDataMigrations2_add_jobs_stateSql,
+	"proteus-common/data/migrations/2_add_language_column.sql":  proteusCommonDataMigrations2_add_language_columnSql,
+	"proteus-common/data/migrations/3_add_job_type_tables.sql":  proteusCommonDataMigrations3_add_job_type_tablesSql,
+	"proteus-common/data/migrations/4_rendezvous_tables.sql":    proteusCommonDataMigrations4_rendezvous_tablesSql,
+	"proteus-orchestrate/data/templates/home.tmpl":              proteusOrchestrateDataTemplatesHomeTmpl,
 }
 
 // AssetDir returns the file names below a certain
@@ -552,25 +552,6 @@ type bintree struct {
 }
 
 var _bintree = &bintree{nil, map[string]*bintree{
-	"Users": {nil, map[string]*bintree{
-		"x": {nil, map[string]*bintree{
-			"golang": {nil, map[string]*bintree{
-				"src": {nil, map[string]*bintree{
-					"github.com": {nil, map[string]*bintree{
-						"thetorproject": {nil, map[string]*bintree{
-							"proteus": {nil, map[string]*bintree{
-								"data": {nil, map[string]*bintree{
-									"templates": {nil, map[string]*bintree{
-										"home.tmpl": {usersXGolangSrcGithubComThetorprojectProteusDataTemplatesHomeTmpl, map[string]*bintree{}},
-									}},
-								}},
-							}},
-						}},
-					}},
-				}},
-			}},
-		}},
-	}},
 	"proteus-common": {nil, map[string]*bintree{
 		"data": {nil, map[string]*bintree{
 			"migrations": {nil, map[string]*bintree{
@@ -583,6 +564,13 @@ var _bintree = &bintree{nil, map[string]*bintree{
 				"2_add_language_column.sql": {proteusCommonDataMigrations2_add_language_columnSql, map[string]*bintree{}},
 				"3_add_job_type_tables.sql": {proteusCommonDataMigrations3_add_job_type_tablesSql, map[string]*bintree{}},
 				"4_rendezvous_tables.sql": {proteusCommonDataMigrations4_rendezvous_tablesSql, map[string]*bintree{}},
+			}},
+		}},
+	}},
+	"proteus-orchestrate": {nil, map[string]*bintree{
+		"data": {nil, map[string]*bintree{
+			"templates": {nil, map[string]*bintree{
+				"home.tmpl": {proteusOrchestrateDataTemplatesHomeTmpl, map[string]*bintree{}},
 			}},
 		}},
 	}},

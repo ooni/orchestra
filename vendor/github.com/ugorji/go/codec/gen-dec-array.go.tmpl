@@ -30,8 +30,8 @@ if {{var "l"}} == 0 {
 		{{var "c"}} = true
 	}
 	} {{end}}
-	var {{var "j"}} int
-    // var {{var "dn"}} bool
+	var {{var "j"}} int 
+    // var {{var "dn"}} bool 
 	for ; ({{var "hl"}} && {{var "j"}} < {{var "l"}}) || !({{var "hl"}} || r.CheckBreak()); {{var "j"}}++ {
 		{{if not isArray}} if {{var "j"}} == 0 && len({{var "v"}}) == 0 {
 			if {{var "hl"}} {
@@ -40,7 +40,7 @@ if {{var "l"}} == 0 {
 				{{var "rl"}} = 8
 			}
 			{{var "v"}} = make([]{{ .Typ }}, {{var "rl"}})
-			{{var "c"}} = true
+			{{var "c"}} = true 
 		}{{end}}
 		{{var "h"}}.ElemContainerState({{var "j"}})
         // {{var "dn"}} = r.TryDecodeAsNil()
@@ -71,6 +71,7 @@ if {{var "l"}} == 0 {
 	} {{end}}
 }
 {{var "h"}}.End()
-{{if not isArray }}if {{var "c"}} {
+{{if not isArray }}if {{var "c"}} { 
 	*{{ .Varname }} = {{var "v"}}
 }{{end}}
+

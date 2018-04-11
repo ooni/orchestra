@@ -36,7 +36,7 @@ func initDatabase() (*sqlx.DB, error) {
 func loadTemplates(list ...string) multitemplate.Render {
 	r := multitemplate.New()
 	for _, x := range list {
-		templateString, err := Asset("data/templates/" + x)
+		templateString, err := Asset("proteus-orchestrate/data/templates/" + x)
 		if err != nil {
 			ctx.WithError(err).Error("failed to load template")
 		}

@@ -123,15 +123,6 @@ func GetTestHelpers(names string, db *sqlx.DB) ([]TestHelperInfo, error) {
 	return testHelpers, nil
 }
 
-// mapToUppercase returns the list with all the strings uppercased
-func mapToUppercase(vs []string) []string {
-	vso := make([]string, len(vs))
-	for i, v := range vs {
-		vso[i] = strings.ToUpper(v)
-	}
-	return vso
-}
-
 // prepareURLsQuery returns the statement to get all the inputs for the
 // given countries and category codes
 func prepareURLsQuery(q URLsQuery, db *sqlx.DB) (*sql.Stmt, []interface{}, error) {
@@ -161,7 +152,7 @@ func prepareURLsQuery(q URLsQuery, db *sqlx.DB) (*sql.Stmt, []interface{}, error
 	if q.CategoryCodes != "" {
 		query += " AND cat_code = ANY($3)"
 		args = append(args, pq.StringArray(
-			mapToUppercase(strings.Split(q.CategoryCodes, ","))))
+			common.MapToUppercase(strings.Split(q.CategoryCodes, ","))))
 	}
 	query += " ORDER BY random() LIMIT $1"
 	stmt, err := db.Prepare(query)
@@ -227,20 +218,6 @@ func (q URLsQuery) MakeMetadata() map[string]interface{} {
 	}
 }
 
-func validateCSVMapStr(csvStr string, m mapStrStruct) bool {
-	if csvStr == "" {
-		// It's ok if the value is missing
-		return true
-	}
-	for _, v := range strings.Split(csvStr, ",") {
-		_, present := m[strings.ToUpper(v)]
-		if !present {
-			return false
-		}
-	}
-	return true
-}
-
 // URLsHandler returns the list of requested URLs
 func URLsHandler(c *gin.Context) {
 	var (
@@ -250,11 +227,11 @@ func URLsHandler(c *gin.Context) {
 	// This is equivalent to setting the default value
 	urlsQuery.Limit = 100
 
-	if validateCSVMapStr(urlsQuery.CountryCode, allCountryCodes) == false {
+	if common.ValidateCSVMapStr(urlsQuery.CountryCode, common.AllCountryCodes) == false {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid country_code"})
 		return
 	}
-	if validateCSVMapStr(urlsQuery.CategoryCodes, allCategoryCodes) == false {
+	if common.ValidateCSVMapStr(urlsQuery.CategoryCodes, common.AllCategoryCodes) == false {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid category_codes"})
 		return
 	}

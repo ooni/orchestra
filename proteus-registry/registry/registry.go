@@ -12,7 +12,6 @@ import (
 	"github.com/apex/log"
 	"github.com/facebookgo/grace/gracehttp"
 	"github.com/gin-gonic/gin"
-	"github.com/jmoiron/sqlx"
 	"github.com/spf13/viper"
 	"gopkg.in/gin-contrib/cors.v1"
 )
@@ -22,19 +21,10 @@ var ctx = log.WithFields(log.Fields{
 	"cmd": "proteus-registry",
 })
 
-func initDatabase() (*sqlx.DB, error) {
-	db, err := sqlx.Open("postgres", viper.GetString("database.url"))
-	if err != nil {
-		ctx.Error("failed to open database")
-		return nil, err
-	}
-	return db, err
-}
-
 func loadTemplates(list ...string) multitemplate.Render {
 	r := multitemplate.New()
 	for _, x := range list {
-		templateString, err := Asset("data/templates/" + x)
+		templateString, err := Asset("proteus-registry/data/templates/" + x)
 		if err != nil {
 			ctx.WithError(err).Error("failed to load template")
 		}
