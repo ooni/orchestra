@@ -6,7 +6,7 @@ go:
 install:
   # Rename TheTorProject to all lowercase to make imports work properly
   - mv $GOPATH/src/github.com/TheTorProject $GOPATH/src/github.com/ooni
-  - mv $GOPATH/src/github.com/TheTorProject/proteus $GOPATH/src/github.com/ooni/orchestra
+  - mv $GOPATH/src/github.com/ooni/proteus $GOPATH/src/github.com/ooni/orchestra
   - cd $GOPATH/src/github.com/ooni/orchestra
   # Install dep
   - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
