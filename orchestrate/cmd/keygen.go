@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
 	"github.com/ooni/orchestra/orchestrate/orchestrate/keystore"
+	"github.com/spf13/cobra"
 )
 
 const PKS11LibPath = "/usr/local/lib/libykcs11.dylib"

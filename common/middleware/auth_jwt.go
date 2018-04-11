@@ -13,8 +13,8 @@ import (
 	"github.com/hellais/jwt-go"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/spf13/viper"
 	common "github.com/ooni/orchestra/common"
+	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 )
 

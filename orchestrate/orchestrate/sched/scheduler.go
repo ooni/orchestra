@@ -17,9 +17,9 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
 	"github.com/lib/pq"
+	"github.com/ooni/orchestra/common"
 	"github.com/satori/go.uuid"
 	"github.com/spf13/viper"
-	"github.com/ooni/orchestra/common"
 )
 
 var ctx = log.WithFields(log.Fields{

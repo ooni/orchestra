@@ -1,9 +1,9 @@
 package cmd
 
 import (
+	"github.com/ooni/orchestra/orchestrate/orchestrate"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/ooni/orchestra/orchestrate/orchestrate"
 )
 
 // startCmd represents the start command

@@ -4,8 +4,8 @@ import (
 	"github.com/apex/log"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
-	migrate "github.com/rubenv/sql-migrate"
 	"github.com/ooni/orchestra/common"
+	migrate "github.com/rubenv/sql-migrate"
 )
 
 var ctx = log.WithFields(log.Fields{

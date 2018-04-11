@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/kardianos/osext"
-	"github.com/spf13/cobra"
 	"github.com/ooni/orchestra/common"
+	"github.com/spf13/cobra"
 )
 
 // VersionCmd is the command used to output the version of orchestra
