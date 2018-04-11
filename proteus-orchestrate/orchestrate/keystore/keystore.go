@@ -168,11 +168,6 @@ func AddKey(libPath string, privKey *rsa.PrivateKey, certBytes []byte) error {
 		pkcs11.NewAttribute(pkcs11.CKA_EXPONENT_2, privKey.Precomputed.Dq.Bytes()),
 		pkcs11.NewAttribute(pkcs11.CKA_COEFFICIENT, privKey.Precomputed.Qinv.Bytes()),
 		pkcs11.NewAttribute(pkcs11.CKA_VENDOR_DEFINED, yubikeyKeymode),
-		/*
-			pkcs11.NewAttribute(pkcs11.CKA_MODULUS, privKey.PublicKey.N.Bytes()),
-			pkcs11.NewAttribute(pkcs11.CKA_PRIVATE_EXPONENT, privKey.D.Bytes()),
-		*/
-		// This is yubikey specific
 	}
 	certTemplate := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),

@@ -63,9 +63,11 @@ func keygen(writePrivKey bool) (*rsa.PrivateKey, []byte, error) {
 		ioutil.WriteFile(outputFile, pemPriv, 0600)
 	}
 
-	// 10 years
+	// We need to have a certificate mapped to the key, otherwise it will not be
+	// added to the yubikey.
+	// The expiry date for this certificate is set to 25 years in the future.
 	startTime := time.Now()
-	template, err := newCertificate("ooni-operator", startTime, startTime.AddDate(10, 0, 0))
+	template, err := newCertificate("OONI Operator", startTime, startTime.AddDate(25, 0, 0))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create the certificate template: %v", err)
 	}
