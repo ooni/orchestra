@@ -54,7 +54,7 @@ bindata:
 ifneq ($(GO_BINDATA_VERSION),$(REQ_GO_BINDATA_VERSION))
 	go get -u github.com/shuLhan/go-bindata/...;
 endif
-	@go-bindata -prefix proteus-common/                                     \
+	@go-bindata                               \
 		-nometadata															\
 		-o proteus-common/bindata.go -pkg common 				           \
 	    proteus-common/data/...;
@@ -62,7 +62,7 @@ endif
 	  if [ -d proteus-$$tool/data ]; then                                  \
 	    extra_dirs="proteus-$$tool/data/...";                              \
 	  fi;                                                                  \
-	  go-bindata -prefix proteus-$$tool/                                   \
+	  go-bindata                             \
 	  	-nometadata														   \
 	    -o proteus-$$tool/$$tool/bindata.go -pkg $$tool                    \
 	    proteus-common/data/... $$extra_dirs;                              \

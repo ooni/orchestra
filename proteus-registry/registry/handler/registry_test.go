@@ -56,10 +56,13 @@ func TestListClients(t *testing.T) {
 			"it", "XXXX",
 			"", "")
 
+	q := ClientsQuery{Limit: 100, Offset: 0}
+	mock.ExpectPrepare("^SELECT (.+) FROM")
 	mock.ExpectQuery("^SELECT (.+) FROM").
+		WithArgs(100, 0).
 		WillReturnRows(rows)
 
-	clientList, err := ListClients(db)
+	clientList, err := ListClients(db, q)
 	if err != nil {
 		t.Errorf("error in listing clients: %s", err)
 	}

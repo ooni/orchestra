@@ -120,14 +120,38 @@ class ActiveClient extends React.Component {
     )
   }
 }
+
+const MetadataRow = ({metadata}) => {
+  return (
+    <div style={{paddingBottom: '20px'}}>
+      <div>Total Client Count: {metadata.total_client_count}</div>
+      <div>Countries: {metadata.client_countries.map((d) => {
+        return <span style={{paddingRight: '30px'}}>{d.probe_cc} ({d.count})</span>
+      })}
+      </div>
+  </div>
+  )
+}
+
+const Pagination = ({limit, offset, nextPage, prevPage}) => {
+  return <div style={{paddingTop: '30px'}}>
+    {offset > 0 && <a onClick={prevPage}>← previous page</a>}
+    <a style={{paddingLeft: '20px'}} onClick={nextPage}>next page →</a>
+  </div>
+}
 export default class AdminClients extends React.Component {
 
   constructor (props) {
     super(props)
     this.state = {
       session: new Session(),
-      clients: {}
+      metadata: {},
+      results: [],
+      limit: 100,
+      offset: 0
     }
+    this.getNextPage = this.getNextPage.bind(this)
+    this.getPrevPage = this.getPrevPage.bind(this)
   }
 
   componentDidMount() {
@@ -137,11 +161,44 @@ export default class AdminClients extends React.Component {
     let req = this.state.session.createRequest({baseURL: process.env.REGISTRY_URL})
     req.get('/api/v1/admin/clients')
       .then((res) => {
-        this.setState({clients: res.data})
+        const { metadata, results } = res.data
+        this.setState({metadata, results})
+      })
+  }
+
+  getPrevPage() {
+    let req = this.state.session.createRequest({baseURL: process.env.REGISTRY_URL})
+    let newOffset = this.state.offset - this.state.limit
+    if (newOffset < 0) {
+      newOffset = 0
+    }
+    const params = {offset: newOffset, limit: this.state.limit}
+    req.get('/api/v1/admin/clients', {params})
+      .then((res) => {
+        const { metadata, results } = res.data
+        this.setState({metadata, results, offset: newOffset})
+      })
+  }
+
+  getNextPage() {
+    let req = this.state.session.createRequest({baseURL: process.env.REGISTRY_URL})
+    const newOffset = this.state.offset + this.state.limit
+    const params = {offset: newOffset, limit: this.state.limit}
+    req.get('/api/v1/admin/clients', {params})
+      .then((res) => {
+        const { metadata, results } = res.data
+        this.setState({metadata, results, offset: newOffset})
       })
   }
 
   render () {
+    const {
+      results,
+      metadata,
+      limit,
+      offset
+    } = this.state
+
     return (
       <Layout title="Active clients">
         <Head>
@@ -159,7 +216,8 @@ export default class AdminClients extends React.Component {
         }
         `}</style>
         <div className='container'>
-          {this.state.clients['active_clients'] && this.state.clients['active_clients'].map((d) => {
+          {metadata.count && <MetadataRow metadata={metadata} />}
+          {results && results.map((d) => {
             return (
               <Grid col={4} px={2}>
               <ActiveClient
@@ -179,6 +237,12 @@ export default class AdminClients extends React.Component {
             </Grid>
             )
           })}
+          <Pagination
+            limit={limit}
+            offset={offset}
+            nextPage={this.getNextPage}
+            prevPage={this.getPrevPage}
+            />
         </div>
       </Layout>
     )
