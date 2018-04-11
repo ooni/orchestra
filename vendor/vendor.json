@@ -161,6 +161,12 @@
 			"revisionTime": "2017-02-02T00:05:34Z"
 		},
 		{
+			"checksumSHA1": "ReMyIcOvGTQ+Sd0QbbEYZUsuT5Y=",
+			"path": "github.com/hellais/jwt-go",
+			"revision": "5225f7c35f5b637f6e803b43e269bbd3005cbeaf",
+			"revisionTime": "2018-04-11T10:20:40Z"
+		},
+		{
 			"checksumSHA1": "x9BsTKxcA9o1U1PSms6hP/Bwr80=",
 			"path": "github.com/jmoiron/sqlx",
 			"revision": "3564e3a314b957a161fefa0e7aea85b4d741c94e",
@@ -217,6 +223,12 @@
 			"path": "github.com/mattn/go-isatty",
 			"revision": "fc9e8d8ef48496124e79ae0df75490096eccf6fe",
 			"revisionTime": "2017-03-22T23:44:13Z"
+		},
+		{
+			"checksumSHA1": "HEAhtYlsoAmh70gObbj3ULjgiQ4=",
+			"path": "github.com/miekg/pkcs11",
+			"revision": "05bded61edae2ff9358deca53276738020b926ea",
+			"revisionTime": "2018-04-09T09:48:25Z"
 		},
 		{
 			"checksumSHA1": "wTMmmuol+KHkz9EwVKaOjd2O4cs=",
@@ -351,6 +363,12 @@
 			"revisionTime": "2017-02-08T20:51:15Z"
 		},
 		{
+			"checksumSHA1": "BGm8lKZmvJbf/YOJLeL1rw2WVjA=",
+			"path": "golang.org/x/crypto/ssh/terminal",
+			"revision": "f70185d77e8278766928032ee1355e3da47e7181",
+			"revisionTime": "2018-04-10T17:26:10Z"
+		},
+		{
 			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
 			"path": "golang.org/x/net/context",
 			"revision": "feeb485667d1fdabe727840fe00adc22431bc86e",
@@ -381,10 +399,16 @@
 			"revisionTime": "2017-02-17T08:49:01Z"
 		},
 		{
-			"checksumSHA1": "oS0UZOGWVVsVciOQ8nZJ582mFF8=",
+			"checksumSHA1": "wyuEvb3yMLCLTeFw9nrJyKjLPAs=",
 			"path": "golang.org/x/sys/unix",
-			"revision": "9ccfe848b9db8435a24c424abbc07a921adf1df5",
-			"revisionTime": "2017-04-27T03:54:25Z"
+			"revision": "3b87a42e500a6dc65dae1a55d0b641295971163e",
+			"revisionTime": "2018-04-06T09:01:59Z"
+		},
+		{
+			"checksumSHA1": "Dfz4tGItokMvHZENCsBmPPB8FGQ=",
+			"path": "golang.org/x/sys/windows",
+			"revision": "3b87a42e500a6dc65dae1a55d0b641295971163e",
+			"revisionTime": "2018-04-06T09:01:59Z"
 		},
 		{
 			"checksumSHA1": "ziMb9+ANGRJSSIuxYdRbA+cDRBQ=",
@@ -403,12 +427,6 @@
 			"path": "gopkg.in/DATA-DOG/go-sqlmock.v1",
 			"revision": "b983233bc0bbea4dc6e8ec8c8c923d935765ffec",
 			"revisionTime": "2017-02-21T15:59:18Z"
-		},
-		{
-			"checksumSHA1": "9QENMGpz4ELXL4R4DI69TzGHulw=",
-			"path": "gopkg.in/dgrijalva/jwt-go.v3",
-			"revision": "d2709f9f1f31ebcda9651b03077758c1f3a0018c",
-			"revisionTime": "2016-06-16T19:15:56Z"
 		},
 		{
 			"checksumSHA1": "898hHXEIWfscNt2k3+ViOG06Z0I=",
