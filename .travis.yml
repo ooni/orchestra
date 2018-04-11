@@ -5,8 +5,7 @@ go:
   #- tip
 install:
   # Rename TheTorProject to all lowercase to make imports work properly
-  - mv $GOPATH/src/github.com/TheTorProject $GOPATH/src/github.com/thetorproject
-  - cd $GOPATH/src/github.com/thetorproject/proteus
+  - cd $GOPATH/src/github.com/ooni/orchestra
   # Install govendor
   - make vendor
 script:
