@@ -333,6 +333,12 @@
 			"revisionTime": "2016-12-13T09:38:49Z"
 		},
 		{
+			"checksumSHA1": "Vld19cF2BnfAWVrPEq0jcZySob4=",
+			"path": "github.com/thalesignite/crypto11",
+			"revision": "a19b60f16f143e66ed8691e4be095c71e9a0160b",
+			"revisionTime": "2018-04-03T14:44:34Z"
+		},
+		{
 			"checksumSHA1": "brp+Ue75op7QoCr4GUeFjXxbtNA=",
 			"path": "github.com/ugorji/go/codec",
 			"revision": "f57d8945648dbfe4c332cff9c50fb57548958e3f",
