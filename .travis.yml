@@ -5,9 +5,12 @@ go:
   #- tip
 install:
   # Rename TheTorProject to all lowercase to make imports work properly
+  - mv $GOPATH/src/github.com/TheTorProject $GOPATH/src/github.com/ooni
+  - mv $GOPATH/src/github.com/TheTorProject/proteus $GOPATH/src/github.com/ooni/orchestra
   - cd $GOPATH/src/github.com/ooni/orchestra
-  # Install govendor
-  - make vendor
+  # Install dep
+  - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 script:
+  - make vendor
   - make check
   - make lint
