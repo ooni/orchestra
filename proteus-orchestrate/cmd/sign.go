@@ -9,7 +9,7 @@ import (
 
 	"github.com/hellais/jwt-go"
 	"github.com/spf13/cobra"
-	"github.com/thetorproject/proteus/proteus-orchestrate/orchestrate/keystore"
+	"github.com/thalesignite/crypto11"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -40,17 +40,27 @@ func signLocal(claims ProteusClaims) {
 }
 
 func signHSM(claims ProteusClaims) {
-	keyPEM, err := ioutil.ReadFile(privKeyPath)
+	config := &crypto11.PKCS11Config{
+		Path:        "/usr/local/lib/libykcs11.dylib",
+		Pin:         "XXX-ADD-PIN",
+		TokenSerial: "1234", // Magic yubikey serial number
+	}
+	_, err := crypto11.Configure(config)
 	if err != nil {
+		fmt.Println("Failed to config")
 		panic(err)
 	}
-	privKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyPEM)
+
+	key, err := crypto11.FindKeyPair([]byte{11}, nil)
 	if err != nil {
+		fmt.Println("Failed to find keypair")
 		panic(err)
 	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
-	ss, err := token.SignedString(privKey)
+	ss, err := token.SignedString(key)
 	if err != nil {
+		fmt.Println("Failed to sign")
 		panic(err)
 	}
 	fmt.Println("Signed claims: ")
@@ -81,19 +91,14 @@ var signCmd = &cobra.Command{
 		}
 		fmt.Println("I will sign: ")
 		fmt.Print(string(jsonBytes))
-		fmt.Println("")
+		fmt.Println("Press the yubikey button")
 		claims := ProteusClaims{}
 
 		err = json.Unmarshal(jsonBytes, &claims)
 		if err != nil {
 			panic(err)
 		}
-		//signLocal(claims)
 
-		err = keystore.ListKeys(PKS11LibPath)
-		if err != nil {
-			fmt.Printf("failed to list keys: %v\n", err)
-		}
 		signHSM(claims)
 	},
 }

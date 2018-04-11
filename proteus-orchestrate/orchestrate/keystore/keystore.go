@@ -159,6 +159,7 @@ func AddKey(libPath string, privKey *rsa.PrivateKey, certBytes []byte) error {
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
 		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
 		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
+		pkcs11.NewAttribute(pkcs11.CKA_LABEL, []byte("orchestrate-key")),
 
 		pkcs11.NewAttribute(pkcs11.CKA_ID, keyID),
 		pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, big.NewInt(int64(privKey.PublicKey.E)).Bytes()), // XXX this is a big ghetto
