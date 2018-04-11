@@ -7,10 +7,10 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/hellais/jwt-go"
 	"github.com/spf13/cobra"
 	"github.com/thetorproject/proteus/proteus-orchestrate/orchestrate/keystore"
 	"golang.org/x/crypto/ssh/terminal"
-	"gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 var privKeyPath string

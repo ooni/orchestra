@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hellais/jwt-go"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/spf13/viper"
 	common "github.com/thetorproject/proteus/proteus-common"
 	"golang.org/x/crypto/bcrypt"
-	"gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 // This is taken from:

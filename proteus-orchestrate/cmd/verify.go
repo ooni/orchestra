@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hellais/jwt-go"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
-	"gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 var pubKeyPath string
