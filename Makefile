@@ -11,16 +11,9 @@ GO_BINDATA_VERSION = $(shell go-bindata --version | cut -d ' ' -f2 | head -n 1 |
 REQ_GO_BINDATA_VERSION = 3.2.0
 
 vendor:
-	@hash govendor > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
-		go get github.com/kardianos/govendor; \
-	fi
-	govendor sync proteus
-
+	dep ensure
 vendor-fetch:
-	@hash govendor > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
-		go get github.com/kardianos/govendor; \
-	fi
-	govendor fetch +external
+	dep ensure
 
 fmt:
 	gofmt -s -w $(GOFILES)
