@@ -19,11 +19,11 @@ fmt:
 	gofmt -s -w $(GOFILES)
 
 fmt-check:
-	@diff=$$(gofmt -d $(GOFILES));               \
+	@diff=$$(gofmt -d $(GOFILES));
 	if [ -n "$$diff" ]; then                     \
-		echo "Please run 'make fmt' and commit"; \
-		echo "$${diff}";                         \
-		exit 1;                                  \
+		echo "Please run 'make fmt' and commit";   \
+		echo "$${diff}";                           \
+		exit 1;                                    \
 	fi
 
 lint: PACKAGES = $(shell govendor list -no-status +local)
@@ -48,17 +48,17 @@ ifneq ($(GO_BINDATA_VERSION),$(REQ_GO_BINDATA_VERSION))
 	go get -u github.com/shuLhan/go-bindata/...;
 endif
 	@go-bindata                                                           \
-		-nometadata                                                       \
-		-o common/bindata.go -pkg common                                  \
-	    common/data/...;
+		-nometadata                                                         \
+		-o common/bindata.go -pkg common                                    \
+			common/data/...;
 	@for tool in ${TOOL_LIST}; do                                         \
-	  if [ -d $$tool/data ]; then                                         \
-	    extra_dirs="$$tool/data/...";                                     \
-	  fi;                                                                 \
-	  go-bindata                                                          \
-	  	-nometadata                                                       \
-	    -o $$tool/$$tool/bindata.go -pkg $$tool                           \
-	    common/data/... $$extra_dirs;                                     \
+		if [ -d $$tool/data ]; then                                         \
+			extra_dirs="$$tool/data/...";                                     \
+		fi;                                                                 \
+		go-bindata                                                          \
+			-nometadata                                                       \
+			-o $$tool/$$tool/bindata.go -pkg $$tool                           \
+			common/data/... $$extra_dirs;                                     \
 	done
 
 build-all: bindata build-orchestrate build-registry
