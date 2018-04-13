@@ -15,11 +15,8 @@ import (
 
 	"github.com/ooni/orchestra/orchestrate/orchestrate/keystore"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
-
-const PKS11LibPath = "/usr/local/lib/libykcs11.dylib"
-
-var outputFile string
 
 func newCertificate(commonName string, startTime, endTime time.Time) (*x509.Certificate, error) {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
@@ -60,7 +57,7 @@ func keygen(writePrivKey bool) (*rsa.PrivateKey, []byte, error) {
 		&pem.Block{Type: "RSA PUBLIC KEY", Bytes: pubKeyBytes},
 	)
 	if writePrivKey == true {
-		ioutil.WriteFile(outputFile, pemPriv, 0600)
+		ioutil.WriteFile(privateKeyPath, pemPriv, 0600)
 	}
 
 	// We need to have a certificate mapped to the key, otherwise it will not be
@@ -77,7 +74,7 @@ func keygen(writePrivKey bool) (*rsa.PrivateKey, []byte, error) {
 		return nil, nil, fmt.Errorf("failed to create the certificate: %v", err)
 	}
 
-	ioutil.WriteFile(outputFile+".pub", pemPub, 0644)
+	ioutil.WriteFile(publicKeyPath, pemPub, 0644)
 	return privKey, certBytes, nil
 }
 
@@ -99,9 +96,9 @@ var keygenCmd = &cobra.Command{
 	Short: "Generate a keypair for use for probe orchestration",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		if _, err := os.Stat(outputFile); !os.IsNotExist(err) {
+		if _, err := os.Stat(privateKeyPath); !os.IsNotExist(err) {
 			// XXX add confirmation dialog
-			fmt.Printf("WARNING: %s exists\n", outputFile)
+			fmt.Printf("WARNING: %s exists\n", privateKeyPath)
 			fmt.Printf("overwrite? (y/n) ")
 			if askForConfirm() == false {
 				fmt.Println("ok quiting...")
@@ -113,24 +110,44 @@ var keygenCmd = &cobra.Command{
 		if err != nil {
 			fmt.Printf("failed to generate key pair: %v", err)
 		}
-		//sh, err := orchestrate.SetupHSM("/usr/local/lib/softhsm/libsofthsm2.so")
-		err = keystore.AddKey(PKS11LibPath, privKey, certBytes)
+		err = keystore.AddKey(hsmConfig, privKey, certBytes)
 		if err != nil {
 			fmt.Printf("failed to add key: %v\n", err)
 		}
-		err = keystore.ListKeys(PKS11LibPath)
+		err = keystore.ListKeys(hsmConfig)
 		if err != nil {
 			fmt.Printf("failed to list keys: %v\n", err)
 		}
 	},
 }
 
+var privateKeyPath string
+var publicKeyPath string
+
+var hsmConfig *keystore.HSMConfig
+
+func addOperatorConfig(cmd *cobra.Command) error {
+	hsmConfig = new(keystore.HSMConfig)
+
+	viper.SetDefault("operator.private-key", "ooni-orchestrate.priv")
+	privateKeyPath = viper.GetString("operator.private-key")
+
+	viper.SetDefault("operator.public-key", "ooni-orchestrate.pub")
+	publicKeyPath = viper.GetString("operator.public-key")
+
+	// Defaults to yubikey library path on macOS
+	viper.SetDefault("operator.pkcs11-lib-path", "/usr/local/lib/libykcs11.dylib")
+	hsmConfig.LibPath = viper.GetString("operator.pkcs11-lib-path")
+
+	viper.SetDefault("operator.token-serial", "1234") // Defaults to yubikey serial
+	hsmConfig.TokenSerial = viper.GetString("operator.token-serial")
+
+	hsmConfig.UserPin = viper.GetString("operator.user-pin")
+	hsmConfig.SOPin = viper.GetString("operator.so-pin")
+	return nil
+}
+
 func init() {
 	RootCmd.AddCommand(keygenCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	keygenCmd.PersistentFlags().StringVar(&outputFile, "f", "orchestrate-key", "Specify where to write the key to")
+	addOperatorConfig(keygenCmd)
 }

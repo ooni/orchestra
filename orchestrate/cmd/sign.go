@@ -41,9 +41,9 @@ func signLocal(claims OrchestraClaims) {
 
 func signHSM(claims OrchestraClaims) {
 	config := &crypto11.PKCS11Config{
-		Path:        "/usr/local/lib/libykcs11.dylib",
-		Pin:         "XXX-ADD-PIN",
-		TokenSerial: "1234", // Magic yubikey serial number
+		Path:        hsmConfig.LibPath,
+		Pin:         hsmConfig.UserPin,
+		TokenSerial: hsmConfig.TokenSerial,
 	}
 	_, err := crypto11.Configure(config)
 	if err != nil {
@@ -105,17 +105,5 @@ var signCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(signCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// signCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	signCmd.PersistentFlags().StringVar(&privKeyPath, "f", "orchestrate-key", "Specify where to read private key from")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// signCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
+	addOperatorConfig(signCmd)
 }

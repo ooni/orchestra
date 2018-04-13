@@ -30,25 +30,34 @@ var (
 	yubikeyKeymode = KeymodeTouch | KeymodePinAlways
 )
 
-func SetupHSM(libPath string) (*pkcs11.Ctx, pkcs11.SessionHandle, error) {
-	if libPath == "" {
+// HSMConfig is the configuration for the Hardware Security Module
+type HSMConfig struct {
+	TokenSerial string
+	UserPin     string
+	SOPin       string
+	LibPath     string
+}
+
+// SetupHSM will do all the setup required to use the HSM
+func SetupHSM(config *HSMConfig) (*pkcs11.Ctx, pkcs11.SessionHandle, error) {
+	if config.LibPath == "" {
 		return nil, 0, errors.New("libPath is empty")
 	}
-	p := pkcs11.New(libPath)
+	p := pkcs11.New(config.LibPath)
 	if err := p.Initialize(); err != nil {
-		return nil, 0, fmt.Errorf("found library %s, but initialize error %s", libPath, err.Error())
+		return nil, 0, fmt.Errorf("found library %s, but initialize error %s", config.LibPath, err.Error())
 	}
 
 	slots, err := p.GetSlotList(true)
 	if err != nil {
 		defer p.Destroy()
 		defer p.Finalize()
-		return nil, 0, fmt.Errorf("loaded library %s, failed to list slots %s", libPath, err)
+		return nil, 0, fmt.Errorf("loaded library %s, failed to list slots %s", config.LibPath, err)
 	}
 	if len(slots) < 1 {
 		defer p.Destroy()
 		defer p.Finalize()
-		return nil, 0, fmt.Errorf("loaded library %s, but no slots found", libPath)
+		return nil, 0, fmt.Errorf("loaded library %s, but no slots found", config.LibPath)
 	}
 
 	fmt.Printf("Slot list: \n")
@@ -66,6 +75,23 @@ func SetupHSM(libPath string) (*pkcs11.Ctx, pkcs11.SessionHandle, error) {
 	return p, session, nil
 }
 
+// MaybeLoginPrompt will show a login prompt only if the pin settings are unset
+func MaybeLoginPrompt(config *HSMConfig, ctx *pkcs11.Ctx, session pkcs11.SessionHandle, userFlag uint) error {
+	var pinStr string
+
+	if userFlag == pkcs11.CKU_SO {
+		pinStr = config.SOPin
+	} else {
+		pinStr = config.UserPin
+	}
+
+	if pinStr != "" {
+		return ctx.Login(session, userFlag, pinStr)
+	}
+	return LoginPrompt(ctx, session, userFlag)
+}
+
+// LoginPrompt will show an interactive login prompt
 func LoginPrompt(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, userFlag uint) error {
 	var (
 		pinType string
@@ -130,16 +156,11 @@ func getKeyID(privKey *rsa.PrivateKey) (string, error) {
 	return keyID, nil
 }
 
-func AddKey(libPath string, privKey *rsa.PrivateKey, certBytes []byte) error {
-	/*
-		keyID, err := getKeyID(privKey)
-		if err != nil {
-			return err
-		}
-	*/
+// AddKey will add a private key and public key to the HSM token
+func AddKey(config *HSMConfig, privKey *rsa.PrivateKey, certBytes []byte) error {
 	keyID := 11
 
-	ctx, session, err := SetupHSM(libPath)
+	ctx, session, err := SetupHSM(config)
 	if err != nil {
 		return err
 	}
@@ -147,7 +168,7 @@ func AddKey(libPath string, privKey *rsa.PrivateKey, certBytes []byte) error {
 	defer ctx.Finalize()
 	defer ctx.CloseSession(session)
 
-	if err = LoginPrompt(ctx, session, pkcs11.CKU_SO); err != nil {
+	if err = MaybeLoginPrompt(config, ctx, session, pkcs11.CKU_SO); err != nil {
 		return err
 	}
 
@@ -187,9 +208,10 @@ func AddKey(libPath string, privKey *rsa.PrivateKey, certBytes []byte) error {
 	return nil
 }
 
-func ListKeys(libPath string) error {
+// ListKeys will list all the keys stored on the device
+func ListKeys(config *HSMConfig) error {
 	fmt.Println("Listing keys")
-	ctx, session, err := SetupHSM(libPath)
+	ctx, session, err := SetupHSM(config)
 	if err != nil {
 		return err
 	}
@@ -197,7 +219,7 @@ func ListKeys(libPath string) error {
 	defer ctx.Finalize()
 	defer ctx.CloseSession(session)
 
-	if err = LoginPrompt(ctx, session, pkcs11.CKU_SO); err != nil {
+	if err = MaybeLoginPrompt(config, ctx, session, pkcs11.CKU_SO); err != nil {
 		return err
 	}
 
@@ -219,10 +241,7 @@ func ListKeys(libPath string) error {
 	if err = ctx.FindObjectsFinal(session); err != nil {
 		return err
 	}
-	fmt.Printf("Len: %d\n", len(objs))
-	if len(objs) != 1 {
-		fmt.Printf("Len: %d\n", len(objs))
-	}
+	fmt.Printf("Obj count: %d\n", len(objs))
 
 	attr, err := ctx.GetAttributeValue(session, objs[0], attrTemplate)
 	if err != nil {
