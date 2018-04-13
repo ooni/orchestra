@@ -48,15 +48,15 @@ ifneq ($(GO_BINDATA_VERSION),$(REQ_GO_BINDATA_VERSION))
 	go get -u github.com/shuLhan/go-bindata/...;
 endif
 	@go-bindata                                                           \
-		-nometadata														  \
-		-o common/bindata.go -pkg common 				                  \
+		-nometadata                                                       \
+		-o common/bindata.go -pkg common                                  \
 	    common/data/...;
 	@for tool in ${TOOL_LIST}; do                                         \
 	  if [ -d $$tool/data ]; then                                         \
 	    extra_dirs="$$tool/data/...";                                     \
 	  fi;                                                                 \
 	  go-bindata                                                          \
-	  	-nometadata														  \
+	  	-nometadata                                                       \
 	    -o $$tool/$$tool/bindata.go -pkg $$tool                           \
 	    common/data/... $$extra_dirs;                                     \
 	done
