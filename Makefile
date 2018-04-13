@@ -1,9 +1,9 @@
-PACKAGE = github.com/thetorproject/proteus
+PACKAGE = github.com/ooni/orchestra
 GOFILES := $(shell find . -name "*.go" -type f -not -path "./vendor/*" -not -name "bindata.go")
 COMMIT_HASH = `git rev-parse --short HEAD 2>/dev/null`
 BUILD_DATE = `date +%FT%T%z`
-LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common.CommitHash=${COMMIT_HASH} -X ${PACKAGE}/proteus-common.BuildDate=${BUILD_DATE}"
-NOGI_LDFLAGS = -ldflags "-X ${PACKAGE}/proteus-common.BuildDate=${BUILD_DATE}"
+LDFLAGS = -ldflags "-X ${PACKAGE}/common.CommitHash=${COMMIT_HASH} -X ${PACKAGE}/common.BuildDate=${BUILD_DATE}"
+NOGI_LDFLAGS = -ldflags "-X ${PACKAGE}/common.BuildDate=${BUILD_DATE}"
 ARCH_LIST=linux/amd64 darwin/amd64 linux/386
 TOOL_LIST=registry orchestrate
 RELEASE_OSARCH = -osarch "${ARCH_LIST}"
@@ -11,16 +11,9 @@ GO_BINDATA_VERSION = $(shell go-bindata --version | cut -d ' ' -f2 | head -n 1 |
 REQ_GO_BINDATA_VERSION = 3.2.0
 
 vendor:
-	@hash govendor > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
-		go get github.com/kardianos/govendor; \
-	fi
-	govendor sync proteus
-
+	dep ensure
 vendor-fetch:
-	@hash govendor > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
-		go get github.com/kardianos/govendor; \
-	fi
-	govendor fetch +external
+	dep ensure
 
 fmt:
 	gofmt -s -w $(GOFILES)
@@ -54,31 +47,31 @@ bindata:
 ifneq ($(GO_BINDATA_VERSION),$(REQ_GO_BINDATA_VERSION))
 	go get -u github.com/shuLhan/go-bindata/...;
 endif
-	@go-bindata                               \
-		-nometadata															\
-		-o proteus-common/bindata.go -pkg common 				           \
-	    proteus-common/data/...;
-	@for tool in ${TOOL_LIST}; do                                          \
-	  if [ -d proteus-$$tool/data ]; then                                  \
-	    extra_dirs="proteus-$$tool/data/...";                              \
-	  fi;                                                                  \
-	  go-bindata                             \
-	  	-nometadata														   \
-	    -o proteus-$$tool/$$tool/bindata.go -pkg $$tool                    \
-	    proteus-common/data/... $$extra_dirs;                              \
+	@go-bindata                                                           \
+		-nometadata                                                       \
+		-o common/bindata.go -pkg common                                  \
+	    common/data/...;
+	@for tool in ${TOOL_LIST}; do                                         \
+	  if [ -d $$tool/data ]; then                                         \
+	    extra_dirs="$$tool/data/...";                                     \
+	  fi;                                                                 \
+	  go-bindata                                                          \
+	  	-nometadata                                                       \
+	    -o $$tool/$$tool/bindata.go -pkg $$tool                           \
+	    common/data/... $$extra_dirs;                                     \
 	done
 
 build-all: bindata build-orchestrate build-registry
 
 build-orchestrate:
-	go build ${LDFLAGS} -o bin/proteus-orchestrate proteus-orchestrate/main.go
+	go build ${LDFLAGS} -o bin/ooni-orchestrate orchestrate/main.go
 build-registry:
-	go build ${LDFLAGS} -o bin/proteus-registry proteus-registry/main.go
+	go build ${LDFLAGS} -o bin/ooni-registry registry/main.go
 
-proteus: vendor build-all
+orchestra: vendor build-all
 
-proteus-no-gitinfo: LDFLAGS = ${NOGI_LDFLAGS}
-proteus-no-gitinfo: vendor proteus
+orchestra-no-gitinfo: LDFLAGS = ${NOGI_LDFLAGS}
+orchestra-no-gitinfo: vendor orchestra
 
 release: fmt-check bindata
 	go get github.com/goreleaser/goreleaser

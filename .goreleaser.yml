@@ -1,13 +1,13 @@
 builds:
-  - main: proteus-orchestrate/main.go
-    binary: proteus-orchestrate
+  - main: orchestrate/main.go
+    binary: ooni-orchestrate
     goos:
       - darwin
       - linux
     goarch:
       - amd64
-  - main: proteus-registry/main.go
-    binary: proteus-registry
+  - main: registry/main.go
+    binary: ooni-registry
     goos:
       - darwin
       - linux

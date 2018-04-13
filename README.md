@@ -1,4 +1,4 @@
-# Proteus
+# OONI Orchestra
 
 The OONI Probe Orchestration System.
 
@@ -10,32 +10,31 @@ Probe Orcehstration System.
 You should have a working golang installation. Then you can:
 
 ```
-go get github.com/thetorproject/proteus
+go get github.com/ooni/orchestra
 ```
 
 You will also need to install:
 
 ```
-go get github.com/kardianos/govendor
 go get -u github.com/shuLhan/go-bindata/...
 ```
 
 To build all the binaries, run:
 
 ```
-make proteus
+make orchestra
 ```
 
 You should now have inside of `./bin` a series of binaries. The ones you care
 about are:
 
 ```
-./bin/proteus-events
-./bin/proteus-registry
+./bin/ooni-orchestra
+./bin/ooni-registry
 ```
 
 They both take a config file--you can use
-`proteus-events/proteus-events.toml.example` (or the `-registry` one) as
+`orchestrate/ooni-orchestrate.toml.example` (or the `registry` one) as
 examples, respectively.
 
 To aid local testing you should set up a local postgres instance with a user
@@ -54,24 +53,24 @@ You should then change the config line in the `database` section for the key
 url = "postgres://proteus:changeme@127.0.0.1:32768/proteus?sslmode=disable"
 ```
 
-For both `proteus-events/proteus-events.toml` and
-`proteus-registry/proteus-registry.toml`.
+For both `orchestrate/ooni-orchestrate.toml` and
+`registry/ooni-registry.toml`.
 
 You should then be able to start the services by running:
 
 ```
-./bin/proteus-events --config proteus-events/proteus-events.toml start
+./bin/ooni-orchestrate --config orchestrate/ooni-orchestrate.toml start
 ```
 
 
 ## Components
 
-**proteus-registry**
+**registry**
 
 Is responsible for registering probes and keeping tabs on what their related
 metadata is.
 
-**proteus-frontend**
+**frontend**
 
 Is the frontend to:
 
@@ -81,27 +80,22 @@ Is the frontend to:
 
 * View active probes
 
-**proteus-events**
+**orchestrate**
 
 Is responsible for receiving events via the admin interface and triggering
-notifications via **proteus-notify**.
+notifications via `gorush`.
 
 Can also be used to view the event history.
-
-**proteus-notify**
-
-This is now deprecated in favour of using
-[gorush](https://github.com/appleboy/gorush).
 
 ## Building and releasing
 
 - Make sure the `GOPATH` environment variable is set. (For reference, the setup
   of sbs is `export GOPATH=$HOME` with repositories in `$HOME/src/`; e.g. this
-  repository is `$HOME/src/github.com/TheTorProject/proteus`).
+  repository is `$HOME/src/github.com/ooni/orchestra`).
 
 - Of course, you also need to have golang installed.
 
-- To build for development, run `make proteus`.
+- To build for development, run `make orchestra`.
 
 - To create a release, run `make release`.
 
@@ -113,7 +107,7 @@ Checklist before tagging a release:
 
     - `Makefile`
 
-    - `proteus-common/proteus_info.go`
+    - `common/orchestra_info.go`
 
 - Make sure all unittests are passing (`make check`)
 
