@@ -80,4 +80,8 @@ release: fmt-check bindata
 	# https://goreleaser.com/#releasing.custom_release_notes
 	GITHUB_TOKEN=`cat .GITHUB_TOKEN` goreleaser --rm-dist
 
-.PHONY: vendor build build-orchestrate build-registry release bindata build-all fmt fmt-check check
+clean:
+	rm -rf dist/*
+	rm -rf bin/*
+
+.PHONY: vendor build build-orchestrate build-registry release bindata build-all fmt fmt-check check clean
