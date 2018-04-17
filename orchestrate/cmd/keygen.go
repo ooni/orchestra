@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apex/log"
 	"github.com/ooni/orchestra/orchestrate/orchestrate/keystore"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -96,6 +97,7 @@ var keygenCmd = &cobra.Command{
 	Short: "Generate a keypair for use for probe orchestration",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		initHSMConfig()
 		if _, err := os.Stat(privateKeyPath); !os.IsNotExist(err) {
 			// XXX add confirmation dialog
 			fmt.Printf("WARNING: %s exists\n", privateKeyPath)
@@ -126,7 +128,7 @@ var publicKeyPath string
 
 var hsmConfig *keystore.HSMConfig
 
-func addOperatorConfig(cmd *cobra.Command) error {
+func initHSMConfig() error {
 	hsmConfig = new(keystore.HSMConfig)
 
 	viper.SetDefault("operator.private-key", "ooni-orchestrate.priv")
@@ -142,6 +144,7 @@ func addOperatorConfig(cmd *cobra.Command) error {
 	viper.SetDefault("operator.token-serial", "1234") // Defaults to yubikey serial
 	hsmConfig.TokenSerial = viper.GetString("operator.token-serial")
 
+	log.Infof("User pin: %s\n", viper.GetString("operator.user-pin"))
 	hsmConfig.UserPin = viper.GetString("operator.user-pin")
 	hsmConfig.SOPin = viper.GetString("operator.so-pin")
 	return nil
@@ -149,5 +152,4 @@ func addOperatorConfig(cmd *cobra.Command) error {
 
 func init() {
 	RootCmd.AddCommand(keygenCmd)
-	addOperatorConfig(keygenCmd)
 }

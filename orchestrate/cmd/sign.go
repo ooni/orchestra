@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/apex/log"
 	"github.com/hellais/jwt-go"
 	"github.com/spf13/cobra"
 	"github.com/thalesignite/crypto11"
@@ -47,25 +48,23 @@ func signHSM(claims OrchestraClaims) {
 	}
 	_, err := crypto11.Configure(config)
 	if err != nil {
-		fmt.Println("Failed to config")
+		log.Error("Failed to config")
 		panic(err)
 	}
 
 	key, err := crypto11.FindKeyPair([]byte{11}, nil)
 	if err != nil {
-		fmt.Println("Failed to find keypair")
+		log.Error("Failed to find keypair")
 		panic(err)
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
 	ss, err := token.SignedString(key)
 	if err != nil {
-		fmt.Println("Failed to sign")
+		log.Error("Failed to sign")
 		panic(err)
 	}
-	fmt.Println("Signed claims: ")
-	fmt.Printf("%v", ss)
-	fmt.Println("")
+	log.WithField("base64", ss).Info("Signed claims")
 }
 
 // signCmd represents the sign command
@@ -74,11 +73,17 @@ var signCmd = &cobra.Command{
 	Short: "Used to sign orchestration commands",
 	Long:  `Usually this command is run with the output given from the orchestra web interface`,
 	Run: func(cmd *cobra.Command, args []string) {
+		initHSMConfig()
+		log.Debug("Running signCmd")
 		if terminal.IsTerminal(0) {
 			// Example:
-			// base64.b64encode(json.dumps({"iss": "art", "exp": 15000, "foo": "bar"}))
-			// eyJpc3MiOiAiYXJ0IiwgImZvbyI6ICJiYXIiLCAiZXhwIjogMTUwMDB9
-			fmt.Println("I require some pipe")
+			log.Error(`You need to pipe me data.
+	For example:
+
+	$ python -c 'import json,base64;print(base64.b64encode(json.dumps({"iss": "art", "exp": 15000, "foo": "bar"})))'
+	eyJpc3MiOiAiYXJ0IiwgImZvbyI6ICJiYXIiLCAiZXhwIjogMTUwMDB9
+	$ echo "eyJpc3MiOiAiYXJ0IiwgImZvbyI6ICJiYXIiLCAiZXhwIjogMTUwMDB9" | ooni-orchestrate sign
+`)
 			return
 		}
 		inBytes, err := ioutil.ReadAll(os.Stdin)
@@ -89,9 +94,8 @@ var signCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("I will sign: ")
-		fmt.Print(string(jsonBytes))
-		fmt.Println("Press the yubikey button")
+		log.WithField("json_bytes", string(jsonBytes)).Info("Signing")
+		log.Warn("Press the yubikey button")
 		claims := OrchestraClaims{}
 
 		err = json.Unmarshal(jsonBytes, &claims)
@@ -105,5 +109,4 @@ var signCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(signCmd)
-	addOperatorConfig(signCmd)
 }
