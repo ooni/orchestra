@@ -100,25 +100,28 @@ var keygenCmd = &cobra.Command{
 		initHSMConfig()
 		if _, err := os.Stat(privateKeyPath); !os.IsNotExist(err) {
 			// XXX add confirmation dialog
-			fmt.Printf("WARNING: %s exists\n", privateKeyPath)
+			log.Warnf("%s exists", privateKeyPath)
 			fmt.Printf("overwrite? (y/n) ")
 			if askForConfirm() == false {
-				fmt.Println("ok quiting...")
+				log.Warn("ok quiting...")
 				return
 			}
-			fmt.Println("overwriting...")
+			fmt.Println()
+			log.Warn("overwriting...")
 		}
 		privKey, certBytes, err := keygen(true)
 		if err != nil {
 			fmt.Printf("failed to generate key pair: %v", err)
 		}
-		err = keystore.AddKey(hsmConfig, privKey, certBytes)
+
+		ks := keystore.NewKeyStore(hsmConfig)
+		err = ks.AddKey(privKey, certBytes)
 		if err != nil {
-			fmt.Printf("failed to add key: %v\n", err)
+			log.WithError(err).Error("failed to add key")
 		}
-		err = keystore.ListKeys(hsmConfig)
+		err = ks.ListKeys()
 		if err != nil {
-			fmt.Printf("failed to list keys: %v\n", err)
+			log.WithError(err).Error("failed to list keys")
 		}
 	},
 }
@@ -144,9 +147,10 @@ func initHSMConfig() error {
 	viper.SetDefault("operator.token-serial", "1234") // Defaults to yubikey serial
 	hsmConfig.TokenSerial = viper.GetString("operator.token-serial")
 
-	log.Infof("User pin: %s\n", viper.GetString("operator.user-pin"))
 	hsmConfig.UserPin = viper.GetString("operator.user-pin")
 	hsmConfig.SOPin = viper.GetString("operator.so-pin")
+	hsmConfig.KeyID = viper.GetInt("operator.key-id")
+	log.Debugf("hsmConfig: %v", hsmConfig)
 	return nil
 }
 

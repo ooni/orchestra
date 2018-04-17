@@ -1,17 +1,16 @@
 package keystore
 
 import (
-	"bytes"
 	"crypto/rsa"
-	"crypto/sha256"
-	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
 	"syscall"
 
+	"github.com/apex/log"
+	jwt "github.com/hellais/jwt-go"
 	"github.com/miekg/pkcs11"
+	"github.com/thalesignite/crypto11"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -36,48 +35,47 @@ type HSMConfig struct {
 	UserPin     string
 	SOPin       string
 	LibPath     string
-	KeyID       string
+	KeyID       int
 }
 
-// SetupHSM will do all the setup required to use the HSM
-func SetupHSM(config *HSMConfig) (*pkcs11.Ctx, pkcs11.SessionHandle, error) {
-	if config.LibPath == "" {
-		return nil, 0, errors.New("libPath is empty")
-	}
-	p := pkcs11.New(config.LibPath)
-	if err := p.Initialize(); err != nil {
-		return nil, 0, fmt.Errorf("found library %s, but initialize error %s", config.LibPath, err.Error())
-	}
+// KeyStore look bellow for methods to use with the KeyStore
+type KeyStore struct {
+	config *HSMConfig
+}
 
-	slots, err := p.GetSlotList(true)
-	if err != nil {
-		defer p.Destroy()
-		defer p.Finalize()
-		return nil, 0, fmt.Errorf("loaded library %s, failed to list slots %s", config.LibPath, err)
+// NewKeyStore creation
+func NewKeyStore(config *HSMConfig) *KeyStore {
+	return &KeyStore{
+		config: config,
 	}
-	if len(slots) < 1 {
-		defer p.Destroy()
-		defer p.Finalize()
-		return nil, 0, fmt.Errorf("loaded library %s, but no slots found", config.LibPath)
-	}
+}
 
-	fmt.Printf("Slot list: \n")
-	for _, slot := range slots {
-		fmt.Printf("- #%d\n", slot)
-	}
-	fmt.Printf("Using slot #%d\n", slots[0])
-	session, err := p.OpenSession(slots[0], pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
-	if err != nil {
-		defer p.Destroy()
-		defer p.Finalize()
-		defer p.CloseSession(session)
-		return nil, 0, fmt.Errorf("loaded library, but failed to start session %s", err)
-	}
-	return p, session, nil
+// SessionContext stores the context, session pair
+type SessionContext struct {
+	Ctx     *pkcs11.Ctx
+	Session pkcs11.SessionHandle
+}
+
+// CloseContext by destroying and finalizing the context
+func (sc *SessionContext) CloseContext() {
+	sc.Ctx.Destroy()
+	sc.Ctx.Finalize()
+}
+
+// Close the context & the session
+func (sc *SessionContext) Close() {
+	sc.CloseContext()
+	sc.Ctx.CloseSession(sc.Session)
+}
+
+// Logout of a session
+func (sc *SessionContext) Logout() {
+	sc.Ctx.Logout(sc.Session)
 }
 
 // MaybeLoginPrompt will show a login prompt only if the pin settings are unset
-func MaybeLoginPrompt(config *HSMConfig, ctx *pkcs11.Ctx, session pkcs11.SessionHandle, userFlag uint) error {
+func (sc *SessionContext) MaybeLoginPrompt(config *HSMConfig, userFlag uint) error {
+	log.Debug("MaybeloginPrompt")
 	var pinStr string
 
 	if userFlag == pkcs11.CKU_SO {
@@ -87,13 +85,14 @@ func MaybeLoginPrompt(config *HSMConfig, ctx *pkcs11.Ctx, session pkcs11.Session
 	}
 
 	if pinStr != "" {
-		return ctx.Login(session, userFlag, pinStr)
+		log.Debug("sc.Ctx.Login")
+		return sc.Ctx.Login(sc.Session, userFlag, pinStr)
 	}
-	return LoginPrompt(ctx, session, userFlag)
+	return sc.LoginPrompt(userFlag)
 }
 
 // LoginPrompt will show an interactive login prompt
-func LoginPrompt(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, userFlag uint) error {
+func (sc *SessionContext) LoginPrompt(userFlag uint) error {
 	var (
 		pinType string
 	)
@@ -109,7 +108,7 @@ func LoginPrompt(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, userFlag uint) e
 		if err != nil {
 			return err
 		}
-		err = ctx.Login(session, userFlag, string(pinBytes))
+		err = sc.Ctx.Login(sc.Session, userFlag, string(pinBytes))
 		if err == nil {
 			fmt.Printf("\nLogged in as %s\n", pinType)
 			return nil
@@ -119,63 +118,57 @@ func LoginPrompt(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, userFlag uint) e
 	return errors.New("Incorrect attempts exceeded")
 }
 
-func encodeByteSlice(in ...[]byte) []byte {
-	l := 0
-	for _, v := range in {
-		l += len(v)
-	}
-	if l > 4294967295 {
-		panic(fmt.Errorf("input byte slice is too long"))
-	}
-	out := make([]byte, 4+l)
-	binary.BigEndian.PutUint32(out, uint32(l))
+// NewSessionContext creates a new session, context pair
+func (ks *KeyStore) NewSessionContext() (*SessionContext, error) {
+	sc := new(SessionContext)
 
-	start := 4 + copy(out[4:], in[0])
-	if len(in) > 1 {
-		for _, v := range in[1:] {
-			copy(out[start:], v)
-		}
+	if ks.config.LibPath == "" {
+		return sc, errors.New("libPath is empty")
 	}
-	return out
-}
-
-func getKeyID(privKey *rsa.PrivateKey) (string, error) {
-	key, ok := privKey.Public().(*rsa.PublicKey)
-	if !ok {
-		return "", errors.New("unsupported type")
+	sc.Ctx = pkcs11.New(ks.config.LibPath)
+	if err := sc.Ctx.Initialize(); err != nil {
+		return sc, fmt.Errorf("found library %s, but initialize error %s", ks.config.LibPath, err.Error())
 	}
-	buf := bytes.NewBuffer(nil)
-	buf.Write(encodeByteSlice([]byte("rsa")))
-	e := make([]byte, 4)
-	binary.BigEndian.PutUint32(e, uint32(key.E))
-	buf.Write(encodeByteSlice(bytes.TrimLeft(e, "\x00")))
-	buf.Write(encodeByteSlice([]byte{0}, key.N.Bytes()))
+	slots, err := sc.Ctx.GetSlotList(true)
+	if err != nil {
+		defer sc.CloseContext()
+		return sc, fmt.Errorf("loaded library %s, failed to list slots %s", ks.config.LibPath, err)
+	}
+	if len(slots) < 1 {
+		defer sc.CloseContext()
+		return sc, fmt.Errorf("loaded library %s, but no slots found", ks.config.LibPath)
+	}
 
-	digest := sha256.Sum256(buf.Bytes())
-	keyID := hex.EncodeToString(digest[:])
-
-	return keyID, nil
+	log.Debug("Slot list")
+	for _, slot := range slots {
+		log.Debugf("- #%d", slot)
+	}
+	log.Debugf("Using slot #%d", slots[0])
+	sc.Session, err = sc.Ctx.OpenSession(slots[0], pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
+	if err != nil {
+		defer sc.Close()
+		return sc, fmt.Errorf("loaded library, but failed to start session %s", err)
+	}
+	return sc, nil
 }
 
 // AddKey will add a private key and public key to the HSM token
-func AddKey(config *HSMConfig, privKey *rsa.PrivateKey, certBytes []byte) error {
-	keyID := 11
-
-	ctx, session, err := SetupHSM(config)
+func (ks *KeyStore) AddKey(privKey *rsa.PrivateKey, certBytes []byte) error {
+	sc, err := ks.NewSessionContext()
 	if err != nil {
-		return err
-	}
-	defer ctx.Destroy()
-	defer ctx.Finalize()
-	defer ctx.CloseSession(session)
-
-	if err = MaybeLoginPrompt(config, ctx, session, pkcs11.CKU_SO); err != nil {
+		log.WithError(err).Error("Failed to create new session")
 		return err
 	}
 
-	defer ctx.Logout(session)
+	defer sc.Close()
+
+	if err = sc.MaybeLoginPrompt(ks.config, pkcs11.CKU_SO); err != nil {
+		return err
+	}
+
+	defer sc.Logout()
+
 	// XXX check if the key is already on the token
-
 	privTemplate := []*pkcs11.Attribute{
 		// Taken from: http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html#_toc416959720
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
@@ -183,7 +176,7 @@ func AddKey(config *HSMConfig, privKey *rsa.PrivateKey, certBytes []byte) error 
 		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, []byte("orchestrate-key")),
 
-		pkcs11.NewAttribute(pkcs11.CKA_ID, keyID),
+		pkcs11.NewAttribute(pkcs11.CKA_ID, ks.config.KeyID),
 		pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, big.NewInt(int64(privKey.PublicKey.E)).Bytes()), // XXX this is a big ghetto
 		pkcs11.NewAttribute(pkcs11.CKA_PRIME_1, privKey.Primes[0].Bytes()),
 		pkcs11.NewAttribute(pkcs11.CKA_PRIME_2, privKey.Primes[1].Bytes()),
@@ -195,14 +188,17 @@ func AddKey(config *HSMConfig, privKey *rsa.PrivateKey, certBytes []byte) error 
 	certTemplate := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
 		pkcs11.NewAttribute(pkcs11.CKA_VALUE, certBytes),
-		pkcs11.NewAttribute(pkcs11.CKA_ID, keyID),
+		pkcs11.NewAttribute(pkcs11.CKA_ID, ks.config.KeyID),
 	}
-	_, err = ctx.CreateObject(session, certTemplate)
+
+	log.Debug("sc.Ctx.CreateObject")
+	_, err = sc.Ctx.CreateObject(sc.Session, certTemplate)
 	if err != nil {
 		return fmt.Errorf("error importing: %v", err)
 	}
 
-	_, err = ctx.CreateObject(session, privTemplate)
+	log.Debug("sc.Ctx.CreateObject(privTemplate)")
+	_, err = sc.Ctx.CreateObject(sc.Session, privTemplate)
 	if err != nil {
 		return fmt.Errorf("error importing key: %v", err)
 	}
@@ -210,17 +206,20 @@ func AddKey(config *HSMConfig, privKey *rsa.PrivateKey, certBytes []byte) error 
 }
 
 // ListKeys will list all the keys stored on the device
-func ListKeys(config *HSMConfig) error {
+func (ks *KeyStore) ListKeys() error {
 	fmt.Println("Listing keys")
-	ctx, session, err := SetupHSM(config)
+	sc, err := ks.NewSessionContext()
 	if err != nil {
+		log.WithError(err).Error("Failed to create new session")
 		return err
 	}
-	defer ctx.Destroy()
-	defer ctx.Finalize()
-	defer ctx.CloseSession(session)
 
-	if err = MaybeLoginPrompt(config, ctx, session, pkcs11.CKU_SO); err != nil {
+	defer sc.Close()
+
+	ctx := sc.Ctx
+	session := sc.Session
+
+	if err = sc.MaybeLoginPrompt(ks.config, pkcs11.CKU_SO); err != nil {
 		return err
 	}
 
@@ -254,4 +253,39 @@ func ListKeys(config *HSMConfig) error {
 	}
 
 	return nil
+}
+
+// OrchestraClaims are the claims to be signed
+type OrchestraClaims struct {
+	Foo string `json:"foo"`
+	jwt.StandardClaims
+}
+
+// SignClaims will sign some probe orchestration claims
+func (ks *KeyStore) SignClaims(claims OrchestraClaims) (string, error) {
+	config := &crypto11.PKCS11Config{
+		Path:        ks.config.LibPath,
+		Pin:         ks.config.UserPin,
+		TokenSerial: ks.config.TokenSerial,
+	}
+	_, err := crypto11.Configure(config)
+	if err != nil {
+		log.WithError(err).Error("Failed to config")
+		return "", err
+	}
+
+	// XXX I am not actually sure this is the correct ID to use
+	key, err := crypto11.FindKeyPair([]byte(string(ks.config.KeyID)), nil)
+	if err != nil {
+		log.WithError(err).Error("Failed to find keypair")
+		return "", err
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
+	ss, err := token.SignedString(key)
+	if err != nil {
+		log.WithError(err).Error("Failed to sign")
+		return "", err
+	}
+	return ss, nil
 }
