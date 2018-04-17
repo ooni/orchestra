@@ -9,19 +9,14 @@ import (
 
 	"github.com/apex/log"
 	"github.com/hellais/jwt-go"
+	"github.com/ooni/orchestra/orchestrate/orchestrate/keystore"
 	"github.com/spf13/cobra"
-	"github.com/thalesignite/crypto11"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
 var privKeyPath string
 
-type OrchestraClaims struct {
-	Foo string `json:"foo"`
-	jwt.StandardClaims
-}
-
-func signLocal(claims OrchestraClaims) {
+func signLocal(claims keystore.OrchestraClaims) {
 	keyPEM, err := ioutil.ReadFile(privKeyPath)
 	if err != nil {
 		panic(err)
@@ -38,33 +33,6 @@ func signLocal(claims OrchestraClaims) {
 	fmt.Println("Signed claims: ")
 	fmt.Printf("%v", ss)
 	fmt.Println("")
-}
-
-func signHSM(claims OrchestraClaims) {
-	config := &crypto11.PKCS11Config{
-		Path:        hsmConfig.LibPath,
-		Pin:         hsmConfig.UserPin,
-		TokenSerial: hsmConfig.TokenSerial,
-	}
-	_, err := crypto11.Configure(config)
-	if err != nil {
-		log.Error("Failed to config")
-		panic(err)
-	}
-
-	key, err := crypto11.FindKeyPair([]byte{11}, nil)
-	if err != nil {
-		log.Error("Failed to find keypair")
-		panic(err)
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
-	ss, err := token.SignedString(key)
-	if err != nil {
-		log.Error("Failed to sign")
-		panic(err)
-	}
-	log.WithField("base64", ss).Info("Signed claims")
 }
 
 // signCmd represents the sign command
@@ -96,14 +64,19 @@ var signCmd = &cobra.Command{
 		}
 		log.WithField("json_bytes", string(jsonBytes)).Info("Signing")
 		log.Warn("Press the yubikey button")
-		claims := OrchestraClaims{}
+		claims := keystore.OrchestraClaims{}
 
 		err = json.Unmarshal(jsonBytes, &claims)
 		if err != nil {
 			panic(err)
 		}
 
-		signHSM(claims)
+		ks := keystore.NewKeyStore(hsmConfig)
+		signedClaims, err := ks.SignClaims(claims)
+		if err != nil {
+			panic(err)
+		}
+		log.WithField("signed_string", signedClaims).Info("Signed claims")
 	},
 }
 
