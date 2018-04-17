@@ -63,13 +63,13 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	}
 
+	log.SetHandler(cli.Default)
 	if err := viper.ReadInConfig(); err == nil {
 		ctx.Infof("using config file: %s", viper.ConfigFileUsed())
 	} else {
 		ctx.WithError(err).Errorf("failed to load config file")
 	}
 
-	log.SetHandler(cli.Default)
 	level, err := log.ParseLevel(viper.GetString("core.log-level"))
 	if err != nil {
 		fmt.Println("Invalid log level. Must be one of debug, info, warn, error, fatal")

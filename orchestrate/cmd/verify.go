@@ -39,6 +39,7 @@ var verifyCmd = &cobra.Command{
 	Short: "Used to verify that a signed token is valid",
 	Long:  `Takes from stdin the signed token and says if the token is valid or not`,
 	Run: func(cmd *cobra.Command, args []string) {
+		initHSMConfig()
 		if terminal.IsTerminal(0) {
 			fmt.Println("I require some pipe")
 			return
@@ -61,5 +62,4 @@ var verifyCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(verifyCmd)
-	addOperatorConfig(verifyCmd)
 }

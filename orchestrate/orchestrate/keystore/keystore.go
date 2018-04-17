@@ -36,6 +36,7 @@ type HSMConfig struct {
 	UserPin     string
 	SOPin       string
 	LibPath     string
+	KeyID       string
 }
 
 // SetupHSM will do all the setup required to use the HSM
