@@ -40,6 +40,24 @@ paths:
           schema:
             type: string
 
+  # Should this go under the admin scope?
+  # That should not be strictly necessary as unauthenticated clients can
+  # generate the task to be signed too.
+  /make-experiment:
+    summary: Return a JWT token to be signed
+    description: |
+      Take in the task paramters and will return a base64 encoded JWT token to
+      be signed via ooni-orchestrate.
+    post:
+      responses:
+        '200':
+          description: 'OK'
+          schema:
+            type: object
+            properties:
+              base64:
+                type: string
+                description: base64 encoded token to be signed
 
   # These are operations related to getting tasks to run in unattended
   # orchestration mode
@@ -52,6 +70,7 @@ paths:
             'application/json': 'Hello world!'
           schema:
             type: string
+
   /task/{task_id}/accept:
     post:
       responses:

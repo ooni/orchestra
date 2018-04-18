@@ -257,7 +257,9 @@ func (ks *KeyStore) ListKeys() error {
 
 // OrchestraClaims are the claims to be signed
 type OrchestraClaims struct {
-	Foo string `json:"foo"`
+	ProbeCC  string        `json:"probe_cc"`
+	TestName string        `json:"test_name"`
+	Args     []interface{} `json:"args"`
 	jwt.StandardClaims
 }
 

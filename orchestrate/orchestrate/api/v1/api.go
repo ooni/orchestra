@@ -25,6 +25,13 @@ func BindAPI(router *gin.Engine, authMiddleware *middleware.GinJWTMiddleware) er
 		admin.DELETE("/job/:job_id", handler.DeleteJobHandler)
 	}
 
+	orchestration := v1.Group("/")
+	// This means that authentication is optional
+	orchestration.Use(authMiddleware.MiddlewareFunc(middleware.NullAuthorizor))
+	{
+		orchestration.POST("/make-experiment", handler.MakeExperiment)
+	}
+
 	rendezvous := v1.Group("/")
 	// This means that authentication is optional
 	rendezvous.Use(authMiddleware.MiddlewareFunc(middleware.NullAuthorizor))
