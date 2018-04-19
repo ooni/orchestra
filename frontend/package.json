@@ -4,7 +4,9 @@
   "license": "BSD-2-Clause",
   "version": "0.2.0",
   "dependencies": {
+    "@material-ui/icons": "^1.0.0-beta.42",
     "axios": "^0.15.3",
+    "babel-plugin-styled-components": "^1.5.1",
     "dotenv": "^4.0.0",
     "express": "^4.14.0",
     "immutable": "^3.8.1",
@@ -20,7 +22,8 @@
     "react-no-ssr": "^1.1.0",
     "react-select": "^1.0.0-rc.3",
     "react-toolbox": "^2.0.0-beta.12",
-    "react-toolbox-themr": "^1.0.2"
+    "react-toolbox-themr": "^1.0.2",
+    "styled-components": "^3.2.6"
   },
   "devDependencies": {
     "babel-plugin-transform-define": "^1.2.0"
