@@ -5,7 +5,7 @@ import React from 'react'
 import Head from 'next/head'
 import Router from 'next/router'
 
-import { Grid } from 'reflexbox'
+import { Grid } from 'ooni-components'
 
 import Button from 'react-toolbox/lib/button/Button'
 import Card from 'react-toolbox/lib/card/Card'

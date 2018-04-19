@@ -3,15 +3,16 @@ import Router from 'next/router'
 import Session from '../../components/session'
 import Layout from '../../components/layout'
 
-import Button from 'react-toolbox/lib/button/Button'
-import Input from 'react-toolbox/lib/input/Input'
-import Card from 'react-toolbox/lib/card/Card'
-import CardActions from 'react-toolbox/lib/card/CardActions'
-import CardTitle from 'react-toolbox/lib/card/CardTitle'
+import { withStyles } from 'material-ui/styles'
 
-import { Flex, Box, Grid } from 'reflexbox'
+import Button from 'material-ui/Button'
+import Input from 'material-ui/Input'
 
-export default class AdminLogin extends React.Component {
+import Card, { CardHeader, CardContent, CardActions } from 'material-ui/Card'
+
+import { Flex, Box, Grid } from 'ooni-components'
+
+class AdminLogin extends React.Component {
 
   constructor(props) {
     super(props)
@@ -62,30 +63,45 @@ export default class AdminLogin extends React.Component {
       error
     } = this.state
 
+    const { classes } = this.props
     return (
       <Layout>
         <Card style={{width: "600px", margin: "auto", padding: '20px'}}>
           {error !== null && <p>{error.message}</p>}
-          <CardTitle title="Authorization required" style={{color: "black"}} />
+          <CardHeader title="Authorization required" style={{color: "black"}} />
+          <CardContent>
           <Input
-            type='text'
-            hint='your username'
-            label='Username'
+            className={classes.input}
+            placeholder='Username'
             value={this.state.username}
-            onChange={(value) => this.onUsernameChange(value)} />
+            onChange={({target}) => this.onUsernameChange(target.value)}
+          />
           <Input
+            className={classes.input}
             type='password'
-            hint='your password'
-            label='Password'
+            placeholder='Password'
             value={this.state.password}
-            onChange={(value) => this.onPasswordChange(value)}/>
+            onChange={({target}) => this.onPasswordChange(target.value)}
+            />
+          </CardContent>
           <CardActions>
-          <Button
-            onClick={this.onSubmit}
-            label='Login' />
+          <Button className={classes.button} onClick={this.onSubmit}>Login</Button>
           </CardActions>
         </Card>
       </Layout>
     )
   }
 }
+
+const styles = theme => ({
+  container: {
+    display: 'flex',
+    flexWrap: 'wrap',
+  },
+  button: {},
+  input: {
+    margin: theme.spacing.unit,
+  },
+})
+
+export default withStyles(styles)(AdminLogin)
