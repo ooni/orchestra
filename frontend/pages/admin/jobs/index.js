@@ -1,41 +1,54 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import Head from 'next/head'
 import Link from 'next/link'
-import Select from 'react-select'
 
 import Immutable from 'immutable'
 
-import Avatar from 'react-toolbox/lib/avatar/Avatar'
-import Button from 'react-toolbox/lib/button/Button'
-import Card from 'react-toolbox/lib/card/Card'
-import CardActions from 'react-toolbox/lib/card/CardActions'
-import CardTitle from 'react-toolbox/lib/card/CardTitle'
-import CardText from 'react-toolbox/lib/card/CardText'
+import Avatar from 'material-ui/Avatar'
 
-import List from 'react-toolbox/lib/list/List'
-import ListItem from 'react-toolbox/lib/list/ListItem'
+import Button from 'material-ui/Button'
+import AddIcon from '@material-ui/icons/Add'
+import ClearIcon from '@material-ui/icons/Clear'
+import MessageIcon from '@material-ui/icons/Message'
+import AssignmentIcon from '@material-ui/icons/Assignment'
+
+
+import Card, { CardHeader, CardContent, CardActions } from 'material-ui/Card'
+
+//import Card from 'react-toolbox/lib/card/Card'
+//import CardActions from 'react-toolbox/lib/card/CardActions'
+//import CardTitle from 'react-toolbox/lib/card/CardTitle'
+//import CardText from 'react-toolbox/lib/card/CardText'
+
+//import List from 'react-toolbox/lib/list/List'
+//import ListItem from 'react-toolbox/lib/list/ListItem'
+import List, { ListItem } from 'material-ui/List'
 
 import moment from 'moment'
+
+import { Flex, Box, Grid } from 'ooni-components'
+import { Container } from 'ooni-components'
 
 import Layout from '../../../components/layout'
 import Session from '../../../components/session'
 
-import { Flex, Box, Grid } from 'reflexbox'
-
 class JobCard extends React.Component {
   static propTypes = {
-    onDelete: React.PropTypes.func,
-    comment: React.PropTypes.string,
-    creationTime: React.PropTypes.string,
-    delay: React.PropTypes.number,
-    id: React.PropTypes.string,
-    state: React.PropTypes.string,
-    schedule: React.PropTypes.string,
-    target: React.PropTypes.object,
-    task: React.PropTypes.object
+    onDelete: PropTypes.func,
+    comment: PropTypes.string,
+    creationTime: PropTypes.string,
+    delay: PropTypes.number,
+    id: PropTypes.string,
+    state: PropTypes.string,
+    schedule: PropTypes.string,
+    target: PropTypes.object,
+    task: PropTypes.object
   }
 
   constructor (props) {
+    console.log("Callin contr")
     super(props)
     this.state = {
       isOpen: false
@@ -88,7 +101,7 @@ class JobCard extends React.Component {
           {isOpen && <Button icon='keyboard_arrow_up' />}
           {!isOpen && <Button icon='keyboard_arrow_down' />}
         </div>
-        <CardTitle
+        <CardHeader
           title={comment}
           avatar={cardAvatar}
           subtitle={subtitle}
@@ -100,41 +113,41 @@ class JobCard extends React.Component {
         <CardText>
           {isOpen && <List>
             {alertData && <ListItem
-                caption={alertData.message}
-                legend="Message"/>
+                primary={alertData.message}
+                secondary="Message"/>
             }
             {alertData && <ListItem
-                caption={JSON.stringify(alertData.extra)}
-                legend="Alert Extra"/>
+                primary={JSON.stringify(alertData.extra)}
+                secondary="Alert Extra"/>
             }
 
             {task && <ListItem
-                caption={task.test_name}
-                legend="Test name"/>
+                primary={task.test_name}
+                secondary="Test name"/>
             }
             {task && <ListItem
-                caption={JSON.stringify(task.arguments)}
-                legend="Test arguments"/>
+                primary={JSON.stringify(task.arguments)}
+                secondary="Test arguments"/>
             }
 
             <ListItem
-                caption={schedule}
-                legend="Schedule"/>
+                primary={schedule}
+                secondary="Schedule"/>
 
             <ListItem
-                caption={''+delay}
-                legend="Delay"/>
+                primary={''+delay}
+                secondary="Delay"/>
 
             <ListItem
-                caption={creationTime}
-                legend="Creation time"/>
+                primary={creationTime}
+                secondary="Creation time"/>
 
             <ListItem
-                caption={targetCountries}
-                legend="Target countries"/>
+                primary={targetCountries}
+                secondary="Target countries"/>
             <ListItem
-                caption={targetPlatforms}
-                legend="Target platforms"/>
+                primary={targetPlatforms}
+                secondary="Target platforms"/>
           </List>}
 
         </CardText>
@@ -143,9 +156,9 @@ class JobCard extends React.Component {
   }
 }
 
-export default class AdminJobsIndex extends React.Component {
-
+class AdminJobsIndex extends React.Component {
   constructor (props) {
+    console.log("Calling constructor")
     super(props)
     this.state = {
       jobList: [],
@@ -199,6 +212,7 @@ export default class AdminJobsIndex extends React.Component {
       actionButtonOpen
     } = this.state
 
+    console.log("Calling render")
     return (
       <Layout title="Jobs">
         <Head>
@@ -206,7 +220,7 @@ export default class AdminJobsIndex extends React.Component {
         </Head>
 
         <div>
-          <div className='container'>
+          <Container style={{position: 'relative'}}>
             {jobList.map((job) => {
               return (
                 <Grid col={6} px={2}>
@@ -225,39 +239,26 @@ export default class AdminJobsIndex extends React.Component {
                 </Grid>
               )
             })}
-            <div className='actions'>
+            <div>
               <Flex column>
                 {actionButtonOpen && <Box pt={2}>
-                  <Link href='/admin/jobs/add_alert'><Button floating icon='message' mini /></Link>
+                  <Link href='/admin/jobs/add_alert'><Button variant="fab" mini><MessageIcon/></Button></Link>
                 </Box>}
                 {actionButtonOpen && <Box pt={2}>
-                  <Link href='/admin/jobs/add_task'><Button floating icon='assignment' mini /></Link>
+                  <Link href='/admin/jobs/add_task'><Button variant="fab" mini><AssignmentIcon/></Button></Link>
                 </Box>}
 
                 <Box pt={2} onClick={() => this.toggleAction()}>
-                  {!actionButtonOpen && <Button floating icon='add' accent />}
-                  {actionButtonOpen && <Button floating icon='clear' accent />}
+                  {!actionButtonOpen && <Button variant="fab" color="primary" mini><AddIcon/></Button>}
+                  {actionButtonOpen && <Button variant="fab" color="primary" mini><ClearIcon/></Button>}
                 </Box>
               </Flex>
             </div>
-          </div>
-          <style jsx>{`
-          .container {
-            max-width: 1024px;
-            padding-left: 20px;
-            padding-right: 20px;
-            margin: auto;
-            position: relative;
-            min-height: 50vh;
-          }
-          .actions {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-          }
-          `}</style>
+          </Container>
         </div>
       </Layout>
     )
   }
 }
+
+export default AdminJobsIndex

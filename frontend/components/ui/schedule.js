@@ -1,22 +1,25 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 
 import Immutable from 'immutable'
 
 import moment from 'moment'
 
-import FontIcon from 'react-toolbox/lib/font_icon/FontIcon'
-import Slider from 'react-toolbox/lib/slider/Slider'
+import AlarmIcon from '@material-ui/icons/Alarm'
+//import Slider from 'react-toolbox/lib/slider/Slider'
 
-import { Flex, Box } from 'reflexbox'
+import { Flex, Box } from 'ooni-components'
+
+const Slider = () => <div>Not implemented</div>
 
 export class DesignatorSlider extends React.Component {
   static propTypes = {
-    unit: React.PropTypes.string.isRequired,
-    min: React.PropTypes.number,
-    max: React.PropTypes.number,
-    step: React.PropTypes.number,
-    defaultValue: React.PropTypes.number,
-    onChange: React.PropTypes.func
+    unit: PropTypes.string.isRequired,
+    min: PropTypes.number,
+    max: PropTypes.number,
+    step: PropTypes.number,
+    defaultValue: PropTypes.number,
+    onChange: PropTypes.func
   }
 
   static defaultProps = {
@@ -58,8 +61,8 @@ export class DesignatorSlider extends React.Component {
 
 export class DurationPicker extends React.Component {
   static propTypes = {
-    onChange: React.PropTypes.func.isRequired,
-    duration: React.PropTypes.object
+    onChange: PropTypes.func.isRequired,
+    duration: PropTypes.object
   }
 
   constructor(props) {
@@ -121,7 +124,7 @@ export const RepeatString = ({duration, repeatCount}) => {
   ]
   return (
     <Flex pt={2} align='center'>
-      <Box><FontIcon value='alarm' /></Box>
+      <Box><AlarmIcon/></Box>
       <Box pl={2}>
       <div>
       Will run

@@ -30,7 +30,7 @@ import {
   ToScheduleString
 } from '../../../components/ui/schedule'
 
-import { Flex, Box, Grid } from 'reflexbox'
+import { Flex, Box, Grid } from 'ooni-components'
 
 class JobCreateConfirm extends React.Component {
   static propTypes = {

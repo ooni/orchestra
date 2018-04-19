@@ -1,23 +1,34 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import Head from 'next/head'
 import Router from 'next/router'
 
-import Autocomplete from 'react-toolbox/lib/autocomplete/Autocomplete'
+import Select from 'react-select'
+//import Autocomplete from 'react-toolbox/lib/autocomplete/Autocomplete'
 
-import Button from 'react-toolbox/lib/button/Button'
-import Input from 'react-toolbox/lib/input/Input'
-import Checkbox from 'react-toolbox/lib/checkbox/Checkbox'
-import Slider from 'react-toolbox/lib/slider/Slider'
+import Button from 'material-ui/Button'
+//import Button from 'react-toolbox/lib/button/Button'
+//import Input from 'react-toolbox/lib/input/Input'
+import Input from 'material-ui/Input'
 
-import Card from 'react-toolbox/lib/card/Card'
-import CardTitle from 'react-toolbox/lib/card/CardTitle'
-import CardActions from 'react-toolbox/lib/card/CardActions'
-import CardText from 'react-toolbox/lib/card/CardText'
+//import Checkbox from 'react-toolbox/lib/checkbox/Checkbox'
+import Checkbox from 'material-ui/Checkbox'
+import { FormControlLabel } from 'material-ui/Form'
 
-import DatePicker from 'react-toolbox/lib/date_picker/DatePicker'
-import TimePicker from 'react-toolbox/lib/time_picker/TimePicker'
-import List from 'react-toolbox/lib/list/List'
-import ListItem from 'react-toolbox/lib/list/ListItem'
+import Card, { CardHeader, CardContent, CardActions } from 'material-ui/Card'
+//import Card from 'react-toolbox/lib/card/Card'
+//import CardTitle from 'react-toolbox/lib/card/CardTitle'
+//import CardActions from 'react-toolbox/lib/card/CardActions'
+//import CardText from 'react-toolbox/lib/card/CardText'
+
+//import DatePicker from 'react-toolbox/lib/date_picker/DatePicker'
+//import TimePicker from 'react-toolbox/lib/time_picker/TimePicker'
+
+import TextField from 'material-ui/TextField'
+
+import List, { ListItem } from 'material-ui/List'
+//import List from 'react-toolbox/lib/list/List'
+//import ListItem from 'react-toolbox/lib/list/ListItem'
 
 import moment from 'moment'
 
@@ -30,20 +41,21 @@ import {
   ToScheduleString
 } from '../../../components/ui/schedule'
 
-import { Flex, Box, Grid } from 'reflexbox'
+import { Flex, Box, Grid } from 'ooni-components'
+import { Container } from 'ooni-components'
 
 
 class JobCreateConfirm extends React.Component {
   static propTypes = {
-    startMoment: React.PropTypes.object,
-    duration: React.PropTypes.object,
-    repeatCount: React.PropTypes.number,
-    targetCountries: React.PropTypes.array,
-    targetPlatforms: React.PropTypes.array,
-    urls: React.PropTypes.string,
-    alertMessage: React.PropTypes.string,
-    href: React.PropTypes.string,
-    altHref: React.PropTypes.string
+    startMoment: PropTypes.object,
+    duration: PropTypes.object,
+    repeatCount: PropTypes.number,
+    targetCountries: PropTypes.array,
+    targetPlatforms: PropTypes.array,
+    urls: PropTypes.string,
+    alertMessage: PropTypes.string,
+    href: PropTypes.string,
+    altHref: PropTypes.string
   }
 
   constructor(props) {
@@ -79,40 +91,40 @@ class JobCreateConfirm extends React.Component {
 
     return (
       <div>
-        <CardTitle title="New Alert Summary" />
-        <CardText>
+        <CardHeader title="New Alert Summary" />
+        <CardContent>
           <List>
           <ListItem
             ripple={false}
-            caption={alertMessage}
-            legend="Message" />
+            primary={alertMessage}
+            secondary="Message" />
           <ListItem
             ripple={false}
-            caption={href}
-            legend="Link" />
+            primary={href}
+            secondary="Link" />
           <ListItem
             ripple={false}
-            caption={startTimeCaption}
-            legend="Start time" />
+            primary={startTimeCaption}
+            secondary="Start time" />
           <ListItem
             ripple={false}
-            caption={<DurationCaption
+            primary={<DurationCaption
                         duration={duration}
                         repeatCount={repeatCount}
                         startMoment={startMoment} />}
-            legend="Duration" />
+            secondary="Duration" />
 
           <ListItem
             ripple={false}
-            caption={targetCountries.join(',')}
-            legend="Target pountries" />
+            primary={targetCountries.join(',')}
+            secondary="Target pountries" />
           <ListItem
             ripple={false}
-            caption={targetPlatforms.join(',')}
-            legend="Target platforms" />
+            primary={targetPlatforms.join(',')}
+            secondary="Target platforms" />
           </List>
 
-        </CardText>
+        </CardContent>
 
         <style jsx>{`
         h2, h3, p, ul, div {
@@ -165,21 +177,25 @@ export default class AdminJobsAdd extends React.Component {
     const countries_alpha2 = require('../../../static/countries-alpha2.json')
 
     let props = {}
-    props.countries = {
-      'any': 'All'
-    }
+    props.countries = [
+      {value: "any", label: 'All'}
+    ]
     for (let alpha2 in countries_alpha2) {
-      props.countries[alpha2] = countries_alpha2[alpha2]
+      props.countries.push({
+        value: alpha2,
+        label: countries_alpha2[alpha2]
+      })
     }
 
-    props.platforms = {
-      'any': 'All',
-      'android': 'Android',
-      'ios': 'iOS',
-      'linux': 'Linux',
-      'macos': 'macOS',
-      'lepidopter': 'Lepidopter'
-    }
+    props.platforms = [
+      {value: 'any', label: 'All'},
+      {value: 'android', label: 'Android'},
+      {value: 'ios', label: 'iOS'},
+      {value: 'linux', label: 'Linux'},
+      {value: 'macos', label: 'macOS'},
+      {value: 'lepidopter', label: 'Lepidopter'},
+    ]
+
     return props
   }
 
@@ -187,22 +203,22 @@ export default class AdminJobsAdd extends React.Component {
     this.state.session.redirectIfInvalid()
   }
 
-  onMessageChange (value) {
-    this.setState({ alertMessage: value})
+  onMessageChange ({target}) {
+    this.setState({ alertMessage: target.value})
   }
-  onHrefChange (value) {
-    this.setState({ href: value})
+  onHrefChange ({target}) {
+    this.setState({ href: target.value})
   }
-  onAltHrefChange (value) {
-    this.setState({ altHref: value})
-  }
-
-  onDurationChange (value) {
-    this.setState({ duration: value });
+  onAltHrefChange ({target}) {
+    this.setState({ altHref: target.value})
   }
 
-  onRepeatChange (value) {
-    this.setState({ repeatCount: value });
+  onDurationChange ({target}) {
+    this.setState({ duration: target.value });
+  }
+
+  onRepeatChange ({target}) {
+    this.setState({ repeatCount: target.value });
   }
 
   onTargetCountryChange (value) {
@@ -325,25 +341,23 @@ export default class AdminJobsAdd extends React.Component {
         </Head>
 
         <div>
-          <div className='container'>
+          <Container>
             {submitted &&
               <Card>
               {finalized && finalized.error === null &&
-                <CardTitle title="Job created successfully!" />
+                <CardHeader title="Job created successfully!" />
               }
               {finalized && finalized.error !== null &&
                 <div>
-                <CardTitle title="Job creation error" />
+                <CardHeader title="Job creation error" />
                 <p>{finalized.error.toString()}</p>
                 <CardActions>
                 <Button
                   raised
-                  onClick={this.onEdit}
-                  label='Edit'/>
+                  onClick={this.onEdit}>Edit</Button>
                 <Button
                   raised
-                  onClick={this.onAdd}
-                  label='Retry'/>
+                  onClick={this.onAdd}>Retry</Button>
                 </CardActions>
                 </div>
               }
@@ -365,69 +379,59 @@ export default class AdminJobsAdd extends React.Component {
                 />
                 <CardActions>
                 <Button
-                  onClick={this.onEdit}
-                  label='Edit'/>
+                  onClick={this.onEdit}>Edit</Button>
                 <Button
-                  onClick={this.onAdd}
-                  label='Add'/>
+                  onClick={this.onAdd}>Add</Button>
                 </CardActions>
               </div>}
 
               </Card>
             }
-          </div>
+          </Container>
           {!submitted &&
-          <div className='scheduled-jobs container'>
-            <div>
+          <Container>
             <Card title="New Alert">
-
-              <CardText>
+              <CardContent>
                 <Input
                   onChange={this.onMessageChange}
-                  label="message"
+                  placeholder="message"
                   type="text" />
                 <Input
                   onChange={this.onHrefChange}
-                  label="href"
+                  placeholder="href"
                   type="text" />
                 <Input
                   onChange={this.onAltHrefChange}
-                  label="alt hrefs"
+                  placeholder="alt hrefs"
                   multiline
                   type="text" />
               <hr/>
 
               <h2>Target</h2>
 
-              <Grid col={3} px={2}>
               <div className='option'>
                 <span className='option-name'>
                   Country
                 </span>
-                <Autocomplete
-                  direction="down"
-                  selectedPosition="above"
-                  label="Choose countries"
+                <Select
+                  name='test'
+                  options={this.props.countries}
+                  value={this.state.targetCountries}
                   onChange={this.onTargetCountryChange}
-                  source={this.props.countries}
-                  value={this.state.targetCountries} />
+                />
               </div>
-              </Grid>
 
-              <Grid col={3} px={2}>
               <div className='option'>
                 <span className='option-name'>
                   Platform
                 </span>
-                <Autocomplete
-                  direction="down"
-                  selectedPosition="above"
-                  label="Choose platforms"
+                <Select
+                  name='test'
+                  options={this.props.platforms}
+                  value={this.state.targetPlatforms}
                   onChange={this.onTargetPlatformChange}
-                  source={this.props.platforms}
-                  value={this.state.targetPlatforms} />
+                />
               </div>
-              </Grid>
 
               <hr />
               <h2>Schedule</h2>
@@ -438,38 +442,19 @@ export default class AdminJobsAdd extends React.Component {
                     Start on
                   </span>
 
-                  <DatePicker
-                    label="Start date"
-                    autoOk={true}
-                    value={this.state.startDate}
-                    onChange={(startDate) => {
-                      let startMoment = this.state.startMoment.clone()
-                      // XXX is it correct to use UTC here?
-                      startMoment.set({
-                        year: startDate.getUTCFullYear(),
-                        month: startDate.getUTCMonth(),
-                        date: startDate.getUTCDate(),
-                      })
-                      this.setState({ startMoment })
-                      this.setState({ startDate })
-                    }}
-                  />
-                  <TimePicker
-                    format="24hr"
-                    value={this.state.startTime}
+                  <TextField
+                    id="date"
                     label="Start time"
-                    onChange={(startTime) => {
-                      let startMoment = this.state.startMoment.clone()
-                      // XXX is it correct to use UTC here?
-                      startMoment.set({
-                        hour: startTime.getUTCHours(),
-                        minute: startTime.getUTCMinutes(),
-                        second: startTime.getUTCSeconds(),
-                      })
+                    type="datetime-local"
+                    value={this.state.startTime}
+                    onChange={({target}) => {
+                      let startMoment = moment(target.value)
                       this.setState({ startMoment })
-                      this.setState({ startTime })
+                      this.setState({ startDate: startMoment.toDate() })
+                      this.setState({ startTime: startMoment.toDate() })
                     }}
                   />
+
                   <Button
                     onClick={() => {
                         this.setState({
@@ -479,33 +464,42 @@ export default class AdminJobsAdd extends React.Component {
                         })
                       }
                     }
-                    label='Now'/>
+                    >Now</Button>
                 </div>
               </Box>
 
               <Box px={2}>
-                <Checkbox
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                    checked={this.state.repeatCount !== 1}
+                    onChange={(isInputChecked) => {
+                      console.log(isInputChecked)
+                      if (isInputChecked === true) this.onRepeatChange(2)
+                      else this.onRepeatChange(1)
+                    }}
+                    />
+                  }
                   label="Repeat"
-                  checked={this.state.repeatCount !== 1}
-                  onChange={(isInputChecked) => {
-                    console.log(isInputChecked)
-                    if (isInputChecked === true) this.onRepeatChange(2)
-                    else this.onRepeatChange(1)
-                  }}
-                />
+                  />
                 {this.state.repeatCount !== 1 && <div>
-                  <Checkbox
-                    label="Repeat forever"
+                  <FormControlLabel
+                  control={
+                    <Checkbox
                     checked={this.state.repeatCount === 0}
                     onChange={(isInputChecked) => {
                       if (isInputChecked === true) this.onRepeatChange(0)
                       else this.onRepeatChange(2)
                     }}
                   />
+                  }
+                  label="Repeat forever"
+                  />
+
                   {this.state.repeatCount !== 0 && <Input
                   type='number'
                   min='0'
-                  label='times to repeat'
+                  placeholder='times to repeat'
                   name='repeat-count'
                   value={this.state.repeatCount}
                   onChange={(value) => {this.onRepeatChange(value)}}
@@ -518,45 +512,16 @@ export default class AdminJobsAdd extends React.Component {
               </Box>
               </Flex>
 
-              </CardText>
+              </CardContent>
               <CardActions>
                 <Button
                   raised
                   onClick={this.onSubmit}
-                  label='Add' style={{marginLeft: 20}} />
+                  style={{marginLeft: 20}}>Add</Button>
               </CardActions>
             </Card>
 
-          </div>
-          </div>}
-          <style jsx>{`
-          .container {
-            max-width: 900px;
-            padding-left: 20px;
-            padding-right: 20px;
-            margin: auto;
-          }
-          hr {
-            margin-top: 10px;
-            margin-bottom: 10px;
-            color: #ccccc;
-          }
-          h2 {
-            font-weight: 100;
-            padding-bottom: 20px;
-          }
-          .option-name {
-            display: block;
-            padding-bottom: 10px;
-          }
-          .option {
-            padding-bottom: 20px;
-          }
-          .url-list {
-            width: 300px;
-            min-height: 100px;
-          }
-          `}</style>
+          </Container>}
         </div>
       </Layout>
     )
