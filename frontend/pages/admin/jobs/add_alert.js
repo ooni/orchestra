@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import Head from 'next/head'
 import Router from 'next/router'
 
-
 import { withStyles } from 'material-ui/styles'
 import Button from 'material-ui/Button'
 import Input, { InputLabel } from 'material-ui/Input'
@@ -13,23 +12,17 @@ import Card, { CardHeader, CardContent, CardActions } from 'material-ui/Card'
 import TextField from 'material-ui/TextField'
 import List, { ListItem, ListItemText } from 'material-ui/List'
 
-import MomentUtils from 'material-ui-pickers/utils/moment-utils'
-import MuiPickersUtilsProvider from 'material-ui-pickers/utils/MuiPickersUtilsProvider'
-import DateTimePicker from 'material-ui-pickers/DateTimePicker'
-import Select from 'react-select'
-
-
 import Layout from '../../../components/layout'
 import Session from '../../../components/session'
 import {
-  DesignatorSlider,
-  DurationPicker,
-  RepeatString,
   ToScheduleString
 } from '../../../components/ui/schedule'
 
-import { Flex, Box, Grid } from 'ooni-components'
+import TargetConfig from '../../../components/ui/jobs/TargetConfig'
+import ScheduleConfig from '../../../components/ui/jobs/ScheduleConfig'
+
 import {
+  Flex, Box, Grid,
   Container,
   Heading
 } from 'ooni-components'
@@ -327,7 +320,6 @@ class AdminJobsAdd extends React.Component {
           <link href="/static/vendor/react-select.css" rel="stylesheet" />
         </Head>
 
-        <MuiPickersUtilsProvider utils={MomentUtils}>
           <div>
           <Container>
             {submitted &&
@@ -410,102 +402,27 @@ class AdminJobsAdd extends React.Component {
               <hr/>
 
               <Heading h={2}>Target</Heading>
-
-              <Flex>
-                <Box w={1/2} pr={2}>
-                <Heading h={4}>Country</Heading>
-                <Select
-                  name='countries'
-                  multi
-                  options={this.props.countries}
-                  value={this.state.targetCountries}
-                  onChange={this.onTargetCountryChange}
-                />
-                </Box>
-
-                <Box w={1/2}>
-                <Heading h={4}>Platform</Heading>
-                <Select
-                  name='platform'
-                  multi
-                  options={this.props.platforms}
-                  value={this.state.targetPlatforms}
-                  onChange={this.onTargetPlatformChange}
-                />
-                </Box>
-              </Flex>
+              <TargetConfig
+                countries={this.props.countries}
+                targetCountries={this.state.targetCountries}
+                onTargetCountryChange={this.onTargetCountryChange}
+                platforms={this.props.platforms}
+                targetPlatforms={this.state.targetPlatforms}
+                onTargetPlatformChange={this.onTargetPlatformChange}
+              />
 
               <hr />
 
               <Heading h={2}>Schedule</Heading>
-              <Flex>
-              <Box px={2}>
-                <div className='option'>
-
-                  <DateTimePicker
-                    value={this.state.startMoment}
-                    disablePast
-                    label='Start on'
-                    onChange={(startMoment) => {
-                      this.setState({ startMoment })
-                    }}
-                  />
-
-                  <Button
-                    onClick={() => {
-                        this.setState({
-                          startMoment: moment(new Date())
-                        })
-                      }
-                    }
-                    >Now</Button>
-                </div>
-              </Box>
-
-              <Box px={2}>
-                <FormGroup>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                    checked={this.state.repeatCount !== 1}
-                    onChange={({target}) => {
-                      if (target.checked === true) this.onRepeatChange(2)
-                      else this.onRepeatChange(1)
-                    }}
-                    />
-                  }
-                  label="Repeat"
-                  />
-                {this.state.repeatCount !== 1 && <div>
-                  <FormControlLabel
-                  control={
-                    <Checkbox
-                    checked={this.state.repeatCount === 0}
-                    onChange={({target}) => {
-                      if (target.checked === true) this.onRepeatChange(0)
-                      else this.onRepeatChange(2)
-                    }}
-                  />
-                  }
-                  label="Repeat forever"
-                  />
-
-                  {this.state.repeatCount !== 0 && <Input
-                  type='number'
-                  min='0'
-                  placeholder='times to repeat'
-                  name='repeat-count'
-                  value={this.state.repeatCount}
-                  onChange={(value) => {this.onRepeatChange(value)}}
-                  />}
-                <DurationPicker onChange={this.onDurationChange}
-                                duration={this.state.duration} />
-
-                <RepeatString duration={this.state.duration} repeatCount={this.state.repeatCount} />
-                </div>}
-                </FormGroup>
-              </Box>
-              </Flex>
+              <ScheduleConfig
+                startMoment={this.state.startMoment}
+                onStartMomentChange={(startMoment) => {
+                  this.setState({ startMoment })
+                }}
+                repeatCount={this.state.repeatCount}
+                onRepeatChange={this.onRepeatChange}
+                duration={this.state.duration}
+                onDurationChange={this.onDurationChange} />
 
               </CardContent>
               <CardActions>
@@ -517,7 +434,6 @@ class AdminJobsAdd extends React.Component {
             </Card>
             </Container>}
         </div>
-        </MuiPickersUtilsProvider>
       </Layout>
     )
   }
