@@ -11,24 +11,19 @@ import Avatar from 'material-ui/Avatar'
 import Button from 'material-ui/Button'
 import AddIcon from '@material-ui/icons/Add'
 import ClearIcon from '@material-ui/icons/Clear'
+import DeleteIcon from '@material-ui/icons/Delete'
 import MessageIcon from '@material-ui/icons/Message'
 import AssignmentIcon from '@material-ui/icons/Assignment'
-
+import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp'
+import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown'
 
 import Card, { CardHeader, CardContent, CardActions } from 'material-ui/Card'
 
-//import Card from 'react-toolbox/lib/card/Card'
-//import CardActions from 'react-toolbox/lib/card/CardActions'
-//import CardTitle from 'react-toolbox/lib/card/CardTitle'
-//import CardText from 'react-toolbox/lib/card/CardText'
-
-//import List from 'react-toolbox/lib/list/List'
-//import ListItem from 'react-toolbox/lib/list/ListItem'
-import List, { ListItem } from 'material-ui/List'
+import List, { ListItem, ListItemText } from 'material-ui/List'
 
 import moment from 'moment'
 
-import { Flex, Box, Grid } from 'ooni-components'
+import { Flex, Box } from 'ooni-components'
 import { Container } from 'ooni-components'
 
 import Layout from '../../../components/layout'
@@ -88,69 +83,85 @@ class JobCard extends React.Component {
       subtitle = `[DELETED] ${subtitle}`
     }
 
-    let cardAvatarValue, cardAvatar
+    let cardAvatar
     if (task) {
-      cardAvatarValue = 'assignment'
+      cardAvatar = <Avatar style={{paddingTop: '8px'}}><AssignmentIcon /></Avatar>
     } else {
-      cardAvatarValue = 'message'
+      cardAvatar = <Avatar style={{paddingTop: '8px'}}><MessageIcon /></Avatar>
     }
-    cardAvatar = <Avatar icon={cardAvatarValue} style={{paddingTop: '8px'}}/>
     return (
       <Card style={{position: 'relative'}}>
         <div style={{position: 'absolute', right: 0}} onClick={() => {this.setState({isOpen: !this.state.isOpen})}}>
-          {isOpen && <Button icon='keyboard_arrow_up' />}
-          {!isOpen && <Button icon='keyboard_arrow_down' />}
+          {isOpen && <Button><KeyboardArrowUpIcon/></Button>}
+          {!isOpen && <Button><KeyboardArrowDownIcon/></Button>}
         </div>
         <CardHeader
           title={comment}
           avatar={cardAvatar}
-          subtitle={subtitle}
+          subheader={subtitle}
           />
-        <CardActions>
-          {state !== 'deleted' && <Button label="Delete" onClick={() => {onDelete(id)}}/>}
-           <Button label="Edit" onClick={() => {alert('I do nothing')}}/>
-        </CardActions>
-        <CardText>
+        <CardContent>
           {isOpen && <List>
-            {alertData && <ListItem
+            {alertData && <ListItem>
+            <ListItemText
                 primary={alertData.message}
                 secondary="Message"/>
+            </ListItem>
             }
-            {alertData && <ListItem
+            {alertData && <ListItem>
+            <ListItemText
                 primary={JSON.stringify(alertData.extra)}
                 secondary="Alert Extra"/>
+            </ListItem>
             }
 
-            {task && <ListItem
+            {task && <ListItem>
+            <ListItemText
                 primary={task.test_name}
                 secondary="Test name"/>
+            </ListItem>
             }
-            {task && <ListItem
+            {task && <ListItem>
+            <ListItemText
                 primary={JSON.stringify(task.arguments)}
                 secondary="Test arguments"/>
+            </ListItem>
             }
 
-            <ListItem
+            <ListItem>
+            <ListItemText
                 primary={schedule}
                 secondary="Schedule"/>
+            </ListItem>
 
-            <ListItem
+            <ListItem>
+            <ListItemText
                 primary={''+delay}
                 secondary="Delay"/>
+            </ListItem>
 
-            <ListItem
+            <ListItem>
+            <ListItemText
                 primary={creationTime}
                 secondary="Creation time"/>
+            </ListItem>
 
-            <ListItem
+            <ListItem>
+            <ListItemText
                 primary={targetCountries}
                 secondary="Target countries"/>
-            <ListItem
+            </ListItem>
+            <ListItem>
+            <ListItemText
                 primary={targetPlatforms}
                 secondary="Target platforms"/>
+            </ListItem>
           </List>}
-
-        </CardText>
+        </CardContent>
+        <CardActions>
+          {state !== 'deleted' && <Button onClick={() => {onDelete(id)}}><DeleteIcon/></Button>}
+           <Button onClick={() => {alert('I do nothing')}}>Edit</Button>
+        </CardActions>
       </Card>
     )
   }
@@ -212,7 +223,6 @@ class AdminJobsIndex extends React.Component {
       actionButtonOpen
     } = this.state
 
-    console.log("Calling render")
     return (
       <Layout title="Jobs">
         <Head>
@@ -223,7 +233,7 @@ class AdminJobsIndex extends React.Component {
           <Container style={{position: 'relative'}}>
             {jobList.map((job) => {
               return (
-                <Grid col={6} px={2}>
+                <Flex>
                 <JobCard
                   key={job.id}
                   onDelete={this.onDelete}
@@ -236,7 +246,7 @@ class AdminJobsIndex extends React.Component {
                   target={job.target}
                   alertData={job.alert}
                   task={job.task} />
-                </Grid>
+                </Flex>
               )
             })}
             <div>
