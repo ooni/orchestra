@@ -27,7 +27,6 @@ class AdminLogin extends React.Component {
   }
 
   onUsernameChange(username) {
-    console.log("Setting username to", username)
     this.setState({username})
   }
   onPasswordChange(password) {

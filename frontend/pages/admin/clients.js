@@ -234,9 +234,10 @@ export default class AdminClients extends React.Component {
         </Head>
         <Container>
           {metadata.count && <MetadataRow metadata={metadata} />}
+          <Flex wrap>
           {results && results.map((d) => {
             return (
-              <Flex>
+              <Box key={d.client_id} w={1/3}>
               <ActiveClient
                 clientId={d.client_id}
                 probeAsn={d.probe_asn}
@@ -251,9 +252,10 @@ export default class AdminClients extends React.Component {
                 token={d.token}
                 lastUpdated={d.last_updated}
                 created={d.creation_time} />
-            </Flex>
+            </Box>
             )
           })}
+          </Flex>
           <Pagination
             limit={limit}
             offset={offset}

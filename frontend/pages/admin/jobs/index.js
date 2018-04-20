@@ -43,7 +43,6 @@ class JobCard extends React.Component {
   }
 
   constructor (props) {
-    console.log("Callin contr")
     super(props)
     this.state = {
       isOpen: false
@@ -85,9 +84,9 @@ class JobCard extends React.Component {
 
     let cardAvatar
     if (task) {
-      cardAvatar = <Avatar style={{paddingTop: '8px'}}><AssignmentIcon /></Avatar>
+      cardAvatar = <Avatar><AssignmentIcon /></Avatar>
     } else {
-      cardAvatar = <Avatar style={{paddingTop: '8px'}}><MessageIcon /></Avatar>
+      cardAvatar = <Avatar><MessageIcon /></Avatar>
     }
     return (
       <Card style={{position: 'relative'}}>
@@ -169,7 +168,6 @@ class JobCard extends React.Component {
 
 class AdminJobsIndex extends React.Component {
   constructor (props) {
-    console.log("Calling constructor")
     super(props)
     this.state = {
       jobList: [],
