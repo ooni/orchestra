@@ -6,7 +6,7 @@ import Router from 'next/router'
 
 import { withStyles } from 'material-ui/styles'
 import Button from 'material-ui/Button'
-import Input from 'material-ui/Input'
+import Input, { InputLabel } from 'material-ui/Input'
 import Checkbox from 'material-ui/Checkbox'
 import { FormGroup, FormControlLabel } from 'material-ui/Form'
 import Card, { CardHeader, CardContent, CardActions } from 'material-ui/Card'
@@ -378,21 +378,35 @@ class AdminJobsAdd extends React.Component {
           </Container>
           {!submitted &&
           <Container>
-            <Card title="New Alert">
+            <Card>
+              <CardHeader  title="New Alert" />
               <CardContent>
+              <Flex wrap>
+                <Box w={1}>
+                <InputLabel>Message</InputLabel>
                 <Input
+                  fullWidth
                   onChange={this.onMessageChange}
-                  placeholder="message"
+                  placeholder="make it short"
                   type="text" />
+                </Box>
+                <Box w={1} pt={3}>
+                <InputLabel>Link</InputLabel>
                 <Input
+                  fullWidth
                   onChange={this.onHrefChange}
-                  placeholder="href"
+                  placeholder="https://msg.ooni.io/xxx"
                   type="text" />
+                </Box>
+                <Box w={1} pt={1}>
                 <Input
+                  fullWidth
                   onChange={this.onAltHrefChange}
-                  placeholder="alt hrefs"
+                  placeholder="https://cloudfront.com/foo/bar/xxx"
                   multiline
                   type="text" />
+                </Box>
+              </Flex>
               <hr/>
 
               <Heading h={2}>Target</Heading>
