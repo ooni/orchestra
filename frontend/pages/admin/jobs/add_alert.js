@@ -3,34 +3,21 @@ import PropTypes from 'prop-types'
 import Head from 'next/head'
 import Router from 'next/router'
 
-import Select from 'react-select'
-//import Autocomplete from 'react-toolbox/lib/autocomplete/Autocomplete'
 
+import { withStyles } from 'material-ui/styles'
 import Button from 'material-ui/Button'
-//import Button from 'react-toolbox/lib/button/Button'
-//import Input from 'react-toolbox/lib/input/Input'
 import Input from 'material-ui/Input'
-
-//import Checkbox from 'react-toolbox/lib/checkbox/Checkbox'
 import Checkbox from 'material-ui/Checkbox'
-import { FormControlLabel } from 'material-ui/Form'
-
+import { FormGroup, FormControlLabel } from 'material-ui/Form'
 import Card, { CardHeader, CardContent, CardActions } from 'material-ui/Card'
-//import Card from 'react-toolbox/lib/card/Card'
-//import CardTitle from 'react-toolbox/lib/card/CardTitle'
-//import CardActions from 'react-toolbox/lib/card/CardActions'
-//import CardText from 'react-toolbox/lib/card/CardText'
-
-//import DatePicker from 'react-toolbox/lib/date_picker/DatePicker'
-//import TimePicker from 'react-toolbox/lib/time_picker/TimePicker'
-
 import TextField from 'material-ui/TextField'
+import List, { ListItem, ListItemText } from 'material-ui/List'
 
-import List, { ListItem } from 'material-ui/List'
-//import List from 'react-toolbox/lib/list/List'
-//import ListItem from 'react-toolbox/lib/list/ListItem'
+import MomentUtils from 'material-ui-pickers/utils/moment-utils'
+import MuiPickersUtilsProvider from 'material-ui-pickers/utils/MuiPickersUtilsProvider'
+import DateTimePicker from 'material-ui-pickers/DateTimePicker'
+import Select from 'react-select'
 
-import moment from 'moment'
 
 import Layout from '../../../components/layout'
 import Session from '../../../components/session'
@@ -42,8 +29,12 @@ import {
 } from '../../../components/ui/schedule'
 
 import { Flex, Box, Grid } from 'ooni-components'
-import { Container } from 'ooni-components'
+import {
+  Container,
+  Heading
+} from 'ooni-components'
 
+import moment from 'moment'
 
 class JobCreateConfirm extends React.Component {
   static propTypes = {
@@ -94,56 +85,52 @@ class JobCreateConfirm extends React.Component {
         <CardHeader title="New Alert Summary" />
         <CardContent>
           <List>
-          <ListItem
-            ripple={false}
+          <ListItem>
+            <ListItemText
             primary={alertMessage}
             secondary="Message" />
-          <ListItem
-            ripple={false}
+          </ListItem>
+          <ListItem>
+            <ListItemText
             primary={href}
             secondary="Link" />
-          <ListItem
-            ripple={false}
+          </ListItem>
+          <ListItem>
+            <ListItemText
             primary={startTimeCaption}
             secondary="Start time" />
-          <ListItem
-            ripple={false}
+          </ListItem>
+          <ListItem>
+            <ListItemText
             primary={<DurationCaption
                         duration={duration}
                         repeatCount={repeatCount}
                         startMoment={startMoment} />}
             secondary="Duration" />
 
-          <ListItem
-            ripple={false}
+          </ListItem>
+          <ListItem>
+            <ListItemText
             primary={targetCountries.join(',')}
-            secondary="Target pountries" />
-          <ListItem
-            ripple={false}
+            secondary="Target countries" />
+          </ListItem>
+          <ListItem>
+            <ListItemText
             primary={targetPlatforms.join(',')}
             secondary="Target platforms" />
+          </ListItem>
           </List>
-
         </CardContent>
-
-        <style jsx>{`
-        h2, h3, p, ul, div {
-          margin-bottom: 16px;
-        }
-        `}</style>
-
       </div>
     )
   }
 }
 
-export default class AdminJobsAdd extends React.Component {
+class AdminJobsAdd extends React.Component {
 
   constructor (props) {
     super(props)
     this.state = {
-      startDate: new Date(),
-      startTime: new Date(),
       startMoment: moment(),
       repeatCount: 1,
       alertMessage: '',
@@ -217,11 +204,12 @@ export default class AdminJobsAdd extends React.Component {
     this.setState({ duration: target.value });
   }
 
-  onRepeatChange ({target}) {
-    this.setState({ repeatCount: target.value });
+  onRepeatChange (repeatCount) {
+    this.setState({ repeatCount });
   }
 
-  onTargetCountryChange (value) {
+  onTargetCountryChange (valueList) {
+    let value = valueList.map(x => x.value)
     if (value.indexOf('any') != -1) {
       if (this.state.targetCountries.indexOf('any') != -1) {
         // If any was already there we remove it
@@ -234,7 +222,8 @@ export default class AdminJobsAdd extends React.Component {
     this.setState({ targetCountries: value })
   }
 
-  onTargetPlatformChange (value) {
+  onTargetPlatformChange (valueList) {
+    let value = valueList.map(x => x.value)
     if (value.indexOf('any') != -1) {
       if (this.state.targetPlatforms.indexOf('any') != -1) {
         // If any was already there we remove it
@@ -321,8 +310,6 @@ export default class AdminJobsAdd extends React.Component {
   render () {
     const {
       submitted,
-      startDate,
-      startTime,
       startMoment,
       repeatCount,
       alertMessage,
@@ -340,7 +327,8 @@ export default class AdminJobsAdd extends React.Component {
           <link href="/static/vendor/react-select.css" rel="stylesheet" />
         </Head>
 
-        <div>
+        <MuiPickersUtilsProvider utils={MomentUtils}>
+          <div>
           <Container>
             {submitted &&
               <Card>
@@ -407,60 +395,52 @@ export default class AdminJobsAdd extends React.Component {
                   type="text" />
               <hr/>
 
-              <h2>Target</h2>
+              <Heading h={2}>Target</Heading>
 
-              <div className='option'>
-                <span className='option-name'>
-                  Country
-                </span>
+              <Flex>
+                <Box w={1/2} pr={2}>
+                <Heading h={4}>Country</Heading>
                 <Select
-                  name='test'
+                  name='countries'
+                  multi
                   options={this.props.countries}
                   value={this.state.targetCountries}
                   onChange={this.onTargetCountryChange}
                 />
-              </div>
+                </Box>
 
-              <div className='option'>
-                <span className='option-name'>
-                  Platform
-                </span>
+                <Box w={1/2}>
+                <Heading h={4}>Platform</Heading>
                 <Select
-                  name='test'
+                  name='platform'
+                  multi
                   options={this.props.platforms}
                   value={this.state.targetPlatforms}
                   onChange={this.onTargetPlatformChange}
                 />
-              </div>
+                </Box>
+              </Flex>
 
               <hr />
-              <h2>Schedule</h2>
+
+              <Heading h={2}>Schedule</Heading>
               <Flex>
               <Box px={2}>
                 <div className='option'>
-                  <span className='option-name'>
-                    Start on
-                  </span>
 
-                  <TextField
-                    id="date"
-                    label="Start time"
-                    type="datetime-local"
-                    value={this.state.startTime}
-                    onChange={({target}) => {
-                      let startMoment = moment(target.value)
+                  <DateTimePicker
+                    value={this.state.startMoment}
+                    disablePast
+                    label='Start on'
+                    onChange={(startMoment) => {
                       this.setState({ startMoment })
-                      this.setState({ startDate: startMoment.toDate() })
-                      this.setState({ startTime: startMoment.toDate() })
                     }}
                   />
 
                   <Button
                     onClick={() => {
                         this.setState({
-                          startMoment: moment(new Date()),
-                          startTime: new Date(),
-                          startDate: new Date()
+                          startMoment: moment(new Date())
                         })
                       }
                     }
@@ -469,13 +449,13 @@ export default class AdminJobsAdd extends React.Component {
               </Box>
 
               <Box px={2}>
+                <FormGroup>
                 <FormControlLabel
                   control={
                     <Checkbox
                     checked={this.state.repeatCount !== 1}
-                    onChange={(isInputChecked) => {
-                      console.log(isInputChecked)
-                      if (isInputChecked === true) this.onRepeatChange(2)
+                    onChange={({target}) => {
+                      if (target.checked === true) this.onRepeatChange(2)
                       else this.onRepeatChange(1)
                     }}
                     />
@@ -487,8 +467,8 @@ export default class AdminJobsAdd extends React.Component {
                   control={
                     <Checkbox
                     checked={this.state.repeatCount === 0}
-                    onChange={(isInputChecked) => {
-                      if (isInputChecked === true) this.onRepeatChange(0)
+                    onChange={({target}) => {
+                      if (target.checked === true) this.onRepeatChange(0)
                       else this.onRepeatChange(2)
                     }}
                   />
@@ -509,6 +489,7 @@ export default class AdminJobsAdd extends React.Component {
 
                 <RepeatString duration={this.state.duration} repeatCount={this.state.repeatCount} />
                 </div>}
+                </FormGroup>
               </Box>
               </Flex>
 
@@ -520,10 +501,24 @@ export default class AdminJobsAdd extends React.Component {
                   style={{marginLeft: 20}}>Add</Button>
               </CardActions>
             </Card>
-
-          </Container>}
+            </Container>}
         </div>
+        </MuiPickersUtilsProvider>
       </Layout>
     )
   }
 }
+
+const styles = theme => ({
+  root: {
+    display: 'flex',
+  },
+  formControl: {
+    margin: theme.spacing.unit * 3,
+  },
+  group: {
+    margin: `${theme.spacing.unit}px 0`,
+  },
+});
+
+export default withStyles(styles)(AdminJobsAdd)
