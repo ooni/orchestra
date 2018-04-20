@@ -5,7 +5,6 @@ import globalStyle from '../components/globalStyle'
 
 export default class StyledComponentsDocument extends Document {
   render () {
-    console.log("Calling render styled cocument")
     const sheet = new ServerStyleSheet()
     const main = sheet.collectStyles(<Main />)
     const styleTags = sheet.getStyleElement()
