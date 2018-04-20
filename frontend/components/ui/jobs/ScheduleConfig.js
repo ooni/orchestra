@@ -1,5 +1,7 @@
 import React from 'react'
 
+import Head from 'next/head'
+
 import Button from 'material-ui/Button'
 import Checkbox from 'material-ui/Checkbox'
 import { FormGroup, FormControlLabel } from 'material-ui/Form'

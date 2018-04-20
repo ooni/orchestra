@@ -11,11 +11,14 @@ import { FormGroup, FormControlLabel } from 'material-ui/Form'
 import Card, { CardHeader, CardContent, CardActions } from 'material-ui/Card'
 import TextField from 'material-ui/TextField'
 import List, { ListItem, ListItemText } from 'material-ui/List'
+import Stepper, { Step, StepLabel } from 'material-ui/Stepper'
+import { CircularProgress } from 'material-ui/Progress'
 
 import Layout from '../../../components/layout'
 import Session from '../../../components/session'
 import {
-  ToScheduleString
+    RepeatString,
+    ToScheduleString
 } from '../../../components/ui/schedule'
 
 import TargetConfig from '../../../components/ui/jobs/TargetConfig'
@@ -119,6 +122,23 @@ class JobCreateConfirm extends React.Component {
   }
 }
 
+function getSteps() {
+  return ['Choose message & targets', 'Repeat?', 'Review & submit!'];
+}
+
+const getStepContent = (idx) => {
+  switch (idx) {
+    case 0:
+      return 'Choose message & targets';
+    case 1:
+      return 'Repeat?';
+    case 2:
+      return 'Review & submit!';
+    default:
+      return 'Unknown step';
+  }
+}
+
 class AdminJobsAdd extends React.Component {
 
   constructor (props) {
@@ -133,22 +153,28 @@ class AdminJobsAdd extends React.Component {
       targetPlatforms: [],
       duration: {W: 1},
       inputSelectorOpen: false,
-      submitted: false,
       comment: '',
       session: new Session(),
-      finalized: null
+      activeStep: 0,
+      skipped: new Set(),
+      error: null,
+      submitting: false
     }
 
     this.onTargetCountryChange = this.onTargetCountryChange.bind(this)
     this.onTargetPlatformChange = this.onTargetPlatformChange.bind(this)
     this.onDurationChange = this.onDurationChange.bind(this)
     this.onRepeatChange = this.onRepeatChange.bind(this)
-    this.onSubmit = this.onSubmit.bind(this)
-    this.onEdit = this.onEdit.bind(this)
-    this.onAdd = this.onAdd.bind(this)
+
     this.onMessageChange = this.onMessageChange.bind(this)
     this.onHrefChange = this.onHrefChange.bind(this)
     this.onAltHrefChange = this.onAltHrefChange.bind(this)
+
+    this.onSubmit = this.onSubmit.bind(this)
+    this.isStepSkipped = this.isStepSkipped.bind(this)
+    this.handleNext = this.handleNext.bind(this)
+    this.handleBack = this.handleBack.bind(this)
+    this.handleSkip = this.handleSkip.bind(this)
   }
 
   static async getInitialProps ({req, res}) {
@@ -230,20 +256,10 @@ class AdminJobsAdd extends React.Component {
   }
 
   onSubmit () {
-    console.log('on submit')
     this.setState({
-      submitted: true
+      submitting: true
     })
-  }
 
-  onEdit () {
-    this.setState({
-      submitted: false
-    })
-  }
-
-  onAdd () {
-    console.log('on add')
     let req = this.state.session.createRequest({baseURL: process.env.ORCHESTRATE_URL})
     let alertExtra = {}
     if (this.state.href != '') {
@@ -284,155 +300,202 @@ class AdminJobsAdd extends React.Component {
       }
     }).then((res) => {
       this.setState({
-        finalized: {
-          error: null
-        },
-        submitted: true
+       error: null
       })
       Router.push('/admin/jobs')
-    }).catch((err) => {
-      this.setState({
-        finalized: {
-          error: err
-        },
-        submitted: true
-      })
+    }).catch((error) => {
+      this.setState({ error })
     })
+  }
+
+  isStepOptional (step) {
+    return step === 1;
+  }
+
+  isStepSkipped(step) {
+    return this.state.skipped.has(step)
+  }
+
+  handleNext() {
+    const { activeStep } = this.state;
+    let { skipped } = this.state;
+    if (this.isStepSkipped(activeStep)) {
+      skipped = new Set(skipped.values());
+      skipped.delete(activeStep);
+    }
+    this.setState({
+      activeStep: activeStep + 1,
+      error: null,
+      skipped,
+    })
+  }
+
+  handleBack() {
+    const { activeStep } = this.state;
+    this.setState({
+      activeStep: activeStep - 1,
+    })
+  }
+
+  handleSkip() {
+    const { activeStep } = this.state;
+    if (!this.isStepOptional(activeStep)) {
+      throw new Error("You can't skip a step that isn't optional.");
+    }
+    const skipped = new Set(this.state.skipped.values());
+    skipped.add(activeStep)
+    this.setState({
+      activeStep: this.state.activeStep + 1,
+      skipped,
+    });
   }
 
   render () {
     const {
-      submitted,
+      submitting,
       startMoment,
       repeatCount,
       alertMessage,
       targetCountries,
       targetPlatforms,
       duration,
-      finalized
+      activeStep,
+      error
     } = this.state
 
+    const steps = getSteps()
 
     return (
       <Layout title="Add Jobs">
         <Head>
-          <title>Jobs - OONI Proteus</title>
+          <title>Jobs - OONI Orchestra</title>
           <link href="/static/vendor/react-select.css" rel="stylesheet" />
         </Head>
 
           <div>
-          <Container>
-            {submitted &&
-              <Card>
-              {finalized && finalized.error === null &&
-                <CardHeader title="Job created successfully!" />
+          <div>
+          <Stepper activeStep={activeStep}>
+            {steps.map((label, index) => {
+              const props = {}
+              if (this.isStepSkipped(index)) {
+                props.completed = false
               }
-              {finalized && finalized.error !== null &&
-                <div>
-                <CardHeader title="Job creation error" />
-                <p>{finalized.error.toString()}</p>
-                <CardActions>
-                <Button
-                  raised
-                  onClick={this.onEdit}>Edit</Button>
-                <Button
-                  raised
-                  onClick={this.onAdd}>Retry</Button>
-                </CardActions>
-                </div>
-              }
-              {!finalized && <div>
-                <JobCreateConfirm
-                  startMoment={this.state.startMoment}
-                  duration={this.state.duration}
-                  repeatCount={this.state.repeatCount}
-                  duration={this.state.duration}
+              return (
+                <Step key={label} {...props}>
+                  <StepLabel>{label}</StepLabel>
+                </Step>
+              );
+            })}
+          </Stepper>
+          </div>
 
-                  alertMessage={this.state.alertMessage}
-                  href={this.state.href}
-                  altHref={this.state.altHref}
+          {error &&
+            <div>
+            <p>Job creation error</p>
+            <p>{error.toString()}</p>
+            </div>
+          }
 
-                  targetCountries={this.state.targetCountries}
-                  targetPlatforms={this.state.targetPlatforms}
-                  urls={this.state.urls}
-                  comment={this.state.comment}
-                />
-                <CardActions>
-                <Button
-                  onClick={this.onEdit}>Edit</Button>
-                <Button
-                  onClick={this.onAdd}>Add</Button>
-                </CardActions>
-              </div>}
+          {submitting && <CircularProgress />}
 
-              </Card>
-            }
-          </Container>
-          {!submitted &&
-          <Container>
-            <Card>
-              <CardHeader  title="New Alert" />
-              <CardContent>
-              <Flex wrap>
-                <Box w={1}>
-                <InputLabel>Message</InputLabel>
-                <Input
-                  fullWidth
-                  onChange={this.onMessageChange}
-                  placeholder="make it short"
-                  type="text" />
-                </Box>
-                <Box w={1} pt={3}>
-                <InputLabel>Link</InputLabel>
-                <Input
-                  fullWidth
-                  onChange={this.onHrefChange}
-                  placeholder="https://msg.ooni.io/xxx"
-                  type="text" />
-                </Box>
-                <Box w={1} pt={1}>
-                <Input
-                  fullWidth
-                  onChange={this.onAltHrefChange}
-                  placeholder="https://cloudfront.com/foo/bar/xxx"
-                  multiline
-                  type="text" />
-                </Box>
-              </Flex>
-              <hr/>
+          {activeStep === 0 && <Container>
+            <Heading h={2}>New alert</Heading>
+            <Flex wrap>
+              <Box w={1}>
+              <InputLabel>Message</InputLabel>
+              <Input
+                fullWidth
+                onChange={this.onMessageChange}
+                placeholder="make it short"
+                type="text" />
+              </Box>
+              <Box w={1} pt={3}>
+              <InputLabel>Link</InputLabel>
+              <Input
+                fullWidth
+                onChange={this.onHrefChange}
+                placeholder="https://msg.ooni.io/xxx"
+                type="text" />
+              </Box>
+              <Box w={1} pt={1}>
+              <Input
+                fullWidth
+                onChange={this.onAltHrefChange}
+                placeholder="https://cloudfront.com/foo/bar/xxx"
+                multiline
+                type="text" />
+              </Box>
+            </Flex>
+            <hr/>
 
-              <Heading h={2}>Target</Heading>
-              <TargetConfig
-                countries={this.props.countries}
-                targetCountries={this.state.targetCountries}
-                onTargetCountryChange={this.onTargetCountryChange}
-                platforms={this.props.platforms}
-                targetPlatforms={this.state.targetPlatforms}
-                onTargetPlatformChange={this.onTargetPlatformChange}
-              />
+            <Heading h={2}>Target</Heading>
+            <TargetConfig
+              countries={this.props.countries}
+              targetCountries={this.state.targetCountries}
+              onTargetCountryChange={this.onTargetCountryChange}
+              platforms={this.props.platforms}
+              targetPlatforms={this.state.targetPlatforms}
+              onTargetPlatformChange={this.onTargetPlatformChange}
+            />
+          </Container>}
 
-              <hr />
+          {activeStep === 1 && <Container>
+            <Heading h={2}>Schedule</Heading>
+            <ScheduleConfig
+              startMoment={this.state.startMoment}
+              onStartMomentChange={(startMoment) => {
+                this.setState({ startMoment })
+              }}
+              repeatCount={this.state.repeatCount}
+              onRepeatChange={this.onRepeatChange}
+              duration={this.state.duration}
+              onDurationChange={this.onDurationChange} />
+          </Container>}
 
-              <Heading h={2}>Schedule</Heading>
-              <ScheduleConfig
-                startMoment={this.state.startMoment}
-                onStartMomentChange={(startMoment) => {
-                  this.setState({ startMoment })
-                }}
-                repeatCount={this.state.repeatCount}
-                onRepeatChange={this.onRepeatChange}
-                duration={this.state.duration}
-                onDurationChange={this.onDurationChange} />
+          {activeStep === 2 && <Container>
+          <JobCreateConfirm
+            startMoment={this.state.startMoment}
+            duration={this.state.duration}
+            repeatCount={this.state.repeatCount}
+            duration={this.state.duration}
 
-              </CardContent>
-              <CardActions>
-                <Button
-                  raised
-                  onClick={this.onSubmit}
-                  style={{marginLeft: 20}}>Add</Button>
-              </CardActions>
-            </Card>
-            </Container>}
+            alertMessage={this.state.alertMessage}
+            href={this.state.href}
+            altHref={this.state.altHref}
+
+            targetCountries={this.state.targetCountries}
+            targetPlatforms={this.state.targetPlatforms}
+            urls={this.state.urls}
+            comment={this.state.comment}
+          />
+          </Container>}
+
+          <div>
+          <Button
+            disabled={activeStep === 0}
+            onClick={this.handleBack}
+            >Back</Button>
+          {this.isStepOptional(activeStep) && (
+            <Button
+              variant="raised"
+              color="primary"
+              onClick={this.handleSkip}
+            >
+              Skip
+            </Button>
+          )}
+          {activeStep === steps.length - 1 ? <Button
+              variant="raised"
+              color="primary"
+              onClick={this.onSubmit}
+            >Submit</Button>
+            : <Button
+            variant="raised"
+            disabled={submitting === true}
+            color="primary"
+            onClick={this.handleNext}>Next</Button>}
+          </div>
+
         </div>
       </Layout>
     )
@@ -449,6 +512,6 @@ const styles = theme => ({
   group: {
     margin: `${theme.spacing.unit}px 0`,
   },
-});
+})
 
 export default withStyles(styles)(AdminJobsAdd)
