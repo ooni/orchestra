@@ -9,7 +9,7 @@ export default () => {
   return (
     <Layout>
       <Head>
-        <title>OPOS</title>
+        <title>OONI Orchestra</title>
       </Head>
       <Container>
         <Heading h={1}>Welcome to the OONI Orchestra!</Heading>
