@@ -300,11 +300,15 @@ class AdminJobsAdd extends React.Component {
       }
     }).then((res) => {
       this.setState({
-       error: null
+       error: null,
+       submitting: false
       })
       Router.push('/admin/jobs')
     }).catch((error) => {
-      this.setState({ error })
+      this.setState({
+        submitting: false,
+        error
+      })
     })
   }
 
@@ -400,6 +404,12 @@ class AdminJobsAdd extends React.Component {
 
           {activeStep === 0 && <Container>
             <Heading h={2}>New alert</Heading>
+            <Heading color='red' h={4}>Important</Heading>
+            <p>Before you begin you should go to <a
+  href="https://msg.ooni.io/">https://msg.ooni.io/</a> and create a post that is
+  to be linked via this alert.
+            </p>
+            <p style={{paddingBottom: '20px'}}>Return to this page once you have done that</p>
             <Flex wrap>
               <Box w={1}>
               <InputLabel>Message</InputLabel>
@@ -470,7 +480,7 @@ class AdminJobsAdd extends React.Component {
           />
           </Container>}
 
-          <div>
+          <Container pt={3}>
           <Button
             disabled={activeStep === 0}
             onClick={this.handleBack}
@@ -494,7 +504,7 @@ class AdminJobsAdd extends React.Component {
             disabled={submitting === true}
             color="primary"
             onClick={this.handleNext}>Next</Button>}
-          </div>
+          </Container>
 
         </div>
       </Layout>
