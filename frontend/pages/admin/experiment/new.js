@@ -305,7 +305,7 @@ class AdminNewExperiment extends React.Component {
 
     let args = {}
     if (testName === 'web_connectivity') {
-      args.urls = this.state.urls.map(url => ({value: url, code: 'XXX'})) // XXX resolve the category code
+      args.urls = this.state.urls.map(({value}) => ({url: value, code: 'XXX'})) // XXX resolve the category code
     }
 
     let jsonData = {
@@ -313,6 +313,11 @@ class AdminNewExperiment extends React.Component {
       'iss': 'testing', // XXX change this for production usage
       'probe_cc': probeCC,
       'test_name': testName,
+      'schedule': ToScheduleString({
+                      duration: this.state.duration,
+                      startMoment: this.state.startMoment,
+                      repeatCount: this.state.repeatCount
+                  }),
       'args': args
     }
     return b64EncodeUnicode(JSON.stringify(jsonData))
@@ -372,7 +377,7 @@ class AdminNewExperiment extends React.Component {
     if (countries.indexOf('any') !== -1) {
       countries = []
     }
-    req.post('/api/v1/admin/job', {
+    req.post('/api/v1/admin/experiment', {
       'schedule': ToScheduleString({
                       duration: this.state.duration,
                       startMoment: this.state.startMoment,
@@ -380,11 +385,7 @@ class AdminNewExperiment extends React.Component {
                   }),
       // XXX we currently don't set this
       'delay': 0,
-      'comment': this.state.alertMessage,
-      'alert': {
-        'message': this.state.alertMessage,
-        'extra': alertExtra,
-      },
+      'signed_experiment': this.state.signedExperiment,
       'target': {
         'countries': countries,
         'platforms': platforms
@@ -394,7 +395,7 @@ class AdminNewExperiment extends React.Component {
        error: null,
        submitting: false
       })
-      Router.push('/admin/jobs')
+      Router.push('/admin/experiments')
     }).catch((error) => {
       this.setState({
         submitting: false,
