@@ -13,6 +13,10 @@ import TextField from 'material-ui/TextField'
 import List, { ListItem, ListItemText } from 'material-ui/List'
 import Stepper, { Step, StepLabel } from 'material-ui/Stepper'
 import { CircularProgress } from 'material-ui/Progress'
+import Select from 'material-ui/Select'
+import { MenuItem } from 'material-ui/Menu'
+
+import MdDelete from 'react-icons/lib/md/delete'
 
 import Layout from '../../../components/layout'
 import Session from '../../../components/session'
@@ -28,130 +32,188 @@ import {
   Flex, Box, Grid,
   Container,
   Heading,
-  Text
+  Text,
+  InputWithIconButton
 } from 'ooni-components'
+
+import styled from 'styled-components'
 
 import moment from 'moment'
 
-class JobCreateConfirm extends React.Component {
-  static propTypes = {
-    startMoment: PropTypes.object,
-    duration: PropTypes.object,
-    repeatCount: PropTypes.number,
-    targetCountries: PropTypes.array,
-    targetPlatforms: PropTypes.array,
-    urls: PropTypes.string,
-    alertMessage: PropTypes.string,
-    href: PropTypes.string,
-    altHref: PropTypes.string
+const AddURLButton = styled(Button)`
+  color: ${props => props.theme.colors.gray5};
+  border-radius: 0;
+  padding: 0;
+  background-color: transparent;
+  border-bottom: 1px solid ${props => props.theme.colors.gray1};
+  text-align: left;
+  text-transform: none;
+  &:hover {
+    background-color: transparent;
+  color: ${props => props.theme.colors.gray6};
+    border-bottom: 1px solid ${props => props.theme.colors.gray3};
   }
+  &:active {
+    background-color: transparent;
+  color: ${props => props.theme.colors.gray7};
+    border-bottom: 2px solid ${props => props.theme.colors.gray4};
+  }
+`
+
+function getSteps() {
+  return ['Choose experiment & targets', 'Repeat?', 'Sign & submit!'];
+}
+
+// This component is stolen from ooni/run.
+// XXX we should probably move this into ooni/design
+class AddURLsSection extends React.Component {
 
   constructor(props) {
     super(props)
+    this.state = {
+      urls: props.urls
+    }
+    this.handleDeleteURL = this.handleDeleteURL.bind(this)
+    this.handleEditURL = this.handleEditURL.bind(this)
+    this.handleKeyPress = this.handleKeyPress.bind(this)
+    this.addURL = this.addURL.bind(this)
+    this.urlRefs = new Map()
+  }
+
+  addURL() {
+    let state = Object.assign({}, this.state)
+    const idx = this.state.urls.length
+    state.urls.push({value: 'http://', error: null, ref: null})
+    this.props.onUpdatedURLs(state.urls)
+    this.setState(state, () => {
+      // This is a ghetto hax, that is a workaround for:
+      // https://github.com/jxnblk/rebass/issues/329
+      const urlInputs = document.getElementsByClassName('url-input')
+      const target = urlInputs[urlInputs.length - 1]
+      target.focus()
+      target.setSelectionRange(7,7)
+    })
+  }
+
+  handleKeyPress (e) {
+    if (e.key === 'Enter') {
+      this.addURL()
+    }
+  }
+
+  handleDeleteURL(idx) {
+    return ((event) => {
+      let state = Object.assign({}, this.state)
+      state.urls = state.urls
+                        .filter((url, jdx) => jdx !== idx)
+                        .map(url => Object.assign({}, url))
+      this.setState(state)
+      this.props.onUpdatedURLs(state.urls)
+    }).bind(this)
+  }
+
+  handleEditURL(idx) {
+    return ((event) => {
+      const value = event.target.value
+      let state = Object.assign({}, this.state)
+      state.urls = state.urls.map(url => Object.assign({}, url))
+      state.error = false
+      let update = value.split(' ').map((line) => {
+        let itm = {'value': line, 'error': null}
+        if (!line.startsWith('https://') && !line.startsWith('http://')) {
+          itm['error'] = 'URL must start with http:// or https://'
+          state.error = true
+        }
+        return itm
+      })
+      state.urls.splice.apply(state.urls, [idx, 1].concat(update))
+      this.setState(state)
+    })
   }
 
   render() {
-    const {
-      startMoment,
-      duration,
-      repeatCount,
-      alertMessage,
-      href,
-      altHref,
-      targetCountries,
-      targetPlatforms
-    } = this.props
-
-    const DurationCaption = ({duration, repeatCount, startMoment}) => (<div>
-      <RepeatString duration={duration} repeatCount={repeatCount} />
-      {ToScheduleString({
-        duration: duration,
-        startMoment: startMoment,
-        repeatCount: repeatCount
-      })}
-    </div>
-    )
-
-    let startTimeCaption = startMoment.calendar()
-    startTimeCaption += ' ('
-    startTimeCaption += startMoment.toString()
-    startTimeCaption += ')'
+    const { onUpdatedURLs } = this.props
+    const { urls } = this.state
 
     return (
-      <div>
-        <Heading h={2}>New Alert Review</Heading>
-
-        <Flex wrap>
-        <Box w={1} pb={3}>
-        <InputLabel>Message</InputLabel>
-        <Text>{alertMessage}</Text>
+      <Box w={2/3}>
+      <Heading h={4} pb={1}>URLs</Heading>
+        {urls.length == 0
+        && <div>
+          Click "Add URL" below to add a URL to test
+          </div>
+        }
+        {urls.map((url, idx) => <div key={`url-${idx}`}>
+          <InputWithIconButton
+                className='url-input'
+                value={url.value}
+                icon={<MdDelete />}
+                error={url.error}
+                onKeyPress={this.handleKeyPress}
+                onBlur={() => onUpdatedURLs(urls)}
+                onChange={this.handleEditURL(idx)}
+                onAction={this.handleDeleteURL(idx)} />
+          </div>)}
+        <div>
+          <AddURLButton onClick={this.addURL}>
+          + Add URL
+          </AddURLButton>
+        </div>
         </Box>
-
-        <Box w={1} pb={3}>
-        <InputLabel>Link</InputLabel>
-        <Text>{href}</Text>
-        </Box>
-
-        <Box w={1} pb={3}>
-        <InputLabel>Target countries</InputLabel>
-        <Text>{targetCountries.join(',')}</Text>
-        </Box>
-        <Box w={1} pb={3}>
-        <InputLabel>Target platforms</InputLabel>
-        <Text>{targetPlatforms.join(',')}</Text>
-        </Box>
-
-        <Box w={1} pb={3}>
-        <InputLabel>Start Time</InputLabel>
-        <Text>{startTimeCaption}</Text>
-        </Box>
-
-        <Box w={1} pb={3}>
-        <InputLabel>Duration</InputLabel>
-        <DurationCaption
-          duration={duration}
-          repeatCount={repeatCount}
-          startMoment={startMoment} />
-        </Box>
-
-        </Flex>
-      </div>
-    )
-  }
+      )
+    }
 }
 
-function getSteps() {
-  return ['Choose message & targets', 'Repeat?', 'Review & submit!'];
+const CodeFormat = styled.div`
+  font-family: monospace;
+  word-wrap: break-word;
+`
+
+const ExperimentSign = ({data, signedExperiment, onSignedChange}) => {
+  return (
+    <div>
+    <p>Copy paste the following into your terminal</p>
+    <Heading h={4}>Sign</Heading>
+    <CodeFormat>echo "{data}" | orchestrate sign</CodeFormat>
+    <Heading h={4}>Paste</Heading>
+    <TextField
+      label="Signed string"
+      multiline
+      fullWidth
+      rowsMax="6"
+      value={signedExperiment}
+      onChange={onSignedChange}
+    />
+    </div>
+  )
 }
 
-const getStepContent = (idx) => {
-  switch (idx) {
-    case 0:
-      return 'Choose message & targets';
-    case 1:
-      return 'Repeat?';
-    case 2:
-      return 'Review & submit!';
-    default:
-      return 'Unknown step';
-  }
+function b64EncodeUnicode(str) {
+    // first we use encodeURIComponent to get percent-encoded UTF-8,
+    // then we convert the percent encodings into raw bytes which
+    // can be fed into btoa.
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+        function toSolidBytes(match, p1) {
+            return String.fromCharCode('0x' + p1);
+    }));
 }
 
-class AdminJobsAdd extends React.Component {
+class AdminNewExperiment extends React.Component {
 
   constructor (props) {
     super(props)
     this.state = {
       startMoment: moment(),
       repeatCount: 1,
-      alertMessage: '',
-      href: '',
-      altHref: '',
+      nettest: '',
+      urls: [
+        {value: 'http://', error: null}
+      ],
       targetCountries: [],
       targetPlatforms: [],
       duration: {W: 1},
       inputSelectorOpen: false,
-      comment: '',
+      signedExperiment: '',
       session: new Session(),
       activeStep: 0,
       skipped: new Set(),
@@ -164,9 +226,9 @@ class AdminJobsAdd extends React.Component {
     this.onDurationChange = this.onDurationChange.bind(this)
     this.onRepeatChange = this.onRepeatChange.bind(this)
 
-    this.onMessageChange = this.onMessageChange.bind(this)
-    this.onHrefChange = this.onHrefChange.bind(this)
-    this.onAltHrefChange = this.onAltHrefChange.bind(this)
+    this.onNettestChange = this.onNettestChange.bind(this)
+    this.onUrlsChange = this.onUrlsChange.bind(this)
+    this.makeStringToSign = this.makeStringToSign.bind(this)
 
     this.onSubmit = this.onSubmit.bind(this)
     this.isStepSkipped = this.isStepSkipped.bind(this)
@@ -200,6 +262,13 @@ class AdminJobsAdd extends React.Component {
       {value: 'lepidopter', label: 'Lepidopter'},
     ]
 
+    props.nettests = [
+      {value: 'web_connectivity', label: 'Web Connectivity'},
+      {value: 'facebook_messenger', label: 'Facebook Messenger'},
+      {value: 'whatsapp', label: 'WhatsApp'},
+      {value: 'telegram', label: 'Telegram'}
+    ]
+
     return props
   }
 
@@ -207,14 +276,16 @@ class AdminJobsAdd extends React.Component {
     this.state.session.redirectIfInvalid()
   }
 
-  onMessageChange ({target}) {
-    this.setState({ alertMessage: target.value})
+  onNettestChange ({target}) {
+    this.setState({ nettest: target.value})
   }
-  onHrefChange ({target}) {
-    this.setState({ href: target.value})
+
+  onUrlsChange (value) {
+    this.setState({urls: value})
   }
-  onAltHrefChange ({target}) {
-    this.setState({ altHref: target.value})
+
+  onSignedChange ({target}) {
+    this.setState({ signedExperiment: target.value})
   }
 
   onDurationChange ({target}) {
@@ -223,6 +294,28 @@ class AdminJobsAdd extends React.Component {
 
   onRepeatChange (repeatCount) {
     this.setState({ repeatCount });
+  }
+
+  makeStringToSign() {
+    const testName = this.state.nettest
+    let probeCC = this.state.targetCountries.slice()
+    if (probeCC.indexOf('any') !== -1) {
+      probeCC = []
+    }
+
+    let args = {}
+    if (testName === 'web_connectivity') {
+      args.urls = this.state.urls.map(url => ({value: url, code: 'XXX'})) // XXX resolve the category code
+    }
+
+    let jsonData = {
+      'exp': moment().add(7, 'days').unix(), // XXX this should be set in relation to the schedule
+      'iss': 'testing', // XXX change this for production usage
+      'probe_cc': probeCC,
+      'test_name': testName,
+      'args': args
+    }
+    return b64EncodeUnicode(JSON.stringify(jsonData))
   }
 
   onTargetCountryChange (valueList) {
@@ -401,37 +494,22 @@ class AdminJobsAdd extends React.Component {
           {submitting && <CircularProgress />}
 
           {activeStep === 0 && <Container>
-            <Heading h={2}>New alert</Heading>
-            <Heading color='red' h={4}>Important</Heading>
-            <p>Before you begin you should go to <a
-  href="https://msg.ooni.io/">https://msg.ooni.io/</a> and create a post that is
-  to be linked via this alert.
-            </p>
-            <p style={{paddingBottom: '20px'}}>Return to this page once you have done that</p>
+            <Heading h={2}>New Experiment</Heading>
             <Flex wrap>
-              <Box w={1}>
-              <InputLabel>Message</InputLabel>
-              <Input
-                fullWidth
-                onChange={this.onMessageChange}
-                placeholder="make it short"
-                type="text" />
+              <Box w={1/3}>
+              <Select
+                value={this.state.nettest}
+                onChange={this.onNettestChange}>
+                {this.props.nettests.map(nt =>
+                  <MenuItem value={nt.value} key={nt.value}>{nt.label}</MenuItem>)}
+              </Select>
               </Box>
-              <Box w={1} pt={3}>
-              <InputLabel>Link</InputLabel>
-              <Input
-                fullWidth
-                onChange={this.onHrefChange}
-                placeholder="https://msg.ooni.io/xxx"
-                type="text" />
-              </Box>
+
+              {this.state.nettest === 'web_connectivity'
+              && <AddURLsSection
+                    urls={this.state.urls}
+                    onUpdatedURLs={this.onUrlsChange} />}
               <Box w={1} pt={1}>
-              <Input
-                fullWidth
-                onChange={this.onAltHrefChange}
-                placeholder="https://cloudfront.com/foo/bar/xxx"
-                multiline
-                type="text" />
               </Box>
             </Flex>
             <hr/>
@@ -461,21 +539,10 @@ class AdminJobsAdd extends React.Component {
           </Container>}
 
           {activeStep === 2 && <Container>
-          <JobCreateConfirm
-            startMoment={this.state.startMoment}
-            duration={this.state.duration}
-            repeatCount={this.state.repeatCount}
-            duration={this.state.duration}
-
-            alertMessage={this.state.alertMessage}
-            href={this.state.href}
-            altHref={this.state.altHref}
-
-            targetCountries={this.state.targetCountries}
-            targetPlatforms={this.state.targetPlatforms}
-            urls={this.state.urls}
-            comment={this.state.comment}
-          />
+          <ExperimentSign
+            data={this.makeStringToSign()}
+            signedExperiment={this.state.signedExperiment}
+            onSignedChange={this.onSignedChange} />
           </Container>}
 
           <Container pt={3}>
@@ -522,4 +589,4 @@ const styles = theme => ({
   },
 })
 
-export default withStyles(styles)(AdminJobsAdd)
+export default withStyles(styles)(AdminNewExperiment)

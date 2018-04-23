@@ -62,7 +62,8 @@ export default class extends React.Component {
           <header>
             <Toolbar>
             <Link href='/'><Button>Home</Button></Link>
-            <Link href='/admin/jobs'><Button>Jobs</Button></Link>
+            <Link href='/admin/jobs'><Button>Alerts</Button></Link>
+            <Link href='/admin/experiment/new'><Button>Experiments</Button></Link>
             <Link href='/admin/clients'><Button>Clients</Button></Link>
             </Toolbar>
           </header>
