@@ -1,54 +1,184 @@
 package handler
 
 import (
-	"encoding/base64"
-	"encoding/json"
+	"database/sql"
+	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/apex/log"
 	"github.com/gin-gonic/gin"
+	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
+	"github.com/ooni/orchestra/common"
+	"github.com/ooni/orchestra/orchestrate/orchestrate/sched"
+	uuid "github.com/satori/go.uuid"
 )
 
-// ExperimentData contains the data for the experiment to be scheduled
+// JobData struct for containing all Job metadata (both alert and tasks)
 type ExperimentData struct {
-	Issuer    string                   `form:"iss" json:"iss"`
-	ExpiresAt int64                    `form:"exp" json:"exp"`
-	ProbeCC   string                   `form:"probe_cc" json:"probe_cc"`
-	TestName  string                   `form:"test_name" json:"test_name"`
-	Args      []map[string]interface{} `form:"args" json:"args"`
+	ID               string
+	Schedule         sched.Schedule
+	ScheduleString   string
+	Delay            int64
+	Comment          string
+	TestName         string
+	Target           Target
+	State            string
+	SignedExperiment string
+
+	CreationTime time.Time
 }
 
-// MakeExperiment is used to create a base64 experiment to be signed
-func MakeExperiment(c *gin.Context) {
-	var exp ExperimentData
-
-	if err := c.Bind(&exp); err != nil {
-		c.JSON(http.StatusBadRequest,
-			gin.H{"error": err.Error()})
-		return
-	}
-
-	if exp.ExpiresAt == 0 {
-		// Default to 1 week expiry time
-		exp.ExpiresAt = time.Now().Add(time.Hour * 24 * 7).Unix()
-	}
-
-	// XXX we probably want to set the issuer from the auth middleware
-	if exp.Issuer == "" {
-		exp.Issuer = "testing"
-	}
-
-	expData, err := json.Marshal(exp)
+func NewExperiment(q CreateExperimentQuery) (*ExperimentData, error) {
+	schedule, err := sched.ParseSchedule(q.Schedule)
 	if err != nil {
+		return nil, err
+	}
+
+	return &ExperimentData{
+		ID:               uuid.NewV4().String(),
+		Schedule:         schedule,
+		ScheduleString:   q.Schedule,
+		Delay:            q.Delay,
+		Comment:          q.Comment,
+		Target:           q.Target,
+		State:            "active",
+		SignedExperiment: q.SignedExperiment, // XXX we should validate this
+		CreationTime:     time.Now().UTC(),
+	}, nil
+}
+
+// JobData struct for containing all Job metadata (both alert and tasks)
+type CreateExperimentQuery struct {
+	ID               string `json:"id"`
+	Schedule         string `json:"schedule" binding:"required"`
+	Delay            int64  `json:"delay"`
+	Comment          string `json:"comment" binding:"required"`
+	Target           Target `json:"target"`
+	SignedExperiment string `json:"signed_experiment" binding:"required"`
+
+	CreationTime time.Time `json:"creation_time"`
+}
+
+// AddExperiment is used to create a new experiment
+func AddExperiment(db *sqlx.DB, s *sched.Scheduler, exp *ExperimentData) error {
+	var expNo sql.NullInt64
+	tx, err := db.Begin()
+	if err != nil {
+		ctx.WithError(err).Error("failed to open transaction")
+		return err
+	}
+
+	{
+		stmt, err := tx.Prepare(`INSERT INTO experiments
+			experiment_no,
+			test_name,
+			signed_experiment
+			VALUES (DEFAULT, $1, $2)
+			RETURNING task_no`)
+		if err != nil {
+			ctx.WithError(err).Error("failed to prepare jobs-tasks query")
+			return err
+		}
+		defer stmt.Close()
+
+		err = stmt.QueryRow(exp.TestName, exp.SignedExperiment).Scan(&expNo)
+		if err != nil {
+			tx.Rollback()
+			ctx.WithError(err).Error("failed to insert into job-tasks table")
+			return err
+		}
+		query := fmt.Sprintf(`INSERT INTO %s (
+			id, comment,
+			schedule, delay,
+			target_countries,
+			target_platforms,
+			creation_time,
+			times_run,
+			next_run_at,
+			is_done,
+			state,
+			task_no,
+			alert_no
+		) VALUES (
+			$1, $2,
+			$3, $4,
+			$5,
+			$6,
+			$7,
+			$8,
+			$9,
+			$10,
+			$11,
+			$12,
+			$13)`,
+			pq.QuoteIdentifier(common.JobsTable))
+
+		stmt, err = tx.Prepare(query)
+		if err != nil {
+			ctx.WithError(err).Error("failed to prepare jobs query")
+			return err
+		}
+		defer stmt.Close()
+
+		_, err = stmt.Exec(exp.ID, exp.Comment,
+			exp.Schedule, exp.Delay,
+			pq.Array(exp.Target.Countries),
+			pq.Array(exp.Target.Platforms),
+			exp.ScheduleString,
+			0,
+			exp.Schedule.StartTime,
+			false,
+			exp.State,
+			expNo,
+			nil)
+		if err != nil {
+			tx.Rollback()
+			ctx.WithError(err).Error("failed to insert into jobs table")
+			return err
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		ctx.WithError(err).Error("failed to commit transaction, rolling back")
+		return err
+	}
+	j := sched.NewJob(exp.ID, exp.Comment, exp.Schedule, exp.Delay)
+	go s.RunJob(j)
+	return nil
+}
+
+// AddExperimentHandler is used to create a new experiment
+func AddExperimentHandler(c *gin.Context) {
+	db := c.MustGet("DB").(*sqlx.DB)
+	scheduler := c.MustGet("Scheduler").(*sched.Scheduler)
+
+	var query CreateExperimentQuery
+	err := c.BindJSON(&query)
+	if err != nil {
+		ctx.WithError(err).Error("invalid request")
+		c.JSON(http.StatusBadRequest,
+			gin.H{"error": "invalid request"})
+		return
+	}
+
+	experiment, err := NewExperiment(query)
+	if err != nil {
+		ctx.WithError(err).Error("failed to create experiment")
 		c.JSON(http.StatusBadRequest,
 			gin.H{"error": err.Error()})
 		return
 	}
-	log.Debugf("Serialized: %s", expData)
 
-	b64Str := base64.StdEncoding.EncodeToString(expData)
+	err = AddExperiment(db, scheduler, experiment)
+	if err != nil {
+		ctx.WithError(err).Error("failed to add experiment")
+		c.JSON(http.StatusBadRequest,
+			gin.H{"error": err.Error()})
+		return
+	}
+
 	c.JSON(http.StatusOK,
-		gin.H{"base64": b64Str})
+		gin.H{"id": experiment.ID})
 	return
 }

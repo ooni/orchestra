@@ -29,7 +29,7 @@ func BindAPI(router *gin.Engine, authMiddleware *middleware.GinJWTMiddleware) er
 	// This means that authentication is optional
 	orchestration.Use(authMiddleware.MiddlewareFunc(middleware.NullAuthorizor))
 	{
-		orchestration.POST("/make-experiment", handler.MakeExperiment)
+		orchestration.POST("/experiment", handler.AddExperimentHandler)
 	}
 
 	rendezvous := v1.Group("/")

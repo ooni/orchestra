@@ -66,63 +66,33 @@ func AddJob(db *sqlx.DB, jd JobData, s *sched.Scheduler) (string, error) {
 
 	jd.ID = uuid.NewV4().String()
 	{
-		if jd.AlertData != nil {
-			query := fmt.Sprintf(`INSERT INTO %s (
-				alert_no,
-				message,
-				extra
-			) VALUES (DEFAULT, $1, $2)
-			RETURNING alert_no;`,
-				pq.QuoteIdentifier(common.JobAlertsTable))
-			stmt, err := tx.Prepare(query)
-			if err != nil {
-				ctx.WithError(err).Error("failed to prepare jobs-alerts query")
-				return "", err
-			}
-			defer stmt.Close()
+		query := fmt.Sprintf(`INSERT INTO %s (
+			alert_no,
+			message,
+			extra
+		) VALUES (DEFAULT, $1, $2)
+		RETURNING alert_no;`,
+			pq.QuoteIdentifier(common.JobAlertsTable))
+		stmt, err := tx.Prepare(query)
+		if err != nil {
+			ctx.WithError(err).Error("failed to prepare jobs-alerts query")
+			return "", err
+		}
+		defer stmt.Close()
 
-			alertExtraStr, err := json.Marshal(jd.AlertData.Extra)
-			if err != nil {
-				tx.Rollback()
-				ctx.WithError(err).Error("failed to serialise alert args")
-			}
-			err = stmt.QueryRow(jd.AlertData.Message, alertExtraStr).Scan(&alertNo)
-			if err != nil {
-				tx.Rollback()
-				ctx.WithError(err).Error("failed to insert into job-alerts table")
-				return "", err
-			}
-		} else if jd.TaskData != nil {
-			query := fmt.Sprintf(`INSERT INTO %s (
-				task_no,
-				test_name,
-				arguments
-			) VALUES (DEFAULT, $1, $2)
-			RETURNING task_no;`,
-				pq.QuoteIdentifier(common.JobTasksTable))
-			stmt, err := tx.Prepare(query)
-			if err != nil {
-				ctx.WithError(err).Error("failed to prepare jobs-tasks query")
-				return "", err
-			}
-			defer stmt.Close()
-
-			taskArgsStr, err := json.Marshal(jd.TaskData.Arguments)
-			if err != nil {
-				tx.Rollback()
-				ctx.WithError(err).Error("failed to serialise task args")
-			}
-			err = stmt.QueryRow(jd.TaskData.TestName, taskArgsStr).Scan(&taskNo)
-			if err != nil {
-				tx.Rollback()
-				ctx.WithError(err).Error("failed to insert into job-tasks table")
-				return "", err
-			}
-		} else {
-			return "", errors.New("task or alert must be defined")
+		alertExtraStr, err := json.Marshal(jd.AlertData.Extra)
+		if err != nil {
+			tx.Rollback()
+			ctx.WithError(err).Error("failed to serialise alert args")
+		}
+		err = stmt.QueryRow(jd.AlertData.Message, alertExtraStr).Scan(&alertNo)
+		if err != nil {
+			tx.Rollback()
+			ctx.WithError(err).Error("failed to insert into job-alerts table")
+			return "", err
 		}
 
-		query := fmt.Sprintf(`INSERT INTO %s (
+		query = fmt.Sprintf(`INSERT INTO %s (
 			id, comment,
 			schedule, delay,
 			target_countries,
@@ -148,7 +118,7 @@ func AddJob(db *sqlx.DB, jd JobData, s *sched.Scheduler) (string, error) {
 			$13)`,
 			pq.QuoteIdentifier(common.JobsTable))
 
-		stmt, err := tx.Prepare(query)
+		stmt, err = tx.Prepare(query)
 		if err != nil {
 			ctx.WithError(err).Error("failed to prepare jobs query")
 			return "", err
