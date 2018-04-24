@@ -76,7 +76,10 @@ var signCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		log.WithField("signed_string", signedClaims).Info("Signed claims")
+		fmt.Println("Below is the Signed Experiment to copy paste into the browser:")
+		fmt.Print("\n\n")
+		fmt.Println(signedClaims)
+		fmt.Print("\n\n")
 	},
 }
 
