@@ -177,10 +177,10 @@ const ExperimentSign = ({data, signedExperiment, onSignedChange}) => {
     <CodeFormat>echo "{data}" | orchestrate sign</CodeFormat>
     <Heading h={4}>Paste</Heading>
     <TextField
-      label="Signed string"
+      label="Signed Experiment"
       multiline
       fullWidth
-      rowsMax="6"
+      rowsMax="15"
       value={signedExperiment}
       onChange={onSignedChange}
     />
@@ -229,6 +229,7 @@ class AdminNewExperiment extends React.Component {
     this.onNettestChange = this.onNettestChange.bind(this)
     this.onUrlsChange = this.onUrlsChange.bind(this)
     this.makeStringToSign = this.makeStringToSign.bind(this)
+    this.onSignedChange = this.onSignedChange.bind(this)
 
     this.onSubmit = this.onSubmit.bind(this)
     this.isStepSkipped = this.isStepSkipped.bind(this)
@@ -285,6 +286,7 @@ class AdminNewExperiment extends React.Component {
   }
 
   onSignedChange ({target}) {
+    console.log(target)
     this.setState({ signedExperiment: target.value})
   }
 
@@ -357,18 +359,6 @@ class AdminNewExperiment extends React.Component {
     })
 
     let req = this.state.session.createRequest({baseURL: process.env.ORCHESTRATE_URL})
-    let alertExtra = {}
-    if (this.state.href != '') {
-      alertExtra['href'] = this.state.href
-      alertExtra['alt_hrefs'] = []
-      if (this.state.altHref != '') {
-        this.state.altHref.split("\n").forEach((v) => {
-          if (v != '') {
-            alertExtra['alt_hrefs'].push(v)
-          }
-        })
-      }
-    }
     let platforms = this.state.targetPlatforms.slice()
     if (platforms.indexOf('any') !== -1) {
       platforms = []
