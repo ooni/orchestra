@@ -2,19 +2,17 @@ package handler
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/ooni/orchestra/common"
 	"github.com/ooni/orchestra/orchestrate/orchestrate/sched"
 	uuid "github.com/satori/go.uuid"
 )
 
-// JobData struct for containing all Job metadata (both alert and tasks)
+// ExperimentData struct for containing all Job metadata (both alert and tasks)
 type ExperimentData struct {
 	ID               string
 	Schedule         sched.Schedule
@@ -48,7 +46,7 @@ func NewExperiment(q CreateExperimentQuery) (*ExperimentData, error) {
 	}, nil
 }
 
-// JobData struct for containing all Job metadata (both alert and tasks)
+// CreateExperimentQuery is the web JSON query to create an experiment
 type CreateExperimentQuery struct {
 	ID               string `json:"id"`
 	Schedule         string `json:"schedule" binding:"required"`
@@ -69,74 +67,70 @@ func AddExperiment(db *sqlx.DB, s *sched.Scheduler, exp *ExperimentData) error {
 		return err
 	}
 
-	{
-		stmt, err := tx.Prepare(`INSERT INTO experiments
-			experiment_no,
-			test_name,
-			signed_experiment
-			VALUES (DEFAULT, $1, $2)
-			RETURNING task_no`)
-		if err != nil {
-			ctx.WithError(err).Error("failed to prepare jobs-tasks query")
-			return err
-		}
-		defer stmt.Close()
+	stmt, err := tx.Prepare(`INSERT INTO job_experiments
+		experiment_no,
+		test_name,
+		signed_experiment
+		VALUES (DEFAULT, $1, $2)
+		RETURNING experiment_no`)
+	if err != nil {
+		ctx.WithError(err).Error("failed to prepare jobs-tasks query")
+		return err
+	}
+	defer stmt.Close()
 
-		err = stmt.QueryRow(exp.TestName, exp.SignedExperiment).Scan(&expNo)
-		if err != nil {
-			tx.Rollback()
-			ctx.WithError(err).Error("failed to insert into job-tasks table")
-			return err
-		}
-		query := fmt.Sprintf(`INSERT INTO %s (
-			id, comment,
-			schedule, delay,
-			target_countries,
-			target_platforms,
-			creation_time,
-			times_run,
-			next_run_at,
-			is_done,
-			state,
-			task_no,
-			alert_no
-		) VALUES (
-			$1, $2,
-			$3, $4,
-			$5,
-			$6,
-			$7,
-			$8,
-			$9,
-			$10,
-			$11,
-			$12,
-			$13)`,
-			pq.QuoteIdentifier(common.JobsTable))
+	err = stmt.QueryRow(exp.TestName, exp.SignedExperiment).Scan(&expNo)
+	if err != nil {
+		tx.Rollback()
+		ctx.WithError(err).Error("failed to insert into job-tasks table")
+		return err
+	}
+	stmt, err = tx.Prepare(`INSERT INTO jobs (
+		id, comment,
+		schedule, delay,
+		target_countries,
+		target_platforms,
+		creation_time,
+		times_run,
+		next_run_at,
+		is_done,
+		state,
+		experiment_no,
+		alert_no
+	) VALUES (
+		$1, $2,
+		$3, $4,
+		$5,
+		$6,
+		$7,
+		$8,
+		$9,
+		$10,
+		$11,
+		$12,
+		$13)`)
 
-		stmt, err = tx.Prepare(query)
-		if err != nil {
-			ctx.WithError(err).Error("failed to prepare jobs query")
-			return err
-		}
-		defer stmt.Close()
+	if err != nil {
+		ctx.WithError(err).Error("failed to prepare jobs query")
+		return err
+	}
+	defer stmt.Close()
 
-		_, err = stmt.Exec(exp.ID, exp.Comment,
-			exp.Schedule, exp.Delay,
-			pq.Array(exp.Target.Countries),
-			pq.Array(exp.Target.Platforms),
-			exp.ScheduleString,
-			0,
-			exp.Schedule.StartTime,
-			false,
-			exp.State,
-			expNo,
-			nil)
-		if err != nil {
-			tx.Rollback()
-			ctx.WithError(err).Error("failed to insert into jobs table")
-			return err
-		}
+	_, err = stmt.Exec(exp.ID, exp.Comment,
+		exp.Schedule, exp.Delay,
+		pq.Array(exp.Target.Countries),
+		pq.Array(exp.Target.Platforms),
+		exp.ScheduleString,
+		0,
+		exp.Schedule.StartTime,
+		false,
+		exp.State,
+		expNo,
+		nil)
+	if err != nil {
+		tx.Rollback()
+		ctx.WithError(err).Error("failed to insert into jobs table")
+		return err
 	}
 
 	if err = tx.Commit(); err != nil {

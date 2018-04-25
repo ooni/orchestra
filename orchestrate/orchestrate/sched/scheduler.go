@@ -2,7 +2,10 @@ package sched
 
 import (
 	"bytes"
+	"crypto/rsa"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +17,7 @@ import (
 	"time"
 
 	"github.com/apex/log"
+	jwt "github.com/hellais/jwt-go"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
 	"github.com/lib/pq"
@@ -34,33 +38,34 @@ type AlertData struct {
 	Extra   map[string]interface{} `json:"extra"`
 }
 
-// TaskData is the data for the task
-type TaskData struct {
-	ID        string                 `json:"id"`
-	TestName  string                 `json:"test_name" binding:"required"`
-	Arguments map[string]interface{} `json:"arguments"`
-	State     string
+// ExperimentData is the data for the task
+type ExperimentData struct {
+	ID               string `json:"id"`
+	ExperimentNo     int64  `json:"-"`
+	TestName         string `json:"test_name" binding:"required"`
+	SigningKeyID     string `json:"signing_key_id"`
+	SignedExperiment string `json:"signed_experiment"`
+	ArgsIdx          []int  `json:"args_idx"`
+	State            string `json:"state"`
 }
 
 // JobTarget the target of a job
 type JobTarget struct {
-	ClientID  string
-	TaskID    *string
-	TaskData  *TaskData
-	AlertData *AlertData
-	Token     string
-	Platform  string
+	ClientID       string
+	ExperimentData *ExperimentData
+	AlertData      *AlertData
+	Token          string
+	Platform       string
 }
 
 // NewJobTarget create a new job target instance
-func NewJobTarget(cID string, token string, plat string, tid *string, td *TaskData, ad *AlertData) *JobTarget {
+func NewJobTarget(cID string, token string, plat string, ed *ExperimentData, ad *AlertData) *JobTarget {
 	return &JobTarget{
-		ClientID:  cID,
-		TaskID:    tid,
-		TaskData:  td,
-		AlertData: ad,
-		Token:     token,
-		Platform:  plat,
+		ClientID:       cID,
+		ExperimentData: ed,
+		AlertData:      ad,
+		Token:          token,
+		Platform:       plat,
 	}
 }
 
@@ -93,75 +98,156 @@ func NewJob(jID string, comment string, schedule Schedule, delay int64) *Job {
 	}
 }
 
-// CreateTask creates a new task and stores it in the JobDB
-func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
-	tx, err := jDB.db.Begin()
+var validSigningKeys = map[string]*rsa.PublicKey{}
+
+func loadSigningKeys() error {
+	// ID: 581ec75b81726d2a0e8268ee0612531cc117e4302856e049f909d71bc8e42299
+	keyPEM := []byte(`-----BEGIN RSA PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxfU1kBg7LwMmFR2DsObh
+b6wL4fRfxOgSeXjcwYUg6LhF3yVVDyRLPMg0KUQoUlO+mscsLoiW6T02RFQgH2Y4
+PjNt3XvpJwjGvLH4+qiB7rcJqRlkqdIVzonK1TOqBlspNAdj+SYeluj6+Z1mVisb
+yVmUv8KIPLfPp4y2yPfdCEb/vZNck4VviWsjYPMO3RUV8hbnYqOC8XX1jEA84B73
+xwuapz6PIP0EP02OvzO/g2ggOsaJjfGtc04OxnrXYLh6SAThQOdas4m3vXuooMsI
+IqsOXuKwezyr5JQBDTuZL0uv4/X6iBD4mWWXGbg0vVmGVJttRJHL1IEJj2kDi3UW
+ZwIDAQAB
+-----END RSA PUBLIC KEY-----`)
+	h := sha256.New()
+	pubKey, err := jwt.ParseRSAPublicKeyFromPEM(keyPEM)
 	if err != nil {
-		ctx.WithError(err).Error("failed to open createTask transaction")
-		return "", err
+		return err
+	}
+	h.Write(keyPEM)
+	// It's a bit weird to use the ascii PEM encoding of the key to do a ID, but
+	// for the moment it's as good as anything.
+	keyID := hex.EncodeToString(h.Sum(nil))
+	validSigningKeys[keyID] = pubKey
+	return nil
+}
+
+func ParseSignedExperiment(ed *ExperimentData) (*jwt.Token, error) {
+	verifyKey, ok := validSigningKeys[ed.SigningKeyID]
+	if !ok {
+		return nil, errors.New("Could not find signing key")
 	}
 
-	var taskID = uuid.NewV4().String()
+	token, err := jwt.ParseWithClaims(ed.SignedExperiment, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// since we only use the one private key to sign the tokens,
+		// we also only use its public counter part to verify
+		return verifyKey, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return token, nil
+}
+
+// CreateExperimentForClient creates a new task and stores it in the JobDB
+func (j *Job) CreateExperimentForClient(jDB *JobDB, cID string, ed *ExperimentData) error {
+	tx, err := jDB.db.Begin()
+	if err != nil {
+		ctx.WithError(err).Error("failed to open CreateExperimentForClient transaction")
+		return err
+	}
+
+	ed.ID = uuid.NewV4().String()
 	{
-		query := fmt.Sprintf(`INSERT INTO %s (
+		stmt, err := tx.Prepare(`INSERT INTO client_experiments (
 			id, probe_id,
-			job_id, test_name,
-			arguments,
-			state,
-			progress,
-			creation_time,
-			notification_time,
-			accept_time,
-			done_time,
+			experiment_no, args_idx,
+			state, progress,
+			creation_time, notification_time,
+			accept_time, done_time,
 			last_updated
 		) VALUES (
 			$1, $2,
 			$3, $4,
-			$5,
-			$6,
-			$7,
-			$8,
-			$9,
-			$10,
-			$11,
-			$12)`,
-			pq.QuoteIdentifier(common.TasksTable))
-		stmt, err := tx.Prepare(query)
+			$5, $6,
+			$7, $8,
+			$9, $10,
+			$11)`)
 		if err != nil {
 			ctx.WithError(err).Error("failed to prepare task create query")
-			return "", err
+			return err
 		}
 		defer stmt.Close()
 
-		taskArgsStr, err := json.Marshal(t.Arguments)
-		ctx.Debugf("task args: %#", t.Arguments)
+		token, err := ParseSignedExperiment(ed)
 		if err != nil {
-			ctx.WithError(err).Error("failed to serialise task arguments in createTask")
-			return "", err
+			ctx.WithError(err).Error("failed to ParseSignedExperiment")
+			return err
 		}
+		var argsIdx []int
+		args := token.Claims.(jwt.MapClaims)["args"].([]interface{})
+		// We just add all the indexes for the moment
+		for i := 0; i <= len(args); i++ {
+			argsIdx = append(argsIdx, i)
+		}
+
 		now := time.Now().UTC()
-		_, err = stmt.Exec(taskID, cID,
-			j.ID, t.TestName,
-			taskArgsStr,
-			"ready",
-			0,
-			now,
-			nil,
-			nil,
-			nil,
-			now)
+		_, err = stmt.Exec(ed.ID, cID,
+			ed.ExperimentNo, pq.Array(argsIdx),
+			"ready", 0,
+			now, nil,
+			nil, nil, now)
 		if err != nil {
 			tx.Rollback()
 			ctx.WithError(err).Error("failed to insert into tasks table")
-			return "", err
+			return err
 		}
 		if err = tx.Commit(); err != nil {
 			ctx.WithError(err).Error("failed to commit transaction in tasks table, rolling back")
-			return "", err
+			return err
 		}
 	}
 
-	return taskID, nil
+	return nil
+}
+
+func NewAlertData(jDB *JobDB, alertNo int64) (*AlertData, error) {
+	var (
+		alertExtra types.JSONText
+	)
+	ad := AlertData{}
+	query := fmt.Sprintf(`SELECT
+			message,
+			extra
+			FROM %s
+			WHERE alert_no = $1`,
+		pq.QuoteIdentifier(common.JobAlertsTable))
+	err := jDB.db.QueryRow(query, alertNo).Scan(
+		&ad.Message,
+		&alertExtra)
+	if err != nil {
+		ctx.WithError(err).Errorf("failed to get alert_no %d", alertNo)
+		return nil, err
+	}
+	err = alertExtra.Unmarshal(&ad.Extra)
+	if err != nil {
+		ctx.WithError(err).Error("failed to unmarshal json for alert")
+		return nil, err
+	}
+
+	return &ad, nil
+}
+
+func NewExperimentData(jDB *JobDB, expNo int64) (*ExperimentData, error) {
+	ed := ExperimentData{ExperimentNo: expNo}
+	query := `SELECT
+			id,
+			test_name,
+			signed_experiment
+			FROM experiment_jobs
+			WHERE experiment_no = $1`
+
+	err := jDB.db.QueryRow(query, expNo).Scan(
+		&ed.ID,
+		&ed.TestName,
+		&ed.SignedExperiment)
+	if err != nil {
+		ctx.WithError(err).Errorf("failed to get experiment_no %d", expNo)
+		return nil, err
+	}
+	return &ed, nil
 }
 
 // GetTargets returns all the targets for the job
@@ -173,18 +259,18 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 		targetPlatforms []string
 		targets         []*JobTarget
 
-		taskNo    sql.NullInt64
-		alertNo   sql.NullInt64
-		rows      *sql.Rows
-		taskData  *TaskData
-		alertData *AlertData
+		experimentNo   sql.NullInt64
+		alertNo        sql.NullInt64
+		rows           *sql.Rows
+		experimentData *ExperimentData
+		alertData      *AlertData
 	)
 	ctx.Debug("getting targets")
 
 	query = fmt.Sprintf(`SELECT
 		target_countries,
 		target_platforms,
-		task_no,
+		experiment_no,
 		alert_no
 		FROM %s
 		WHERE id = $1`,
@@ -193,7 +279,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	err = jDB.db.QueryRow(query, j.ID).Scan(
 		pq.Array(&targetCountries),
 		pq.Array(&targetPlatforms),
-		&taskNo,
+		&experimentNo,
 		&alertNo)
 	if err != nil {
 		ctx.WithError(err).Error("failed to obtain targets")
@@ -204,53 +290,17 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	}
 
 	if alertNo.Valid {
-		var (
-			alertExtra types.JSONText
-		)
-		ad := AlertData{}
-		query := fmt.Sprintf(`SELECT
-			message,
-			extra
-			FROM %s
-			WHERE alert_no = $1`,
-			pq.QuoteIdentifier(common.JobAlertsTable))
-		err = jDB.db.QueryRow(query, alertNo.Int64).Scan(
-			&ad.Message,
-			&alertExtra)
+		alertData, err = NewAlertData(jDB, alertNo.Int64)
 		if err != nil {
-			ctx.WithError(err).Errorf("failed to get alert_no %d", alertNo.Int64)
-			panic("failed to get alert_no")
+			// XXX we should probably recover in some way
+			panic(err)
 		}
-		err = alertExtra.Unmarshal(&ad.Extra)
+	} else if experimentNo.Valid {
+		experimentData, err = NewExperimentData(jDB, experimentNo.Int64)
 		if err != nil {
-			ctx.WithError(err).Error("failed to unmarshal json for alert")
-			panic("invalid JSON in database")
+			panic(err)
 		}
-		alertData = &ad
-	} else if taskNo.Valid {
-		var (
-			taskArgs types.JSONText
-		)
-		td := TaskData{}
-		query := fmt.Sprintf(`SELECT
-			test_name,
-			arguments
-			FROM %s
-			WHERE task_no = $1`,
-			pq.QuoteIdentifier(common.JobTasksTable))
-		err = jDB.db.QueryRow(query, taskNo.Int64).Scan(
-			&td.TestName,
-			&taskArgs)
-		if err != nil {
-			ctx.WithError(err).Errorf("failed to get task_no %d", taskNo.Int64)
-			panic("failed to get task_no")
-		}
-		err = taskArgs.Unmarshal(&td.Arguments)
-		if err != nil {
-			ctx.WithError(err).Error("failed to unmarshal json for task")
-			panic("invalid JSON in database")
-		}
-		taskData = &td
+
 	} else {
 		panic("inconsistent database missing task_no or alert_no")
 	}
@@ -275,7 +325,6 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	} else {
 		rows, err = jDB.db.Query(query)
 	}
-
 	if err != nil {
 		ctx.WithError(err).Error("failed to find targets")
 		return targets
@@ -284,7 +333,6 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	for rows.Next() {
 		var (
 			clientID string
-			taskID   string
 			token    string
 			plat     string
 		)
@@ -293,14 +341,14 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 			ctx.WithError(err).Error("failed to iterate over targets")
 			return targets
 		}
-		if taskData != nil {
-			taskID, err = j.CreateTask(clientID, taskData, jDB)
+		if experimentData != nil {
+			err = j.CreateExperimentForClient(jDB, clientID, experimentData)
 			if err != nil {
 				ctx.WithError(err).Error("failed to create task")
 				return targets
 			}
 		}
-		targets = append(targets, NewJobTarget(clientID, token, plat, &taskID, taskData, alertData))
+		targets = append(targets, NewJobTarget(clientID, token, plat, experimentData, alertData))
 	}
 	return targets
 }
@@ -346,53 +394,6 @@ func (j *Job) WaitAndRun(jDB *JobDB) {
 type NotifyReq struct {
 	ClientIDs []string               `json:"client_ids"`
 	Event     map[string]interface{} `json:"event"`
-}
-
-// TaskNotifyOrchestra this will tell the notify backend to notify the client of
-// the task
-func TaskNotifyOrchestra(bu string, jt *JobTarget) error {
-	var err error
-	path, _ := url.Parse("/api/v1/notify")
-
-	baseURL, err := url.Parse(bu)
-	if err != nil {
-		ctx.WithError(err).Error("invalid base url")
-		return err
-	}
-
-	notifyReq := NotifyReq{
-		ClientIDs: []string{jt.ClientID},
-		Event: map[string]interface{}{
-			"type":    "run_task",
-			"task_id": jt.TaskID,
-		},
-	}
-	jsonStr, err := json.Marshal(notifyReq)
-	if err != nil {
-		ctx.WithError(err).Error("failed to marshal data")
-		return err
-	}
-	u := baseURL.ResolveReference(path)
-	req, err := http.NewRequest("POST",
-		u.String(),
-		bytes.NewBuffer(jsonStr))
-	if err != nil {
-		ctx.WithError(err).Error("failed send request")
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		ctx.WithError(err).Error("http request failed")
-		return err
-	}
-	defer resp.Body.Close()
-	// XXX do we also want to check the body?
-	if resp.StatusCode != 200 {
-		return errors.New("http request returned invalid status code")
-	}
-	return nil
 }
 
 // GoRushNotification all the notification metadata for gorush
@@ -449,11 +450,11 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 			"type":    notificationType,
 			"payload": jt.AlertData.Extra,
 		}
-	} else if jt.TaskData != nil {
+	} else if jt.ExperimentData != nil {
 		notification.Data = map[string]interface{}{
-			"type": "run_task",
+			"type": "run_experiment",
 			"payload": map[string]string{
-				"task_id": *jt.TaskID,
+				"experiment_id": jt.ExperimentData.ID,
 			},
 		}
 		notification.ContentAvailable = true
@@ -532,60 +533,56 @@ var ErrTaskNotFound = errors.New("task not found")
 // ErrAccessDenied not enough permissions
 var ErrAccessDenied = errors.New("access denied")
 
-// GetTask returns the specified task with the ID
-func GetTask(tID string, uID string, db *sqlx.DB) (TaskData, error) {
+// GetExperiment returns the experiment specfic to a certain user
+func GetExperiment(db *sqlx.DB, experimentID string) (ExperimentData, string, error) {
 	var (
-		err      error
-		probeID  string
-		taskArgs types.JSONText
+		err     error
+		probeID string
 	)
-	task := TaskData{}
-	query := fmt.Sprintf(`SELECT
-		id,
-		probe_id,
-		test_name,
-		arguments,
-		COALESCE(state, 'ready')
-		FROM %s
-		WHERE id = $1`,
-		pq.QuoteIdentifier(common.TasksTable))
-	err = db.QueryRow(query, tID).Scan(
-		&task.ID,
-		&probeID,
-		&task.TestName,
-		&taskArgs,
-		&task.State)
+	exp := ExperimentData{}
+	query := `SELECT
+		client_experiments.id, client_experiments.probe_id,
+		client_experiments.experiment_no, client_experiments.args_idx,
+		client_experiments.state,
+		job_experiments.test_name, job_experiments.signing_key_id,
+		job_experiments.signed_experiment
+		FROM client_experiments
+		WHERE id = $1
+		JOIN job_experiments
+		ON job_experiments.experiment_no = client_experiments.experiment_no`
+	err = db.QueryRow(query, experimentID).Scan(
+		&exp.ID, &probeID,
+		&exp.ExperimentNo, pq.Array(&exp.ArgsIdx),
+		&exp.State,
+		&exp.TestName, &exp.SigningKeyID,
+		&exp.SignedExperiment)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return task, ErrTaskNotFound
+			return exp, probeID, ErrTaskNotFound
 		}
 		ctx.WithError(err).Error("failed to get task")
-		return task, err
+		return exp, probeID, err
 	}
-	if probeID != uID {
-		return task, ErrAccessDenied
-	}
-	err = taskArgs.Unmarshal(&task.Arguments)
-	if err != nil {
-		ctx.WithError(err).Error("failed to unmarshal json")
-		return task, err
-	}
-	return task, nil
+
+	return exp, probeID, nil
 }
 
-// SetTaskState sets the state of the task
-func SetTaskState(tID string, uID string,
+// SetExperimentState sets the state of the task
+func SetExperimentState(expID string, uID string,
 	state string, validStates []string,
 	updateTimeCol string,
 	db *sqlx.DB) error {
 	var err error
-	task, err := GetTask(tID, uID, db)
+	experimentData, probeID, err := GetExperiment(db, expID)
+	if probeID != uID {
+		return ErrAccessDenied
+	}
 	if err != nil {
 		return err
 	}
 	stateConsistent := false
 	for _, s := range validStates {
-		if task.State == s {
+		if experimentData.State == s {
 			stateConsistent = true
 			break
 		}
@@ -594,20 +591,29 @@ func SetTaskState(tID string, uID string,
 		return ErrInconsistentState
 	}
 
-	query := fmt.Sprintf(`UPDATE %s SET
+	query := fmt.Sprintf(`UPDATE client_experiments SET
 		state = $2,
 		%s = $3,
 		last_updated = $3
 		WHERE id = $1`,
-		pq.QuoteIdentifier(common.TasksTable),
 		updateTimeCol)
 
-	_, err = db.Exec(query, tID, state, time.Now().UTC())
+	_, err = db.Exec(query, expID, state, time.Now().UTC())
 	if err != nil {
 		ctx.WithError(err).Error("failed to get task")
 		return err
 	}
 	return nil
+}
+
+func SetExperimentNotified(jDB *JobDB, jt *JobTarget) error {
+	return SetExperimentState(
+		jt.ExperimentData.ID,
+		jt.ClientID,
+		"notified",
+		[]string{"ready"},
+		"notification_time",
+		jDB.db)
 }
 
 // Notify send a notification for the given JobTarget
@@ -624,11 +630,6 @@ func Notify(jt *JobTarget, jDB *JobDB) error {
 			jt)
 	} else if viper.IsSet("core.notify-url") {
 		err = errors.New("proteus notify is deprecated")
-		/*
-			err = TaskNotifyOrchestra(
-				viper.GetString("core.notify-url"),
-				jt)
-		*/
 	} else {
 		err = errors.New("no valid notification service found")
 	}
@@ -636,13 +637,8 @@ func Notify(jt *JobTarget, jDB *JobDB) error {
 	if err != nil {
 		return err
 	}
-	if jt.TaskData != nil {
-		err = SetTaskState(jt.TaskData.ID,
-			jt.ClientID,
-			"notified",
-			[]string{"ready"},
-			"notification_time",
-			jDB.db)
+	if jt.ExperimentData != nil {
+		err := SetExperimentNotified(jDB, jt)
 		if err != nil {
 			ctx.WithError(err).Error("failed to update task state")
 			return err

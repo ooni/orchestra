@@ -2,62 +2,60 @@ package handler
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
-	"github.com/jmoiron/sqlx/types"
 	"github.com/lib/pq"
-	common "github.com/ooni/orchestra/common"
 	"github.com/ooni/orchestra/orchestrate/orchestrate/sched"
 )
 
-// GetTasksForUser lists all the tasks a user has
-func GetTasksForUser(uID string, since string,
-	db *sqlx.DB) ([]sched.TaskData, error) {
+// GetExperimentsForUser lists all the tasks a user has
+func GetExperimentsForUser(uID string, since string,
+	db *sqlx.DB) ([]sched.ExperimentData, error) {
 	var (
-		err   error
-		tasks []sched.TaskData
+		err         error
+		experiments []sched.ExperimentData
 	)
-	query := fmt.Sprintf(`SELECT
-		id,
-		test_name,
-		arguments
-		FROM %s
-		WHERE
-		state = 'ready' AND
-		probe_id = $1 AND creation_time >= $2`,
-		pq.QuoteIdentifier(common.TasksTable))
 
+	query := `SELECT
+		client_experiments.id,
+		client_experiments.experiment_no, client_experiments.args_idx,
+		client_experiments.state,
+		job_experiments.test_name, job_experiments.signing_key_id,
+		job_experiments.signed_experiment
+		FROM client_experiments
+		WHERE
+			state = 'ready' AND
+			probe_id = $1 AND creation_time >= $2
+		JOIN job_experiments
+		ON job_experiments.experiment_no = client_experiments.experiment_no`
 	rows, err := db.Query(query, uID, since)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return tasks, nil
+			return experiments, nil
 		}
 		ctx.WithError(err).Error("failed to get task list")
-		return tasks, err
+		return experiments, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			taskArgs types.JSONText
-			task     sched.TaskData
+			exp sched.ExperimentData
 		)
-		rows.Scan(&task.ID, &task.TestName, &taskArgs)
+		rows.Scan(&exp.ID,
+			&exp.ExperimentNo, pq.Array(&exp.ArgsIdx),
+			&exp.State,
+			&exp.TestName, &exp.SigningKeyID,
+			&exp.SignedExperiment)
 		if err != nil {
 			ctx.WithError(err).Error("failed to get task")
-			return tasks, err
+			return experiments, err
 		}
-		err = taskArgs.Unmarshal(&task.Arguments)
-		if err != nil {
-			ctx.WithError(err).Error("failed to unmarshal json")
-			return tasks, err
-		}
-		tasks = append(tasks, task)
+		experiments = append(experiments, exp)
 	}
-	return tasks, nil
+	return experiments, nil
 }
 
 // ListTasksHandler lists all the tasks for a user
@@ -72,14 +70,14 @@ func ListTasksHandler(c *gin.Context) {
 			gin.H{"error": "invalid since specified"})
 		return
 	}
-	tasks, err := GetTasksForUser(userID, since, db)
+	experiments, err := GetExperimentsForUser(userID, since, db)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
 			gin.H{"error": "server side error"})
 		return
 	}
 	c.JSON(http.StatusOK,
-		gin.H{"tasks": tasks})
+		gin.H{"experiments": experiments})
 	return
 }
 
@@ -89,13 +87,13 @@ func GetTaskHandler(c *gin.Context) {
 
 	taskID := c.Param("task_id")
 	userID := c.MustGet("userID").(string)
-	task, err := sched.GetTask(taskID, userID, db)
+	exp, expUserID, err := sched.GetExperiment(db, taskID)
+	if expUserID != userID {
+		c.JSON(http.StatusUnauthorized,
+			gin.H{"error": "access denied"})
+		return
+	}
 	if err != nil {
-		if err == sched.ErrAccessDenied {
-			c.JSON(http.StatusUnauthorized,
-				gin.H{"error": "access denied"})
-			return
-		}
 		if err == sched.ErrTaskNotFound {
 			// XXX is it a concern that a user this way can enumerate
 			// tasks of other users?
@@ -110,9 +108,9 @@ func GetTaskHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK,
-		gin.H{"id": task.ID,
-			"test_name": task.TestName,
-			"arguments": task.Arguments})
+		gin.H{"id": exp.ID,
+			"test_name": exp.TestName,
+			"args_idx":  exp.ArgsIdx})
 	return
 }
 
@@ -122,7 +120,7 @@ func AcceptTaskHandler(c *gin.Context) {
 
 	taskID := c.Param("task_id")
 	userID := c.MustGet("userID").(string)
-	err := sched.SetTaskState(taskID,
+	err := sched.SetExperimentState(taskID,
 		userID,
 		"accepted",
 		[]string{"ready", "notified"},
@@ -156,7 +154,7 @@ func RejectTaskHandler(c *gin.Context) {
 
 	taskID := c.Param("task_id")
 	userID := c.MustGet("userID").(string)
-	err := sched.SetTaskState(taskID,
+	err := sched.SetExperimentState(taskID,
 		userID,
 		"rejected",
 		[]string{"ready", "notified", "accepted"},
@@ -190,7 +188,7 @@ func DoneTaskHandler(c *gin.Context) {
 
 	taskID := c.Param("task_id")
 	userID := c.MustGet("userID").(string)
-	err := sched.SetTaskState(taskID,
+	err := sched.SetExperimentState(taskID,
 		userID,
 		"done",
 		[]string{"accepted"},
