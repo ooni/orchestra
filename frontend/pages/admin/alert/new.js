@@ -279,7 +279,7 @@ class AdminJobsAdd extends React.Component {
     if (countries.indexOf('any') !== -1) {
       countries = []
     }
-    req.post('/api/v1/admin/job', {
+    req.post('/api/v1/admin/alert', {
       'schedule': ToScheduleString({
                       duration: this.state.duration,
                       startMoment: this.state.startMoment,
@@ -301,7 +301,7 @@ class AdminJobsAdd extends React.Component {
        error: null,
        submitting: false
       })
-      Router.push('/admin/jobs')
+      Router.push('/admin/alerts')
     }).catch((error) => {
       this.setState({
         submitting: false,

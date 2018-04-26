@@ -60,10 +60,10 @@ export default class extends React.Component {
             <link rel='stylesheet' href='/static/vendor/nprogress.css'/>
           </Head>
           <header>
-            <Toolbar>
+            <Toolbar style={{backgroundColor: theme.colors.gray4}}>
             <Link href='/'><Button>Home</Button></Link>
-            <Link href='/admin/jobs'><Button>Alerts</Button></Link>
-            <Link href='/admin/experiment/new'><Button>Experiments</Button></Link>
+            <Link href='/admin/alerts'><Button>Alerts</Button></Link>
+            <Link href='/admin/experiments'><Button>Experiments</Button></Link>
             <Link href='/admin/clients'><Button>Clients</Button></Link>
             </Toolbar>
           </header>
