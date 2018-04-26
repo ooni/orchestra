@@ -27,6 +27,7 @@ type ExperimentData struct {
 	CreationTime time.Time
 }
 
+// NewExperiment populates the ExperimentData struct
 func NewExperiment(q CreateExperimentQuery) (*ExperimentData, error) {
 	schedule, err := sched.ParseSchedule(q.Schedule)
 	if err != nil {

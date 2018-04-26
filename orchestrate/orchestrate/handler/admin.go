@@ -24,35 +24,26 @@ type Target struct {
 	Platforms []string `json:"platforms"`
 }
 
-// URLTestArg are the URL arguments for the test
-type URLTestArg struct {
-	GlobalCategories  []string `json:"global_categories"`
-	CountryCategories []string `json:"country_categories"`
-	URLs              []string `json:"urls"`
-}
-
-// JobData struct for containing all Job metadata (both alert and tasks)
-type JobData struct {
-	ID        string                `json:"id"`
-	Schedule  string                `json:"schedule" binding:"required"`
-	Delay     int64                 `json:"delay"`
-	Comment   string                `json:"comment" binding:"required"`
-	TaskData  *sched.ExperimentData `json:"experiment"`
-	AlertData *sched.AlertData      `json:"alert"`
-	Target    Target                `json:"target"`
-	State     string                `json:"state"`
+// AlertData struct for containing all Job metadata (both alert and tasks)
+type AlertData struct {
+	ID        string           `json:"id"`
+	Schedule  string           `json:"schedule" binding:"required"`
+	Delay     int64            `json:"delay"`
+	Comment   string           `json:"comment" binding:"required"`
+	AlertData *sched.AlertData `json:"alert"`
+	Target    Target           `json:"target"`
+	State     string           `json:"state"`
 
 	CreationTime time.Time `json:"creation_time"`
 }
 
-// AddJob adds a job to the database and run it
-func AddJob(db *sqlx.DB, jd JobData, s *sched.Scheduler) (string, error) {
+// AddAlert adds an alert to the database and run it
+func AddAlert(db *sqlx.DB, s *sched.Scheduler, ad AlertData) (string, error) {
 	var (
-		taskNo  sql.NullInt64
 		alertNo sql.NullInt64
 		err     error
 	)
-	schedule, err := sched.ParseSchedule(jd.Schedule)
+	schedule, err := sched.ParseSchedule(ad.Schedule)
 	if err != nil {
 		ctx.WithError(err).Error("invalid schedule format")
 		return "", err
@@ -64,7 +55,7 @@ func AddJob(db *sqlx.DB, jd JobData, s *sched.Scheduler) (string, error) {
 		return "", err
 	}
 
-	jd.ID = uuid.NewV4().String()
+	ad.ID = uuid.NewV4().String()
 	{
 		query := fmt.Sprintf(`INSERT INTO %s (
 			alert_no,
@@ -80,12 +71,12 @@ func AddJob(db *sqlx.DB, jd JobData, s *sched.Scheduler) (string, error) {
 		}
 		defer stmt.Close()
 
-		alertExtraStr, err := json.Marshal(jd.AlertData.Extra)
+		alertExtraStr, err := json.Marshal(ad.AlertData.Extra)
 		if err != nil {
 			tx.Rollback()
 			ctx.WithError(err).Error("failed to serialise alert args")
 		}
-		err = stmt.QueryRow(jd.AlertData.Message, alertExtraStr).Scan(&alertNo)
+		err = stmt.QueryRow(ad.AlertData.Message, alertExtraStr).Scan(&alertNo)
 		if err != nil {
 			tx.Rollback()
 			ctx.WithError(err).Error("failed to insert into job-alerts table")
@@ -102,7 +93,6 @@ func AddJob(db *sqlx.DB, jd JobData, s *sched.Scheduler) (string, error) {
 			next_run_at,
 			is_done,
 			state,
-			task_no,
 			alert_no
 		) VALUES (
 			$1, $2,
@@ -114,7 +104,6 @@ func AddJob(db *sqlx.DB, jd JobData, s *sched.Scheduler) (string, error) {
 			$9,
 			$10,
 			$11,
-			$12,
 			$13)`,
 			pq.QuoteIdentifier(common.JobsTable))
 
@@ -125,16 +114,15 @@ func AddJob(db *sqlx.DB, jd JobData, s *sched.Scheduler) (string, error) {
 		}
 		defer stmt.Close()
 
-		_, err = stmt.Exec(jd.ID, jd.Comment,
-			jd.Schedule, jd.Delay,
-			pq.Array(jd.Target.Countries),
-			pq.Array(jd.Target.Platforms),
+		_, err = stmt.Exec(ad.ID, ad.Comment,
+			ad.Schedule, ad.Delay,
+			pq.Array(ad.Target.Countries),
+			pq.Array(ad.Target.Platforms),
 			time.Now().UTC(),
 			0,
 			schedule.StartTime,
 			false,
 			"active",
-			taskNo,
 			alertNo)
 		if err != nil {
 			tx.Rollback()
@@ -147,20 +135,20 @@ func AddJob(db *sqlx.DB, jd JobData, s *sched.Scheduler) (string, error) {
 		ctx.WithError(err).Error("failed to commit transaction, rolling back")
 		return "", err
 	}
-	j := sched.NewJob(jd.ID,
-		jd.Comment,
+	j := sched.NewJob(ad.ID,
+		ad.Comment,
 		schedule,
-		jd.Delay)
+		ad.Delay)
 	go s.RunJob(j)
 
-	return jd.ID, nil
+	return ad.ID, nil
 }
 
 // ListAlerts list all the jobs present in the database
-func ListAlerts(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
+func ListAlerts(db *sqlx.DB, showDeleted bool) ([]AlertData, error) {
 	// XXX this can probably be unified with JobDB.GetAll()
 	var (
-		currentJobs []JobData
+		currentJobs []AlertData
 	)
 	query := `SELECT
 		id, comment,
@@ -185,7 +173,7 @@ func ListAlerts(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			jd           JobData
+			jd           AlertData
 			alertNo      sql.NullInt64
 			alertMessage sql.NullString
 			alertExtra   types.JSONText
@@ -226,8 +214,8 @@ func ListAlerts(db *sqlx.DB, showDeleted bool) ([]JobData, error) {
 // ErrJobNotFound did not found the job in the DB
 var ErrJobNotFound = errors.New("job not found")
 
-// DeleteJob mark the job as deleted
-func DeleteJob(jobID string, db *sqlx.DB, s *sched.Scheduler) error {
+// DeleteAlert mark the alert as deleted
+func DeleteAlert(db *sqlx.DB, s *sched.Scheduler, jobID string) error {
 	query := fmt.Sprintf(`UPDATE %s SET
 		state = $2
 		WHERE id = $1`,
@@ -247,9 +235,8 @@ func DeleteJob(jobID string, db *sqlx.DB, s *sched.Scheduler) error {
 	return nil
 }
 
-// XXX this should be renamed to ListAlertsHandler
-// ListJobsHandler lists the jobs in the database
-func ListJobsHandler(c *gin.Context) {
+// ListAlertsHandler lists the jobs in the database
+func ListAlertsHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
 	jobList, err := ListAlerts(db, true)
@@ -263,20 +250,20 @@ func ListJobsHandler(c *gin.Context) {
 	return
 }
 
-// AddJobHandler adds a job to the job DB
-func AddJobHandler(c *gin.Context) {
+// AddAlertHandler adds an alert to the DB
+func AddAlertHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 	scheduler := c.MustGet("Scheduler").(*sched.Scheduler)
 
-	var jobData JobData
-	err := c.BindJSON(&jobData)
+	var alertData AlertData
+	err := c.BindJSON(&alertData)
 	if err != nil {
 		ctx.WithError(err).Error("invalid request")
 		c.JSON(http.StatusBadRequest,
 			gin.H{"error": "invalid request"})
 		return
 	}
-	jobID, err := AddJob(db, jobData, scheduler)
+	alertID, err := AddAlert(db, scheduler, alertData)
 	if err != nil {
 		c.JSON(http.StatusBadRequest,
 			gin.H{"error": err.Error()})
@@ -284,17 +271,17 @@ func AddJobHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK,
-		gin.H{"id": jobID})
+		gin.H{"id": alertID})
 	return
 }
 
-// DeleteJobHandler deletes a job
-func DeleteJobHandler(c *gin.Context) {
+// DeleteAlertHandler deletes an alert
+func DeleteAlertHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 	scheduler := c.MustGet("Scheduler").(*sched.Scheduler)
 
-	jobID := c.Param("job_id")
-	err := DeleteJob(jobID, db, scheduler)
+	alertID := c.Param("alert_id")
+	err := DeleteAlert(db, scheduler, alertID)
 	if err != nil {
 		if err == ErrJobNotFound {
 			c.JSON(http.StatusNotFound,
