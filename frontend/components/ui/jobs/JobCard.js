@@ -2,8 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import DeleteIcon from '@material-ui/icons/Delete'
-import MessageIcon from '@material-ui/icons/Message'
-import AssignmentIcon from '@material-ui/icons/Assignment'
 
 import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown'
@@ -11,6 +9,11 @@ import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown'
 import Card, { CardHeader, CardContent, CardActions } from 'material-ui/Card'
 
 import List, { ListItem, ListItemText } from 'material-ui/List'
+import Button from 'material-ui/Button'
+
+import {
+  Box
+} from 'ooni-components'
 
 class JobCard extends React.Component {
   static propTypes = {
@@ -66,12 +69,8 @@ class JobCard extends React.Component {
     }
 
     let cardAvatar
-    if (task) {
-      cardAvatar = <Avatar><AssignmentIcon /></Avatar>
-    } else {
-      cardAvatar = <Avatar><MessageIcon /></Avatar>
-    }
     return (
+      <Box w={isOpen ? 1 : 1/3 } pl={3} pb={4}>
       <Card style={{position: 'relative'}}>
         <div style={{position: 'absolute', right: 0}} onClick={() => {this.setState({isOpen: !this.state.isOpen})}}>
           {isOpen && <Button><KeyboardArrowUpIcon/></Button>}
@@ -79,7 +78,6 @@ class JobCard extends React.Component {
         </div>
         <CardHeader
           title={comment}
-          avatar={cardAvatar}
           subheader={subtitle}
           />
         <CardContent>
@@ -145,6 +143,7 @@ class JobCard extends React.Component {
            <Button onClick={() => {alert('I do nothing')}}>Edit</Button>
         </CardActions>
       </Card>
+      </Box>
     )
   }
 }

@@ -58,7 +58,7 @@ class AdminJobsIndex extends React.Component {
     req.get('/api/v1/admin/alerts')
       .then((res) => {
         this.setState({
-          jobList: res.data.jobs || [],
+          jobList: res.data.alerts|| [],
           error: null
         })
     }).catch((err) => {
@@ -83,9 +83,9 @@ class AdminJobsIndex extends React.Component {
             <Heading h={1}>List of alerts</Heading>
             {jobList.length == 0 && <Heading h={5}>No alert has been scheduled</Heading>}
             <Link href='/admin/alert/new'><Button color='primary' variant='raised'>Create new alert</Button></Link>
+            <Flex wrap pt={4}>
             {jobList.map((job) => {
               return (
-                <Flex>
                 <JobCard
                   key={job.id}
                   onDelete={this.onDelete}
@@ -96,11 +96,11 @@ class AdminJobsIndex extends React.Component {
                   schedule={job.schedule}
                   state={job.state}
                   target={job.target}
-                  alertData={job.alert}
+                  alertData={job}
                   task={job.task} />
-                </Flex>
               )
             })}
+            </Flex>
 
           </Container>
       </Layout>

@@ -75,7 +75,7 @@ class AdminExperimentsIndex extends React.Component {
     } = this.state
 
     return (
-      <Layout title="Jobs">
+      <Layout>
         <Head>
           <title>Experiments - OONI Proteus</title>
         </Head>
@@ -86,7 +86,6 @@ class AdminExperimentsIndex extends React.Component {
             <Link href='/admin/experiment/new'><Button color='primary' variant='raised'>Create new experiment</Button></Link>
             {jobList.map((job) => {
               return (
-                <Flex>
                 <JobCard
                   key={job.id}
                   onDelete={this.onDelete}
@@ -99,7 +98,6 @@ class AdminExperimentsIndex extends React.Component {
                   target={job.target}
                   alertData={job.alert}
                   task={job.task} />
-                </Flex>
               )
             })}
 

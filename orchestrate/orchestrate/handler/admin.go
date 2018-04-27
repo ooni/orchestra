@@ -26,13 +26,15 @@ type Target struct {
 
 // AlertData struct for containing all Job metadata (both alert and tasks)
 type AlertData struct {
-	ID        string           `json:"id"`
-	Schedule  string           `json:"schedule" binding:"required"`
-	Delay     int64            `json:"delay"`
-	Comment   string           `json:"comment" binding:"required"`
-	AlertData *sched.AlertData `json:"alert"`
-	Target    Target           `json:"target"`
-	State     string           `json:"state"`
+	ID       string                 `json:"id"`
+	AlertNo  string                 `json:"alert_no"`
+	Message  string                 `json:"message" binding:"required"`
+	Extra    map[string]interface{} `json:"extra"`
+	Schedule string                 `json:"schedule" binding:"required"`
+	Delay    int64                  `json:"delay"`
+	Comment  string                 `json:"comment" binding:"required"`
+	Target   Target                 `json:"target"`
+	State    string                 `json:"state"`
 
 	CreationTime time.Time `json:"creation_time"`
 }
@@ -71,12 +73,12 @@ func AddAlert(db *sqlx.DB, s *sched.Scheduler, ad AlertData) (string, error) {
 		}
 		defer stmt.Close()
 
-		alertExtraStr, err := json.Marshal(ad.AlertData.Extra)
+		alertExtraStr, err := json.Marshal(ad.Extra)
 		if err != nil {
 			tx.Rollback()
 			ctx.WithError(err).Error("failed to serialise alert args")
 		}
-		err = stmt.QueryRow(ad.AlertData.Message, alertExtraStr).Scan(&alertNo)
+		err = stmt.QueryRow(ad.Message, alertExtraStr).Scan(&alertNo)
 		if err != nil {
 			tx.Rollback()
 			ctx.WithError(err).Error("failed to insert into job-alerts table")
@@ -148,7 +150,7 @@ func AddAlert(db *sqlx.DB, s *sched.Scheduler, ad AlertData) (string, error) {
 func ListAlerts(db *sqlx.DB, showDeleted bool) ([]AlertData, error) {
 	// XXX this can probably be unified with JobDB.GetAll()
 	var (
-		currentJobs []AlertData
+		alertList []AlertData
 	)
 	query := `SELECT
 		id, comment,
@@ -156,59 +158,46 @@ func ListAlerts(db *sqlx.DB, showDeleted bool) ([]AlertData, error) {
 		schedule, delay,
 		target_countries,
 		target_platforms,
-		jobs.alert_no,
-		job_alerts.message,
-		job_alerts.extra,
+		alert_no,
+		message,
+		extra,
 		COALESCE(state, 'active') AS state
-		FROM jobs
-		LEFT OUTER JOIN job_alerts ON (job_alerts.alert_no = jobs.alert_no)`
+		FROM job_alerts`
 	if showDeleted == false {
 		query += " WHERE state = 'active'"
 	}
 	rows, err := db.Query(query)
 	if err != nil {
 		ctx.WithError(err).Error("failed to list jobs")
-		return currentJobs, err
+		return alertList, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			jd           AlertData
-			alertNo      sql.NullInt64
-			alertMessage sql.NullString
-			alertExtra   types.JSONText
+			ad         AlertData
+			alertExtra types.JSONText
 		)
-		err := rows.Scan(&jd.ID, &jd.Comment,
-			&jd.CreationTime,
-			&jd.Schedule, &jd.Delay,
-			pq.Array(&jd.Target.Countries),
-			pq.Array(&jd.Target.Platforms),
-			&alertNo,
-			&alertMessage,
+		err := rows.Scan(&ad.ID, &ad.Comment,
+			&ad.CreationTime,
+			&ad.Schedule, &ad.Delay,
+			pq.Array(&ad.Target.Countries),
+			pq.Array(&ad.Target.Platforms),
+			&ad.AlertNo,
+			&ad.Message,
 			&alertExtra,
-			&jd.State)
+			&ad.State)
 		if err != nil {
 			ctx.WithError(err).Error("failed to iterate over jobs")
-			return currentJobs, err
+			return alertList, err
 		}
-		if !alertNo.Valid {
-			ctx.Error("Alertno is invalid")
-			continue
-		}
-		ad := sched.AlertData{}
-		if !alertMessage.Valid {
-			panic("alert_message is NULL")
-		}
-		ad.Message = alertMessage.String
 		err = alertExtra.Unmarshal(&ad.Extra)
 		if err != nil {
 			ctx.WithError(err).Error("failed to unmarshal alert extra JSON")
-			return currentJobs, err
+			return alertList, err
 		}
-		jd.AlertData = &ad
-		currentJobs = append(currentJobs, jd)
+		alertList = append(alertList, ad)
 	}
-	return currentJobs, nil
+	return alertList, nil
 }
 
 // ErrJobNotFound did not found the job in the DB
@@ -239,14 +228,14 @@ func DeleteAlert(db *sqlx.DB, s *sched.Scheduler, jobID string) error {
 func ListAlertsHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
-	jobList, err := ListAlerts(db, true)
+	alertList, err := ListAlerts(db, true)
 	if err != nil {
 		c.JSON(http.StatusBadRequest,
 			gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK,
-		gin.H{"jobs": jobList})
+		gin.H{"alerts": alertList})
 	return
 }
 
