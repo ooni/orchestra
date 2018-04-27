@@ -138,7 +138,7 @@ func AddExperiment(db *sqlx.DB, s *sched.Scheduler, exp *ExperimentData) error {
 		ctx.WithError(err).Error("failed to commit transaction, rolling back")
 		return err
 	}
-	j := sched.NewJob(exp.ID, exp.Comment, exp.Schedule, exp.Delay)
+	j := sched.NewExperimentJob(exp.ID, exp.Comment, exp.Schedule, exp.Delay)
 	go s.RunJob(j)
 	return nil
 }

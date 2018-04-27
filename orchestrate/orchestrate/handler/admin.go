@@ -137,7 +137,7 @@ func AddAlert(db *sqlx.DB, s *sched.Scheduler, ad AlertData) (string, error) {
 		ctx.WithError(err).Error("failed to commit transaction, rolling back")
 		return "", err
 	}
-	j := sched.NewJob(ad.ID,
+	j := sched.NewAlertJob(ad.ID,
 		ad.Comment,
 		schedule,
 		ad.Delay)

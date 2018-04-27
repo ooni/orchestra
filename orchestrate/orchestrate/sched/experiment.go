@@ -12,12 +12,23 @@ import (
 	jwt "github.com/hellais/jwt-go"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"github.com/ooni/orchestra/common"
 	uuid "github.com/satori/go.uuid"
 )
 
 // ExperimentData is the data for the task
 type ExperimentData struct {
+	ExperimentNo     int64
+	TestName         string
+	SigningKeyID     string
+	SignedExperiment string
+	State            string
+}
+
+// ClientExperimentData is the data for the task
+type ClientExperimentData struct {
 	ID               string `json:"id"`
+	ClientID         string `json:"client_id"`
 	ExperimentNo     int64  `json:"-"`
 	TestName         string `json:"test_name" binding:"required"`
 	SigningKeyID     string `json:"signing_key_id"`
@@ -71,14 +82,22 @@ func ParseSignedExperiment(ed *ExperimentData) (*jwt.Token, error) {
 }
 
 // CreateExperimentForClient creates a new task and stores it in the JobDB
-func (j *Job) CreateExperimentForClient(jDB *JobDB, cID string, ed *ExperimentData) error {
+func CreateClientExperiment(jDB *JobDB, ed *ExperimentData, cID string) (*ClientExperimentData, error) {
+	// XXX maybe there is more powerful golang ideom for this
+	clientExp := ClientExperimentData{
+		ExperimentNo:     ed.ExperimentNo,
+		ClientID:         cID,
+		TestName:         ed.TestName,
+		SignedExperiment: ed.SignedExperiment,
+	}
+
 	tx, err := jDB.db.Begin()
 	if err != nil {
 		ctx.WithError(err).Error("failed to open CreateExperimentForClient transaction")
-		return err
+		return nil, err
 	}
 
-	ed.ID = uuid.NewV4().String()
+	clientExp.ID = uuid.NewV4().String()
 	{
 		stmt, err := tx.Prepare(`INSERT INTO client_experiments (
 			id, probe_id,
@@ -96,54 +115,55 @@ func (j *Job) CreateExperimentForClient(jDB *JobDB, cID string, ed *ExperimentDa
 			$11)`)
 		if err != nil {
 			ctx.WithError(err).Error("failed to prepare task create query")
-			return err
+			return nil, err
 		}
 		defer stmt.Close()
 
 		token, err := ParseSignedExperiment(ed)
 		if err != nil {
 			ctx.WithError(err).Error("failed to ParseSignedExperiment")
-			return err
+			return nil, err
 		}
 		var argsIdx []int
 		args := token.Claims.(jwt.MapClaims)["args"].([]interface{})
 		// We just add all the indexes for the moment
 		for i := 0; i <= len(args); i++ {
-			argsIdx = append(argsIdx, i)
+			clientExp.ArgsIdx = append(clientExp.ArgsIdx, i)
 		}
 
 		now := time.Now().UTC()
-		_, err = stmt.Exec(ed.ID, cID,
-			ed.ExperimentNo, pq.Array(argsIdx),
+		_, err = stmt.Exec(clientExp.ID, clientExp.ClientID,
+			clientExp.ExperimentNo, pq.Array(clientExp.ArgsIdx),
 			"ready", 0,
 			now, nil,
 			nil, nil, now)
 		if err != nil {
 			tx.Rollback()
 			ctx.WithError(err).Error("failed to insert into tasks table")
-			return err
+			return nil, err
 		}
 		if err = tx.Commit(); err != nil {
 			ctx.WithError(err).Error("failed to commit transaction in tasks table, rolling back")
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return &clientExp, nil
 }
 
 // NewExperimentData creates a new ExperimentData struct
 func NewExperimentData(jDB *JobDB, expNo int64) (*ExperimentData, error) {
 	ed := ExperimentData{ExperimentNo: expNo}
-	query := `SELECT
-			id,
+	query := fmt.Sprintf(`SELECT
+			experiment_no,
 			test_name,
 			signed_experiment
-			FROM experiment_jobs
-			WHERE experiment_no = $1`
+			FROM %s
+			WHERE experiment_no = $1`,
+		common.JobExperimentsTable)
 
 	err := jDB.db.QueryRow(query, expNo).Scan(
-		&ed.ID,
+		&ed.ExperimentNo,
 		&ed.TestName,
 		&ed.SignedExperiment)
 	if err != nil {
@@ -154,37 +174,38 @@ func NewExperimentData(jDB *JobDB, expNo int64) (*ExperimentData, error) {
 }
 
 // GetExperiment returns the experiment specfic to a certain user
-func GetExperiment(db *sqlx.DB, experimentID string) (ExperimentData, string, error) {
+func GetExperiment(db *sqlx.DB, experimentID string) (*ClientExperimentData, error) {
 	var (
 		err     error
 		probeID string
 	)
-	exp := ExperimentData{}
-	query := `SELECT
+	exp := ClientExperimentData{}
+	query := fmt.Sprintf(`SELECT
 		client_experiments.id, client_experiments.probe_id,
 		client_experiments.experiment_no, client_experiments.args_idx,
 		client_experiments.state,
 		job_experiments.test_name, job_experiments.signing_key_id,
 		job_experiments.signed_experiment
-		FROM client_experiments
+		FROM %s
 		WHERE client_experiments.id = $1
-		JOIN job_experiments
-		ON job_experiments.experiment_no = client_experiments.experiment_no`
+		JOIN %s
+		ON job_experiments.experiment_no = client_experiments.experiment_no`,
+		common.ClientExperimentsTable,
+		common.JobExperimentsTable)
 	err = db.QueryRow(query, experimentID).Scan(
-		&exp.ID, &probeID,
+		&exp.ID, &exp.ClientID,
 		&exp.ExperimentNo, pq.Array(&exp.ArgsIdx),
 		&exp.State,
 		&exp.TestName, &exp.SigningKeyID,
 		&exp.SignedExperiment)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return exp, probeID, ErrTaskNotFound
+			return &exp, ErrTaskNotFound
 		}
 		ctx.WithError(err).Error("failed to get task")
-		return exp, probeID, err
+		return &exp, err
 	}
-
-	return exp, probeID, nil
+	return &exp, nil
 }
 
 // SetExperimentState sets the state of the task
@@ -193,8 +214,8 @@ func SetExperimentState(expID string, uID string,
 	updateTimeCol string,
 	db *sqlx.DB) error {
 	var err error
-	experimentData, probeID, err := GetExperiment(db, expID)
-	if probeID != uID {
+	experimentData, err := GetExperiment(db, expID)
+	if experimentData.ClientID != uID {
 		return ErrAccessDenied
 	}
 	if err != nil {
@@ -227,10 +248,10 @@ func SetExperimentState(expID string, uID string,
 }
 
 // SetExperimentNotified marks the experiement of the JobTarget as notified
-func SetExperimentNotified(jDB *JobDB, jt *JobTarget) error {
+func SetExperimentNotified(jDB *JobDB, expID string, clientID string) error {
 	return SetExperimentState(
-		jt.ExperimentData.ID,
-		jt.ClientID,
+		expID,
+		clientID,
 		"notified",
 		[]string{"ready"},
 		"notification_time",

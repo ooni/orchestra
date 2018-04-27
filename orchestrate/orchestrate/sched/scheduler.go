@@ -28,34 +28,33 @@ var ctx = log.WithFields(log.Fields{
 
 // AlertData is the alert message
 type AlertData struct {
-	ID      string                 `json:"id"`
+	AlertNo int64                  `json:"alert_no"`
 	Message string                 `json:"message" binding:"required"`
 	Extra   map[string]interface{} `json:"extra"`
 }
 
 // JobTarget the target of a job
 type JobTarget struct {
-	ClientID       string
-	ExperimentData *ExperimentData
-	AlertData      *AlertData
-	Token          string
-	Platform       string
+	ClientID string
+	Token    string
+	Platform string
 }
 
-// NewJobTarget create a new job target instance
-func NewJobTarget(cID string, token string, plat string, ed *ExperimentData, ad *AlertData) *JobTarget {
-	return &JobTarget{
-		ClientID:       cID,
-		ExperimentData: ed,
-		AlertData:      ad,
-		Token:          token,
-		Platform:       plat,
-	}
-}
+type JobType int
+
+const (
+	AlertJob      JobType = 0
+	ExperimentJob JobType = 1
+)
 
 // Job container
 type Job struct {
-	ID       string
+	// XXX the use of this ID is currently very dangerous due to possible
+	// collisions between the jobs and alerts tables.
+	// I MUST either solve the collision or split the Job structure into an
+	// AlertJob and a ExperimentJob (which is probably wise, but is a fair amount
+	// of refactoring).
+	ID       int64
 	Schedule Schedule
 	Delay    int64
 	Comment  string
@@ -66,10 +65,11 @@ type Job struct {
 	lock     sync.RWMutex
 	jobTimer *time.Timer
 	IsDone   bool
+	Type     JobType
+	Data     interface{}
 }
 
-// NewJob create a new job
-func NewJob(jID string, comment string, schedule Schedule, delay int64) *Job {
+func NewAlertJob(jID int64, comment string, schedule Schedule, delay int64) *Job {
 	return &Job{
 		ID:        jID,
 		Comment:   comment,
@@ -79,6 +79,20 @@ func NewJob(jID string, comment string, schedule Schedule, delay int64) *Job {
 		lock:      sync.RWMutex{},
 		IsDone:    false,
 		NextRunAt: schedule.StartTime,
+		Type:      AlertJob,
+	}
+}
+func NewExperimentJob(jID int64, comment string, schedule Schedule, delay int64) *Job {
+	return &Job{
+		ID:        jID,
+		Comment:   comment,
+		Schedule:  schedule,
+		Delay:     delay,
+		TimesRun:  0,
+		lock:      sync.RWMutex{},
+		IsDone:    false,
+		NextRunAt: schedule.StartTime,
+		Type:      AlertJob,
 	}
 }
 
@@ -111,83 +125,65 @@ func NewAlertData(jDB *JobDB, alertNo int64) (*AlertData, error) {
 }
 
 // GetTargets returns all the targets for the job
-func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
+func (j *Job) GetTargets(jDB *JobDB) ([]*JobTarget, error) {
 	var (
 		err             error
 		query           string
+		tableName       string
 		targetCountries []string
 		targetPlatforms []string
 		targets         []*JobTarget
-
-		experimentNo   sql.NullInt64
-		alertNo        sql.NullInt64
-		rows           *sql.Rows
-		experimentData *ExperimentData
-		alertData      *AlertData
 	)
 	ctx.Debug("getting targets")
+	if j.Type == AlertJob {
+		tableName = common.JobAlertsTable
+	} else if j.Type == ExperimentJob {
+		tableName = common.JobAlertsTable
+	} else {
+		return nil, errors.New("invalid job type")
+	}
 
 	query = fmt.Sprintf(`SELECT
 		target_countries,
-		target_platforms,
-		experiment_no,
-		alert_no
-		FROM %s
+		target_platforms
 		WHERE id = $1`,
-		pq.QuoteIdentifier(common.JobsTable))
+		pq.QuoteIdentifier(tableName))
 
 	err = jDB.db.QueryRow(query, j.ID).Scan(
 		pq.Array(&targetCountries),
-		pq.Array(&targetPlatforms),
-		&experimentNo,
-		&alertNo)
+		pq.Array(&targetPlatforms))
 	if err != nil {
 		ctx.WithError(err).Error("failed to obtain targets")
 		if err == sql.ErrNoRows {
-			panic("could not find job with ID")
+			return nil, errors.New("could not find job with ID")
 		}
-		panic("other error in query")
-	}
-
-	if alertNo.Valid {
-		alertData, err = NewAlertData(jDB, alertNo.Int64)
-		if err != nil {
-			// XXX we should probably recover in some way
-			panic(err)
-		}
-	} else if experimentNo.Valid {
-		experimentData, err = NewExperimentData(jDB, experimentNo.Int64)
-		if err != nil {
-			panic(err)
-		}
-
-	} else {
-		panic("inconsistent database missing task_no or alert_no")
+		return nil, errors.New("other error in query")
 	}
 
 	// XXX this is really ghetto. There is probably a much better way of doing
 	// it.
+	var rows *sql.Rows
 	query = fmt.Sprintf("SELECT id, token, platform FROM %s",
 		pq.QuoteIdentifier(common.ActiveProbesTable))
 	if len(targetCountries) > 0 && len(targetPlatforms) > 0 {
 		query += " WHERE probe_cc = ANY($1) AND platform = ANY($2)"
-		rows, err = jDB.db.Query(query,
+		rows, err := jDB.db.Query(query,
 			pq.Array(targetCountries),
 			pq.Array(targetPlatforms))
 	} else if len(targetCountries) > 0 || len(targetPlatforms) > 0 {
 		if len(targetCountries) > 0 {
 			query += " WHERE probe_cc = ANY($1)"
-			rows, err = jDB.db.Query(query, pq.Array(targetCountries))
+			rows, err := jDB.db.Query(query, pq.Array(targetCountries))
 		} else {
 			query += " WHERE platform = ANY($1)"
-			rows, err = jDB.db.Query(query, pq.Array(targetPlatforms))
+			rows, err := jDB.db.Query(query, pq.Array(targetPlatforms))
 		}
 	} else {
-		rows, err = jDB.db.Query(query)
+		rows, err := jDB.db.Query(query)
 	}
 	if err != nil {
 		ctx.WithError(err).Error("failed to find targets")
-		return targets
+		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -199,18 +195,15 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 		err = rows.Scan(&clientID, &token, &plat)
 		if err != nil {
 			ctx.WithError(err).Error("failed to iterate over targets")
-			return targets
+			return nil, err
 		}
-		if experimentData != nil {
-			err = j.CreateExperimentForClient(jDB, clientID, experimentData)
-			if err != nil {
-				ctx.WithError(err).Error("failed to create task")
-				return targets
-			}
-		}
-		targets = append(targets, NewJobTarget(clientID, token, plat, experimentData, alertData))
+		targets = append(targets, &JobTarget{
+			ClientID: clientID,
+			Token:    token,
+			Platform: plat,
+		})
 	}
-	return targets
+	return targets, nil
 }
 
 // GetWaitDuration gets the amount of time to wait for the task to run next
@@ -274,63 +267,15 @@ type GoRushReq struct {
 }
 
 // NotifyGorush tell gorush to notify clients
-func NotifyGorush(bu string, jt *JobTarget) error {
+func NotifyGorush(notification *GoRushNotification) error {
 	var (
 		err error
 	)
 
 	path, _ := url.Parse("/api/push")
-
-	baseURL, err := url.Parse(bu)
+	baseURL, err := url.Parse(viper.GetString("core.gorush-url"))
 	if err != nil {
-		ctx.WithError(err).Error("invalid base url")
 		return err
-	}
-
-	notification := &GoRushNotification{
-		Tokens: []string{jt.Token},
-	}
-
-	if jt.AlertData != nil {
-		var (
-			notificationType = "default"
-		)
-		if _, ok := jt.AlertData.Extra["href"]; ok {
-			notificationType = "open_href"
-		}
-		notification.Message = jt.AlertData.Message
-		notification.Data = map[string]interface{}{
-			"type":    notificationType,
-			"payload": jt.AlertData.Extra,
-		}
-	} else if jt.ExperimentData != nil {
-		notification.Data = map[string]interface{}{
-			"type": "run_experiment",
-			"payload": map[string]string{
-				"experiment_id": jt.ExperimentData.ID,
-			},
-		}
-		notification.ContentAvailable = true
-	} else {
-		return errors.New("either alertData or TaskData must be set")
-	}
-
-	notification.Notification = make(map[string]string)
-
-	if jt.Platform == "ios" {
-		notification.Platform = 1
-		notification.Topic = viper.GetString("core.notify-topic-ios")
-	} else if jt.Platform == "android" {
-		notification.Notification["click_action"] = viper.GetString(
-			"core.notify-click-action-android")
-		notification.Platform = 2
-		/* We don't need to send a topic on Android. As the response message of
-		   failed requests say: `Must use either "registration_ids" field or
-		   "to", not both`. And we need `registration_ids` because we send in
-		   multicast to many clients. More evidence, as usual, on SO:
-		   <https://stackoverflow.com/a/33440105>. */
-	} else {
-		return errors.New("unsupported platform")
 	}
 
 	notifyReq := GoRushReq{
@@ -377,6 +322,73 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 	return nil
 }
 
+func MakeAlertNotifcation(j *Job, jt *JobTarget) (*GoRushNotification, error) {
+	var notificationType = "default"
+	notification := &GoRushNotification{
+		Tokens: []string{jt.Token},
+	}
+
+	alertData := j.Data.(*AlertData)
+	if _, ok := alertData.Extra["href"]; ok {
+		notificationType = "open_href"
+	}
+	notification.Message = alertData.Message
+	notification.Data = map[string]interface{}{
+		"type":    notificationType,
+		"payload": alertData.Extra,
+	}
+	notification.Notification = make(map[string]string)
+
+	if jt.Platform == "ios" {
+		notification.Platform = 1
+		notification.Topic = viper.GetString("core.notify-topic-ios")
+	} else if jt.Platform == "android" {
+		notification.Notification["click_action"] = viper.GetString(
+			"core.notify-click-action-android")
+		notification.Platform = 2
+		/* We don't need to send a topic on Android. As the response message of
+		   failed requests say: `Must use either "registration_ids" field or
+		   "to", not both`. And we need `registration_ids` because we send in
+		   multicast to many clients. More evidence, as usual, on SO:
+		   <https://stackoverflow.com/a/33440105>. */
+	} else {
+		return nil, errors.New("unsupported platform")
+	}
+	return notification, nil
+}
+
+func MakeExperimentNotifcation(j *Job, jt *JobTarget, expID string) (*GoRushNotification, error) {
+	notification := &GoRushNotification{
+		Tokens: []string{jt.Token},
+	}
+	experimentData := j.Data.(*ExperimentData)
+	notification.Data = map[string]interface{}{
+		"type": "run_experiment",
+		"payload": map[string]string{
+			"experiment_id": expID,
+		},
+	}
+	notification.ContentAvailable = true
+	notification.Notification = make(map[string]string)
+
+	if jt.Platform == "ios" {
+		notification.Platform = 1
+		notification.Topic = viper.GetString("core.notify-topic-ios")
+	} else if jt.Platform == "android" {
+		notification.Notification["click_action"] = viper.GetString(
+			"core.notify-click-action-android")
+		notification.Platform = 2
+		/* We don't need to send a topic on Android. As the response message of
+		   failed requests say: `Must use either "registration_ids" field or
+		   "to", not both`. And we need `registration_ids` because we send in
+		   multicast to many clients. More evidence, as usual, on SO:
+		   <https://stackoverflow.com/a/33440105>. */
+	} else {
+		return nil, errors.New("unsupported platform")
+	}
+	return notification, nil
+}
+
 // ErrInconsistentState when you try to accept an already accepted task
 var ErrInconsistentState = errors.New("task already accepted")
 
@@ -386,33 +398,21 @@ var ErrTaskNotFound = errors.New("task not found")
 // ErrAccessDenied not enough permissions
 var ErrAccessDenied = errors.New("access denied")
 
-// Notify send a notification for the given JobTarget
-func Notify(jt *JobTarget, jDB *JobDB) error {
+func (j *Job) RefreshData(jDB *JobDB) error {
 	var err error
-	if jt.Platform != "android" && jt.Platform != "ios" {
-		ctx.Debugf("we don't support notifying to %s", jt.Platform)
-		return nil
-	}
-
-	if viper.IsSet("core.gorush-url") {
-		err = NotifyGorush(
-			viper.GetString("core.gorush-url"),
-			jt)
-	} else if viper.IsSet("core.notify-url") {
-		err = errors.New("proteus notify is deprecated")
-	} else {
-		err = errors.New("no valid notification service found")
-	}
-
-	if err != nil {
-		return err
-	}
-	if jt.ExperimentData != nil {
-		err := SetExperimentNotified(jDB, jt)
+	if j.Type == AlertJob {
+		j.Data, err = NewAlertData(jDB, j.Data.(AlertData).AlertNo)
 		if err != nil {
-			ctx.WithError(err).Error("failed to update task state")
+			// XXX we should probably recover in some way
 			return err
 		}
+	} else if j.Type == ExperimentJob {
+		j.Data, err = NewExperimentData(jDB, j.Data.(ExperimentData).ExperimentNo)
+		if err != nil {
+			return err
+		}
+	} else {
+		return err
 	}
 	return nil
 }
@@ -426,19 +426,51 @@ func (j *Job) Run(jDB *JobDB) {
 		ctx.Error("inconsitency in should run detected..")
 		return
 	}
+	if err := j.RefreshData(jDB); err != nil {
+		ctx.Error("failed to refresh data")
+		return
+	}
 
-	targets := j.GetTargets(jDB)
+	jobTargets, err := j.GetTargets(jDB)
+	if err != nil {
+		ctx.WithError(err).Error("failed to list targets")
+		return
+	}
+
 	lastRunAt := time.Now().UTC()
-	for _, t := range targets {
+	for _, t := range jobTargets {
 		// XXX
 		// In here shall go logic to connect to notification server and notify
 		// them of the task
-		ctx.Debugf("notifying %s", t.ClientID)
-		err := Notify(t, jDB)
-		if err != nil {
-			ctx.WithError(err).Errorf("failed to notify %s",
-				t.ClientID)
+		if j.Type == AlertJob {
+			notification, err := MakeAlertNotifcation(j, t)
+			if err != nil {
+				ctx.WithError(err).Errorf("failed to notify %s",
+					t.ClientID)
+			}
+			err = NotifyGorush(notification)
+			if err != nil {
+				ctx.WithError(err).Errorf("failed to notify %s",
+					t.ClientID)
+			}
+		} else if j.Type == ExperimentJob {
+			clientExp, err := CreateClientExperiment(jDB, j.Data.(*ExperimentData), t.ClientID)
+			if err != nil {
+				ctx.WithError(err).Errorf("failed to create clientExperiment for %s",
+					t.ClientID)
+				continue
+			}
+			notification, err := MakeExperimentNotifcation(j, t, clientExp.ID)
+			if err != nil {
+				ctx.WithError(err).Errorf("failed to create experiment notification for %s",
+					clientExp.ID)
+			}
+			err = SetExperimentNotified(jDB, clientExp.ID, clientExp.ClientID)
+			if err != nil {
+				ctx.WithError(err).Error("failed to update task state")
+			}
 		}
+		ctx.Debugf("notifying %s", t.ClientID)
 	}
 
 	ctx.Debugf("successfully ran at %s", lastRunAt)
@@ -453,7 +485,7 @@ func (j *Job) Run(jDB *JobDB) {
 	}
 	ctx.Debugf("next run will be at %s", j.NextRunAt)
 	ctx.Debugf("times run %d", j.TimesRun)
-	err := j.Save(jDB)
+	err = j.Save(jDB)
 	if err != nil {
 		ctx.Error("failed to save job state to DB")
 	}
