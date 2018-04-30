@@ -124,7 +124,6 @@ func CreateClientExperiment(jDB *JobDB, ed *ExperimentData, cID string) (*Client
 			ctx.WithError(err).Error("failed to ParseSignedExperiment")
 			return nil, err
 		}
-		var argsIdx []int
 		args := token.Claims.(jwt.MapClaims)["args"].([]interface{})
 		// We just add all the indexes for the moment
 		for i := 0; i <= len(args); i++ {
@@ -175,10 +174,7 @@ func NewExperimentData(jDB *JobDB, expNo int64) (*ExperimentData, error) {
 
 // GetExperiment returns the experiment specfic to a certain user
 func GetExperiment(db *sqlx.DB, experimentID string) (*ClientExperimentData, error) {
-	var (
-		err     error
-		probeID string
-	)
+	var err error
 	exp := ClientExperimentData{}
 	query := fmt.Sprintf(`SELECT
 		client_experiments.id, client_experiments.probe_id,

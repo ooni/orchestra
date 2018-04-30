@@ -49,15 +49,11 @@ const (
 
 // Job container
 type Job struct {
-	// XXX the use of this ID is currently very dangerous due to possible
-	// collisions between the jobs and alerts tables.
-	// I MUST either solve the collision or split the Job structure into an
-	// AlertJob and a ExperimentJob (which is probably wise, but is a fair amount
-	// of refactoring).
-	ID       int64
-	Schedule Schedule
-	Delay    int64
-	Comment  string
+	AlertNo      int64
+	ExperimentNo int64
+	Schedule     Schedule
+	Delay        int64
+	Comment      string
 
 	NextRunAt time.Time
 	TimesRun  int64
@@ -71,7 +67,7 @@ type Job struct {
 
 func NewAlertJob(jID int64, comment string, schedule Schedule, delay int64) *Job {
 	return &Job{
-		ID:        jID,
+		AlertNo:   jID,
 		Comment:   comment,
 		Schedule:  schedule,
 		Delay:     delay,
@@ -84,15 +80,15 @@ func NewAlertJob(jID int64, comment string, schedule Schedule, delay int64) *Job
 }
 func NewExperimentJob(jID int64, comment string, schedule Schedule, delay int64) *Job {
 	return &Job{
-		ID:        jID,
-		Comment:   comment,
-		Schedule:  schedule,
-		Delay:     delay,
-		TimesRun:  0,
-		lock:      sync.RWMutex{},
-		IsDone:    false,
-		NextRunAt: schedule.StartTime,
-		Type:      AlertJob,
+		ExperimentNo: jID,
+		Comment:      comment,
+		Schedule:     schedule,
+		Delay:        delay,
+		TimesRun:     0,
+		lock:         sync.RWMutex{},
+		IsDone:       false,
+		NextRunAt:    schedule.StartTime,
+		Type:         AlertJob,
 	}
 }
 
@@ -124,32 +120,50 @@ func NewAlertData(jDB *JobDB, alertNo int64) (*AlertData, error) {
 	return &ad, nil
 }
 
+func GetTableInfo(j *Job) (int64, string, string, error) {
+	var (
+		tableName  string
+		columnName string
+		id         int64
+	)
+	if j.Type == AlertJob {
+		id = j.AlertNo
+		columnName = "alert_no"
+		tableName = common.JobAlertsTable
+	} else if j.Type == ExperimentJob {
+		id = j.ExperimentNo
+		columnName = "experiment_no"
+		tableName = common.JobAlertsTable
+	} else {
+		return id, tableName, columnName, errors.New("invalid job type")
+	}
+	return id, tableName, columnName, nil
+}
+
 // GetTargets returns all the targets for the job
 func (j *Job) GetTargets(jDB *JobDB) ([]*JobTarget, error) {
 	var (
 		err             error
 		query           string
-		tableName       string
 		targetCountries []string
 		targetPlatforms []string
 		targets         []*JobTarget
 	)
 	ctx.Debug("getting targets")
-	if j.Type == AlertJob {
-		tableName = common.JobAlertsTable
-	} else if j.Type == ExperimentJob {
-		tableName = common.JobAlertsTable
-	} else {
-		return nil, errors.New("invalid job type")
+
+	id, tableName, columnName, err := GetTableInfo(j)
+	if err != nil {
+		return targets, err
 	}
 
 	query = fmt.Sprintf(`SELECT
 		target_countries,
 		target_platforms
-		WHERE id = $1`,
-		pq.QuoteIdentifier(tableName))
+		FROM %s
+		WHERE %s = $1`,
+		pq.QuoteIdentifier(tableName), columnName)
 
-	err = jDB.db.QueryRow(query, j.ID).Scan(
+	err = jDB.db.QueryRow(query, id).Scan(
 		pq.Array(&targetCountries),
 		pq.Array(&targetPlatforms))
 	if err != nil {
@@ -167,19 +181,19 @@ func (j *Job) GetTargets(jDB *JobDB) ([]*JobTarget, error) {
 		pq.QuoteIdentifier(common.ActiveProbesTable))
 	if len(targetCountries) > 0 && len(targetPlatforms) > 0 {
 		query += " WHERE probe_cc = ANY($1) AND platform = ANY($2)"
-		rows, err := jDB.db.Query(query,
+		rows, err = jDB.db.Query(query,
 			pq.Array(targetCountries),
 			pq.Array(targetPlatforms))
 	} else if len(targetCountries) > 0 || len(targetPlatforms) > 0 {
 		if len(targetCountries) > 0 {
 			query += " WHERE probe_cc = ANY($1)"
-			rows, err := jDB.db.Query(query, pq.Array(targetCountries))
+			rows, err = jDB.db.Query(query, pq.Array(targetCountries))
 		} else {
 			query += " WHERE platform = ANY($1)"
-			rows, err := jDB.db.Query(query, pq.Array(targetPlatforms))
+			rows, err = jDB.db.Query(query, pq.Array(targetPlatforms))
 		}
 	} else {
-		rows, err := jDB.db.Query(query)
+		rows, err = jDB.db.Query(query)
 	}
 	if err != nil {
 		ctx.WithError(err).Error("failed to find targets")
@@ -361,7 +375,6 @@ func MakeExperimentNotifcation(j *Job, jt *JobTarget, expID string) (*GoRushNoti
 	notification := &GoRushNotification{
 		Tokens: []string{jt.Token},
 	}
-	experimentData := j.Data.(*ExperimentData)
 	notification.Data = map[string]interface{}{
 		"type": "run_experiment",
 		"payload": map[string]string{
@@ -450,7 +463,7 @@ func (j *Job) Run(jDB *JobDB) {
 			}
 			err = NotifyGorush(notification)
 			if err != nil {
-				ctx.WithError(err).Errorf("failed to notify %s",
+				ctx.WithError(err).Errorf("failed to notify alert to %s",
 					t.ClientID)
 			}
 		} else if j.Type == ExperimentJob {
@@ -464,6 +477,11 @@ func (j *Job) Run(jDB *JobDB) {
 			if err != nil {
 				ctx.WithError(err).Errorf("failed to create experiment notification for %s",
 					clientExp.ID)
+			}
+			err = NotifyGorush(notification)
+			if err != nil {
+				ctx.WithError(err).Errorf("failed to notify experiment to %s",
+					t.ClientID)
 			}
 			err = SetExperimentNotified(jDB, clientExp.ID, clientExp.ClientID)
 			if err != nil {
@@ -501,19 +519,24 @@ func (j *Job) Save(jDB *JobDB) error {
 		ctx.WithError(err).Error("failed to open transaction")
 		return err
 	}
+	id, tableName, columnName, err := GetTableInfo(j)
+	if err != nil {
+		return err
+	}
+
 	query := fmt.Sprintf(`UPDATE %s SET
 		times_run = $2,
 		next_run_at = $3,
 		is_done = $4
-		WHERE id = $1`,
-		pq.QuoteIdentifier(common.JobsTable))
+		WHERE %s = $1`,
+		pq.QuoteIdentifier(tableName), columnName)
 
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		ctx.WithError(err).Error("failed to prepare update jobs query")
 		return err
 	}
-	_, err = stmt.Exec(j.ID,
+	_, err = stmt.Exec(id,
 		j.TimesRun,
 		j.NextRunAt.UTC(),
 		j.IsDone)
@@ -570,16 +593,30 @@ type JobDB struct {
 
 // GetAll returns a list of all jobs in the database
 func (db *JobDB) GetAll() ([]*Job, error) {
+	var (
+		alertNo      sql.NullInt64
+		experimentNo sql.NullInt64
+	)
 	allJobs := []*Job{}
 	query := fmt.Sprintf(`SELECT
-		id, comment,
-		schedule, delay,
+		alert_no, comment,
+		schedule,
+		delay,
 		times_run,
 		next_run_at,
-		is_done
+		is_done, null
 		FROM %s
-		WHERE state = 'active'`,
-		pq.QuoteIdentifier(common.JobsTable))
+		UNION
+		SELECT
+		null, comment,
+		schedule,
+		delay,
+		times_run,
+		next_run_at,
+		is_done, experiment_no
+		FROM %s;`,
+		pq.QuoteIdentifier(common.JobAlertsTable),
+		pq.QuoteIdentifier(common.JobExperimentsTable))
 	rows, err := db.db.Query(query)
 	if err != nil {
 		ctx.WithError(err).Error("failed to list jobs")
@@ -592,13 +629,14 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 			schedule     string
 			nextRunAtStr string
 		)
-		err := rows.Scan(&j.ID,
+		err := rows.Scan(&alertNo,
 			&j.Comment,
 			&schedule,
 			&j.Delay,
 			&j.TimesRun,
 			&nextRunAtStr,
-			&j.IsDone)
+			&j.IsDone,
+			&experimentNo)
 		if err != nil {
 			ctx.WithError(err).Error("failed to iterate over jobs")
 			return allJobs, err
@@ -613,6 +651,15 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 			ctx.WithError(err).Error("invalid schedule")
 			return allJobs, err
 		}
+		if alertNo.Valid {
+			j.Type = AlertJob
+			j.AlertNo = alertNo.Int64
+		} else if experimentNo.Valid {
+			j.Type = ExperimentJob
+			j.ExperimentNo = experimentNo.Int64
+		} else {
+			return allJobs, errors.New("Either alert_no or experiment_no must be set")
+		}
 		j.lock = sync.RWMutex{}
 		allJobs = append(allJobs, &j)
 	}
@@ -622,26 +669,29 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 // Scheduler is the datastructure for the scheduler
 type Scheduler struct {
 	jobDB       JobDB
-	runningJobs map[string]*Job
+	runningJobs map[string]map[int64]*Job
 	stopped     chan os.Signal
 }
 
 // NewScheduler creates a new instance of the scheduler
 func NewScheduler(db *sqlx.DB) *Scheduler {
 	return &Scheduler{
-		stopped:     make(chan os.Signal),
-		runningJobs: make(map[string]*Job),
-		jobDB:       JobDB{db: db}}
+		stopped: make(chan os.Signal),
+		runningJobs: map[string]map[int64]*Job{
+			"alerts":      make(map[int64]*Job),
+			"experiments": make(map[int64]*Job),
+		},
+		jobDB: JobDB{db: db}}
 }
 
-// DeleteJob will remove the job by removing it from the running jobs
-func (s *Scheduler) DeleteJob(jobID string) error {
-	job, ok := s.runningJobs[jobID]
+// DeleteJobAlert will remove the job by removing it from the running jobs
+func (s *Scheduler) DeleteJobAlert(alertNo int64) error {
+	job, ok := s.runningJobs["alerts"][alertNo]
 	if !ok {
 		return errors.New("Job is not part of the running jobs")
 	}
 	job.IsDone = true
-	delete(s.runningJobs, jobID)
+	delete(s.runningJobs["alerts"], alertNo)
 	return nil
 }
 
@@ -664,7 +714,11 @@ func (s *Scheduler) Start() {
 		return
 	}
 	for _, j := range allJobs {
-		s.runningJobs[j.ID] = j
+		if j.Type == AlertJob {
+			s.runningJobs["alerts"][j.AlertNo] = j
+		} else if j.Type == ExperimentJob {
+			s.runningJobs["experiments"][j.ExperimentNo] = j
+		}
 		s.RunJob(j)
 	}
 }
