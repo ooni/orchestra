@@ -23,6 +23,7 @@ SELECT
 INTO job_alerts_tmp
 FROM job_alerts;
 
+-- The down migration script is likely broken from here downwards.
 SELECT
 	id,
 	comment,
@@ -38,6 +39,13 @@ FROM job_alerts;
 
 DROP TABLE job_alerts;
 ALTER TABLE jobs_alerts_tmp RENAME TO job_alerts;
+
+ALTER TABLE public.job_alerts ALTER COLUMN  "next_run_at" TYPE TIME WITH TIME ZONE USING next_run_at::time;
+
+ALTER TABLE public.job_alerts
+	ALTER COLUMN "alert_no" SET DEFAULT nextval('alert_no_seq'::regclass),
+	ALTER COLUMN "alert_no" SET NOT NULL,
+	ADD PRIMARY KEY ("alert_no");
 
 -- +migrate StatementEnd
 
@@ -67,9 +75,6 @@ CREATE TABLE job_experiments (
   signed_experiment VARCHAR
 );
 
--- This sets the next_run_at to be a timestamp with the date.
-ALTER TABLE public.job_alerts ALTER COLUMN  "next_run_at" TYPE TIMESTAMP WITH TIME ZONE USING current_date + next_run_at;
-
 -- The following migration puts all the alert related tables into a new separate
 -- table
 SELECT
@@ -94,6 +99,14 @@ JOIN jobs ON jobs.alert_no = job_alerts.alert_no;
 DROP TABLE jobs;
 DROP TABLE job_alerts;
 ALTER TABLE job_alerts_tmp RENAME TO job_alerts;
+
+-- This sets the next_run_at to be a timestamp with the date.
+ALTER TABLE public.job_alerts ALTER COLUMN  "next_run_at" TYPE TIMESTAMP WITH TIME ZONE USING current_date + next_run_at;
+
+ALTER TABLE public.job_alerts
+	ALTER COLUMN "alert_no" SET DEFAULT nextval('alert_no_seq'::regclass),
+	ALTER COLUMN "alert_no" SET NOT NULL,
+	ADD PRIMARY KEY ("alert_no");
 
 CREATE TABLE IF NOT EXISTS client_experiments
 (
