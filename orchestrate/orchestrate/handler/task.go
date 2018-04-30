@@ -13,10 +13,10 @@ import (
 
 // GetExperimentsForUser lists all the tasks a user has
 func GetExperimentsForUser(uID string, since string,
-	db *sqlx.DB) ([]sched.ExperimentData, error) {
+	db *sqlx.DB) ([]*sched.ClientExperimentData, error) {
 	var (
 		err         error
-		experiments []sched.ExperimentData
+		experiments []*sched.ClientExperimentData
 	)
 
 	query := `SELECT
@@ -42,7 +42,7 @@ func GetExperimentsForUser(uID string, since string,
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			exp sched.ExperimentData
+			exp sched.ClientExperimentData
 		)
 		rows.Scan(&exp.ID,
 			&exp.ExperimentNo, pq.Array(&exp.ArgsIdx),
@@ -53,7 +53,7 @@ func GetExperimentsForUser(uID string, since string,
 			ctx.WithError(err).Error("failed to get task")
 			return experiments, err
 		}
-		experiments = append(experiments, exp)
+		experiments = append(experiments, &exp)
 	}
 	return experiments, nil
 }
@@ -87,8 +87,8 @@ func GetTaskHandler(c *gin.Context) {
 
 	taskID := c.Param("task_id")
 	userID := c.MustGet("userID").(string)
-	exp, expUserID, err := sched.GetExperiment(db, taskID)
-	if expUserID != userID {
+	exp, err := sched.GetExperiment(db, taskID)
+	if exp.ClientID != userID {
 		c.JSON(http.StatusUnauthorized,
 			gin.H{"error": "access denied"})
 		return

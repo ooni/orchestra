@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"database/sql"
 	"net/http"
 	"time"
 
@@ -9,12 +8,11 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/ooni/orchestra/orchestrate/orchestrate/sched"
-	uuid "github.com/satori/go.uuid"
 )
 
 // ExperimentData struct for containing all Job metadata (both alert and tasks)
 type ExperimentData struct {
-	ID               string
+	ExperimentNo     int64
 	Schedule         sched.Schedule
 	ScheduleString   string
 	Delay            int64
@@ -35,7 +33,7 @@ func NewExperiment(q CreateExperimentQuery) (*ExperimentData, error) {
 	}
 
 	return &ExperimentData{
-		ID:               uuid.NewV4().String(),
+		ExperimentNo:     -1,
 		Schedule:         schedule,
 		ScheduleString:   q.Schedule,
 		Delay:            q.Delay,
@@ -61,55 +59,29 @@ type CreateExperimentQuery struct {
 
 // AddExperiment is used to create a new experiment
 func AddExperiment(db *sqlx.DB, s *sched.Scheduler, exp *ExperimentData) error {
-	var expNo sql.NullInt64
 	tx, err := db.Begin()
 	if err != nil {
 		ctx.WithError(err).Error("failed to open transaction")
 		return err
 	}
 
-	stmt, err := tx.Prepare(`INSERT INTO job_experiments
-		experiment_no,
-		test_name,
-		signed_experiment
-		VALUES (DEFAULT, $1, $2)
-		RETURNING experiment_no`)
-	if err != nil {
-		ctx.WithError(err).Error("failed to prepare jobs-tasks query")
-		return err
-	}
-	defer stmt.Close()
-
-	err = stmt.QueryRow(exp.TestName, exp.SignedExperiment).Scan(&expNo)
-	if err != nil {
-		tx.Rollback()
-		ctx.WithError(err).Error("failed to insert into job-tasks table")
-		return err
-	}
-	stmt, err = tx.Prepare(`INSERT INTO jobs (
-		id, comment,
+	stmt, err := tx.Prepare(`INSERT INTO job_experiments (
+		experiment_no, comment,
 		schedule, delay,
-		target_countries,
-		target_platforms,
-		creation_time,
-		times_run,
-		next_run_at,
-		is_done,
+		target_countries, target_platforms,
+		creation_time, times_run,
+		next_run_at, is_done,
 		state,
-		experiment_no,
-		alert_no
+		test_name, signed_experiment
 	) VALUES (
-		$1, $2,
-		$3, $4,
-		$5,
-		$6,
-		$7,
-		$8,
-		$9,
+		DEFAULT, $1,
+		$2, $3,
+		$4, $5,
+		$6, $7,
+		$8, $9,
 		$10,
-		$11,
-		$12,
-		$13)`)
+		$11, $12)
+	RETURNING experiment_no`)
 
 	if err != nil {
 		ctx.WithError(err).Error("failed to prepare jobs query")
@@ -117,17 +89,13 @@ func AddExperiment(db *sqlx.DB, s *sched.Scheduler, exp *ExperimentData) error {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(exp.ID, exp.Comment,
-		exp.Schedule, exp.Delay,
-		pq.Array(exp.Target.Countries),
-		pq.Array(exp.Target.Platforms),
-		exp.ScheduleString,
-		0,
-		exp.Schedule.StartTime,
-		false,
+	err = stmt.QueryRow(exp.Comment,
+		exp.ScheduleString, exp.Delay,
+		pq.Array(exp.Target.Countries), pq.Array(exp.Target.Platforms),
+		exp.Schedule.StartTime, 0,
+		exp.Schedule.StartTime, false,
 		exp.State,
-		expNo,
-		nil)
+		exp.TestName, exp.SignedExperiment).Scan(&exp.ExperimentNo)
 	if err != nil {
 		tx.Rollback()
 		ctx.WithError(err).Error("failed to insert into jobs table")
@@ -138,7 +106,7 @@ func AddExperiment(db *sqlx.DB, s *sched.Scheduler, exp *ExperimentData) error {
 		ctx.WithError(err).Error("failed to commit transaction, rolling back")
 		return err
 	}
-	j := sched.NewExperimentJob(exp.ID, exp.Comment, exp.Schedule, exp.Delay)
+	j := sched.NewExperimentJob(exp.ExperimentNo, exp.Comment, exp.Schedule, exp.Delay)
 	go s.RunJob(j)
 	return nil
 }
@@ -174,6 +142,6 @@ func AddExperimentHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK,
-		gin.H{"id": experiment.ID})
+		gin.H{"id": experiment.ExperimentNo})
 	return
 }

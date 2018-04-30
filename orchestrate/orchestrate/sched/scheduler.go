@@ -65,9 +65,9 @@ type Job struct {
 	Data     interface{}
 }
 
-func NewAlertJob(jID int64, comment string, schedule Schedule, delay int64) *Job {
+func NewAlertJob(alertNo int64, comment string, schedule Schedule, delay int64) *Job {
 	return &Job{
-		AlertNo:   jID,
+		AlertNo:   alertNo,
 		Comment:   comment,
 		Schedule:  schedule,
 		Delay:     delay,
@@ -78,9 +78,9 @@ func NewAlertJob(jID int64, comment string, schedule Schedule, delay int64) *Job
 		Type:      AlertJob,
 	}
 }
-func NewExperimentJob(jID int64, comment string, schedule Schedule, delay int64) *Job {
+func NewExperimentJob(expNo int64, comment string, schedule Schedule, delay int64) *Job {
 	return &Job{
-		ExperimentNo: jID,
+		ExperimentNo: expNo,
 		Comment:      comment,
 		Schedule:     schedule,
 		Delay:        delay,
@@ -88,7 +88,7 @@ func NewExperimentJob(jID int64, comment string, schedule Schedule, delay int64)
 		lock:         sync.RWMutex{},
 		IsDone:       false,
 		NextRunAt:    schedule.StartTime,
-		Type:         AlertJob,
+		Type:         ExperimentJob,
 	}
 }
 
