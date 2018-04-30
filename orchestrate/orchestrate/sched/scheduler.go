@@ -366,10 +366,12 @@ func MakeAlertNotifcation(j *Job, jt *JobTarget) (*GoRushNotification, error) {
 		   multicast to many clients. More evidence, as usual, on SO:
 		   <https://stackoverflow.com/a/33440105>. */
 	} else {
-		return nil, errors.New("unsupported platform")
+		return nil, ErrUnsupportedPlatform
 	}
 	return notification, nil
 }
+
+var ErrUnsupportedPlatform = errors.New("unsupported platform")
 
 func MakeExperimentNotifcation(j *Job, jt *JobTarget, expID string) (*GoRushNotification, error) {
 	notification := &GoRushNotification{
@@ -397,7 +399,7 @@ func MakeExperimentNotifcation(j *Job, jt *JobTarget, expID string) (*GoRushNoti
 		   multicast to many clients. More evidence, as usual, on SO:
 		   <https://stackoverflow.com/a/33440105>. */
 	} else {
-		return nil, errors.New("unsupported platform")
+		return nil, ErrUnsupportedPlatform
 	}
 	return notification, nil
 }
@@ -459,8 +461,13 @@ func (j *Job) Run(jDB *JobDB) {
 		if j.Type == AlertJob {
 			notification, err := MakeAlertNotifcation(j, t)
 			if err != nil {
-				ctx.WithError(err).Errorf("failed to notify %s",
-					t.ClientID)
+				if err == ErrUnsupportedPlatform {
+					ctx.Debugf("unsupported platform")
+				} else {
+					ctx.WithError(err).Errorf("failed to make notification %s",
+						t.ClientID)
+				}
+				continue
 			}
 			err = NotifyGorush(notification)
 			if err != nil {
@@ -470,8 +477,12 @@ func (j *Job) Run(jDB *JobDB) {
 		} else if j.Type == ExperimentJob {
 			clientExp, err := CreateClientExperiment(jDB, j.Data.(*ExperimentData), t.ClientID)
 			if err != nil {
-				ctx.WithError(err).Errorf("failed to create clientExperiment for %s",
-					t.ClientID)
+				if err == ErrUnsupportedPlatform {
+					ctx.Debugf("unsupported platform")
+				} else {
+					ctx.WithError(err).Errorf("failed to create clientExperiment for %s",
+						t.ClientID)
+				}
 				continue
 			}
 			notification, err := MakeExperimentNotifcation(j, t, clientExp.ID)

@@ -40,7 +40,7 @@ class AdminJobsIndex extends React.Component {
     let req = this.state.session.createRequest({baseURL: process.env.ORCHESTRATE_URL})
     req.delete(`/api/v1/admin/alert/${jobId}`)
       .then((res) => {
-        const newJobList = this.state.jobList.filter((job) => (job.id !== jobId))
+        const newJobList = this.state.jobList.filter((job) => (job.alert_id !== jobId))
         this.setState({
           jobList: newJobList
         })
@@ -87,12 +87,12 @@ class AdminJobsIndex extends React.Component {
             {jobList.map((job) => {
               return (
                 <JobCard
-                  key={job.id}
+                  key={job.alert_no}
                   onDelete={this.onDelete}
                   comment={job.comment}
                   creationTime={job.creation_time}
                   delay={job.delay}
-                  id={job.id}
+                  jobNumber={job.alert_no}
                   schedule={job.schedule}
                   state={job.state}
                   target={job.target}

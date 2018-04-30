@@ -21,7 +21,7 @@ class JobCard extends React.Component {
     comment: PropTypes.string,
     creationTime: PropTypes.string,
     delay: PropTypes.number,
-    id: PropTypes.string,
+    jobNumber: PropTypes.number,
     state: PropTypes.string,
     schedule: PropTypes.string,
     target: PropTypes.object,
@@ -41,7 +41,7 @@ class JobCard extends React.Component {
       comment,
       creationTime,
       delay,
-      id,
+      jobNumber,
       schedule,
       target,
       task,
@@ -139,7 +139,7 @@ class JobCard extends React.Component {
           </List>}
         </CardContent>
         <CardActions>
-          {state !== 'deleted' && <Button onClick={() => {onDelete(id)}}><DeleteIcon/></Button>}
+          {state !== 'deleted' && <Button onClick={() => {onDelete(jobNumber)}}><DeleteIcon/></Button>}
            <Button onClick={() => {alert('I do nothing')}}>Edit</Button>
         </CardActions>
       </Card>

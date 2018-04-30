@@ -288,10 +288,8 @@ class AdminJobsAdd extends React.Component {
       // XXX we currently don't set this
       'delay': 0,
       'comment': this.state.alertMessage,
-      'alert': {
-        'message': this.state.alertMessage,
-        'extra': alertExtra,
-      },
+      'message': this.state.alertMessage,
+      'extra': alertExtra,
       'target': {
         'countries': countries,
         'platforms': platforms

@@ -56,73 +56,44 @@ func AddAlert(db *sqlx.DB, s *sched.Scheduler, ad *AlertData) error {
 	}
 
 	{
-		query := fmt.Sprintf(`INSERT INTO %s (
-			alert_no,
-			message,
-			extra
-		) VALUES (DEFAULT, $1, $2)
-		RETURNING alert_no;`,
-			pq.QuoteIdentifier(common.JobAlertsTable))
-		stmt, err := tx.Prepare(query)
-		if err != nil {
-			ctx.WithError(err).Error("failed to prepare jobs-alerts query")
-			return err
-		}
-		defer stmt.Close()
-
 		alertExtraStr, err := json.Marshal(ad.Extra)
 		if err != nil {
-			tx.Rollback()
 			ctx.WithError(err).Error("failed to serialise alert args")
-		}
-		err = stmt.QueryRow(ad.Message, alertExtraStr).Scan(&ad.AlertNo)
-		if err != nil {
-			tx.Rollback()
-			ctx.WithError(err).Error("failed to insert into job-alerts table")
 			return err
 		}
-
-		query = fmt.Sprintf(`INSERT INTO %s (
+		query := fmt.Sprintf(`INSERT INTO %s (
 			alert_no, comment,
+			message, extra,
 			schedule, delay,
-			target_countries,
-			target_platforms,
-			creation_time,
-			times_run,
-			next_run_at,
-			is_done,
-			state
+			target_countries, target_platforms,
+			creation_time, times_run,
+			next_run_at, is_done, state
 		) VALUES (
-			$1, $2,
-			$3, $4,
-			$5,
-			$6,
-			$7,
-			$8,
-			$9,
-			$10,
-			$11)`,
+			DEFAULT, $1,
+			$2, $3,
+			$4, $5,
+			$6, $7,
+			$8, $9,
+			$10, $11, $12)
+		RETURNING alert_no;`,
 			pq.QuoteIdentifier(common.JobAlertsTable))
 
-		stmt, err = tx.Prepare(query)
+		stmt, err := tx.Prepare(query)
 		if err != nil {
 			ctx.WithError(err).Error("failed to prepare jobs query")
 			return err
 		}
 		defer stmt.Close()
 
-		_, err = stmt.Exec(ad.AlertNo, ad.Comment,
+		err = stmt.QueryRow(ad.Comment,
+			ad.Message, alertExtraStr,
 			ad.Schedule, ad.Delay,
-			pq.Array(ad.Target.Countries),
-			pq.Array(ad.Target.Platforms),
-			time.Now().UTC(),
-			0,
-			schedule.StartTime,
-			false,
-			"active")
+			pq.Array(ad.Target.Countries), pq.Array(ad.Target.Platforms),
+			time.Now().UTC(), 0,
+			schedule.StartTime, false, "active").Scan(&ad.AlertNo)
 		if err != nil {
 			tx.Rollback()
-			ctx.WithError(err).Error("failed to insert into jobs table")
+			ctx.WithError(err).Error("failed to insert into job-alerts table")
 			return err
 		}
 	}
