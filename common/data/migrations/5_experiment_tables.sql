@@ -58,7 +58,7 @@ CREATE TABLE job_experiments (
   target_countries VARCHAR(2) [],
   target_platforms VARCHAR(10) [],
   times_run INT,
-  next_run_at TIME WITH TIME ZONE,
+  next_run_at TIMESTAMP WITH TIME ZONE,
   is_done BOOLEAN,
   state JOB_STATE,
 
@@ -67,6 +67,8 @@ CREATE TABLE job_experiments (
   signed_experiment VARCHAR
 );
 
+-- This sets the next_run_at to be a timestamp with the date.
+ALTER TABLE public.job_alerts ALTER COLUMN  "next_run_at" TYPE TIMESTAMP WITH TIME ZONE USING current_date + next_run_at;
 
 -- The following migration puts all the alert related tables into a new separate
 -- table

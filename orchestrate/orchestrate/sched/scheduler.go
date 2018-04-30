@@ -341,7 +341,7 @@ func MakeAlertNotifcation(j *Job, jt *JobTarget) (*GoRushNotification, error) {
 	notification := &GoRushNotification{
 		Tokens: []string{jt.Token},
 	}
-
+	ctx.Debugf("making alert data for %v", j)
 	alertData := j.Data.(*AlertData)
 	if _, ok := alertData.Extra["href"]; ok {
 		notificationType = "open_href"
@@ -413,14 +413,15 @@ var ErrAccessDenied = errors.New("access denied")
 
 func (j *Job) RefreshData(jDB *JobDB) error {
 	var err error
+	ctx.Debugf("refreshing data for %v", j)
 	if j.Type == AlertJob {
-		j.Data, err = NewAlertData(jDB, j.Data.(AlertData).AlertNo)
+		j.Data, err = NewAlertData(jDB, j.AlertNo)
 		if err != nil {
 			// XXX we should probably recover in some way
 			return err
 		}
 	} else if j.Type == ExperimentJob {
-		j.Data, err = NewExperimentData(jDB, j.Data.(ExperimentData).ExperimentNo)
+		j.Data, err = NewExperimentData(jDB, j.ExperimentNo)
 		if err != nil {
 			return err
 		}
@@ -530,6 +531,7 @@ func (j *Job) Save(jDB *JobDB) error {
 		is_done = $4
 		WHERE %s = $1`,
 		pq.QuoteIdentifier(tableName), columnName)
+	ctx.Debugf("Saving the state to the DB with query %s", query)
 
 	stmt, err := tx.Prepare(query)
 	if err != nil {
@@ -606,6 +608,7 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 		next_run_at,
 		is_done, null
 		FROM %s
+		WHERE state = 'active'
 		UNION
 		SELECT
 		null, comment,
@@ -614,7 +617,8 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 		times_run,
 		next_run_at,
 		is_done, experiment_no
-		FROM %s;`,
+		FROM %s
+		WHERE state = 'active';`,
 		pq.QuoteIdentifier(common.JobAlertsTable),
 		pq.QuoteIdentifier(common.JobExperimentsTable))
 	rows, err := db.db.Query(query)
