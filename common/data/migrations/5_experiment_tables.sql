@@ -126,4 +126,10 @@ CREATE TABLE IF NOT EXISTS client_experiments
 DROP TABLE job_tasks;
 DROP TABLE tasks;
 DROP SEQUENCE task_no_seq;
+
+ALTER TABLE "public"."accounts"
+  ALTER COLUMN "username" SET NOT NULL,
+  ALTER COLUMN "username" SET UNIQUE,
+  ADD COLUMN "keyid" VARCHAR;
+
 -- +migrate StatementEnd

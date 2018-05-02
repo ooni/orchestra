@@ -33,11 +33,12 @@ type OrchestraClaims struct {
 type Account struct {
 	Username string
 	Role     string
+	KeyID    string
 }
 
 // GinJWTMiddleware provides a Json-Web-Token authentication implementation. On failure, a 401 HTTP response
 // is returned. On success, the wrapped middleware is called, and the userID is made available as
-// c.Get("userID").(string).
+// c.Get("userID").(string). userID is the accounts username column.
 // Users can get a token by posting a json request to LoginHandler. The token then needs to be passed in
 // the Authentication header. Example: Authorization:Bearer XXX_TOKEN_XXX
 type GinJWTMiddleware struct {
@@ -436,10 +437,11 @@ func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 			}
 			// XXX set the last_login value
 			query := fmt.Sprintf(`SELECT
-							password_hash, role
+							keyid, password_hash, role
 							FROM %s WHERE username = $1`,
 				pq.QuoteIdentifier(common.AccountsTable))
 			err := db.QueryRow(query, userId).Scan(
+				&account.KeyID,
 				&passwordHash,
 				&account.Role)
 			if err != nil {
