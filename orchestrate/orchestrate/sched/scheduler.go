@@ -390,8 +390,6 @@ func MakeExperimentNotifcation(j *Job, jt *JobTarget, expID string) (*GoRushNoti
 		notification.Platform = 1
 		notification.Topic = viper.GetString("core.notify-topic-ios")
 	} else if jt.Platform == "android" {
-		notification.Notification["click_action"] = viper.GetString(
-			"core.notify-click-action-android")
 		notification.Platform = 2
 		/* We don't need to send a topic on Android. As the response message of
 		   failed requests say: `Must use either "registration_ids" field or

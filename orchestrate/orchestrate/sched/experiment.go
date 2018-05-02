@@ -51,7 +51,8 @@ yVmUv8KIPLfPp4y2yPfdCEb/vZNck4VviWsjYPMO3RUV8hbnYqOC8XX1jEA84B73
 xwuapz6PIP0EP02OvzO/g2ggOsaJjfGtc04OxnrXYLh6SAThQOdas4m3vXuooMsI
 IqsOXuKwezyr5JQBDTuZL0uv4/X6iBD4mWWXGbg0vVmGVJttRJHL1IEJj2kDi3UW
 ZwIDAQAB
------END RSA PUBLIC KEY-----`)
+-----END RSA PUBLIC KEY-----
+`)
 	h := sha256.New()
 	pubKey, err := jwt.ParseRSAPublicKeyFromPEM(keyPEM)
 	if err != nil {
