@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"time"
@@ -14,18 +15,20 @@ import (
 
 // ExperimentData struct for containing all Job metadata (both alert and tasks)
 type ExperimentData struct {
-	ExperimentNo     int64
-	Schedule         sched.Schedule
-	ScheduleString   string
-	Delay            int64
-	Comment          string
-	TestName         string
-	Target           Target
-	State            string
-	SignedExperiment string
-	SigningKeyID     string
-
-	CreationTime time.Time
+	ExperimentNo     int64          `json:"experiment_no"`
+	Schedule         sched.Schedule `json:"-"`
+	ScheduleString   string         `json:"schedule"`
+	Delay            int64          `json:"delay"`
+	Comment          string         `json:"comment"`
+	TestName         string         `json:"test_name"`
+	Target           Target         `json:"target"`
+	State            string         `json:"state"`
+	SignedExperiment string         `json:"signed_experiment"`
+	SigningKeyID     string         `json:"signing_key_id"`
+	TimesRun         int64          `json:"times_run"`
+	Done             bool           `json:"done"`
+	NextRunAt        time.Time      `json:"next_run_at"`
+	CreationTime     time.Time      `json:"creation_time"`
 }
 
 // NewExperiment populates the ExperimentData struct
@@ -129,8 +132,8 @@ func GetSigningKeyID(db *sqlx.DB, userID string) (string, error) {
 	return keyID, nil
 }
 
-// AddExperimentHandler is used to create a new experiment
-func AddExperimentHandler(c *gin.Context) {
+// AdminAddExperimentHandler is used to create a new experiment
+func AdminAddExperimentHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 	userID := c.MustGet("userID").(string)
 
@@ -164,5 +167,68 @@ func AddExperimentHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK,
 		gin.H{"id": experiment.ExperimentNo})
+	return
+}
+
+// GetExperimentsForUser lists all the tasks a user has
+func AdminListExperiments(db *sqlx.DB) ([]*ExperimentData, error) {
+	var (
+		err         error
+		experiments []*ExperimentData
+	)
+
+	query := `SELECT
+		experiment_no, comment,
+		test_name,  signing_key_id,
+		signed_experiment, creation_time,
+		schedule, delay,
+		target_countries, target_platforms,
+		times_run, next_run_at,
+		is_done, state
+		FROM job_experiments`
+	rows, err := db.Query(query)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return experiments, nil
+		}
+		ctx.WithError(err).Error("failed to get adminexperiment list")
+		return experiments, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			exp    ExperimentData
+			target Target
+		)
+		rows.Scan(&exp.ExperimentNo, &exp.Comment,
+			&exp.TestName, &exp.SigningKeyID,
+			&exp.SignedExperiment, &exp.CreationTime,
+			&exp.ScheduleString, &exp.Delay,
+			pq.Array(&target.Countries), pq.Array(&target.Platforms),
+			&exp.TimesRun, &exp.NextRunAt,
+			&exp.Done, &exp.State)
+		exp.Target = target
+		if err != nil {
+			ctx.WithError(err).Error("failed to get task")
+			return experiments, err
+		}
+		experiments = append(experiments, &exp)
+	}
+	return experiments, nil
+}
+
+// AdminListExperimentsHandler returns all the scheduled experiments
+func AdminListExperimentsHandler(c *gin.Context) {
+	db := c.MustGet("DB").(*sqlx.DB)
+	experiments, err := AdminListExperiments(db)
+	if err != nil {
+		ctx.WithError(err).Error("failed to list experiments")
+		c.JSON(http.StatusBadRequest,
+			gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK,
+		gin.H{"experiments": experiments})
 	return
 }

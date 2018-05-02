@@ -46,6 +46,7 @@ class JobCard extends React.Component {
       target,
       task,
       alertData,
+      experimentData,
       onDelete
     } = this.props
     const {

@@ -59,7 +59,7 @@ class AdminExperimentsIndex extends React.Component {
     req.get('/api/v1/admin/experiments')
       .then((res) => {
         this.setState({
-          jobList: res.data.jobs || [],
+          jobList: res.data.experiments || [],
           error: null
         })
     }).catch((err) => {
@@ -96,7 +96,7 @@ class AdminExperimentsIndex extends React.Component {
                   schedule={job.schedule}
                   state={job.state}
                   target={job.target}
-                  alertData={job.alert}
+                  experimentDat={job}
                   task={job.task} />
               )
             })}

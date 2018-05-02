@@ -81,8 +81,8 @@ func ListExperimentsHandler(c *gin.Context) {
 	return
 }
 
-// GetExperimentsHandler get a specific task
-func GetExperimentsHandler(c *gin.Context) {
+// GetExperimentHandler get a specific experiment
+func GetExperimentHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
 	expID := c.Param("exp_id")

@@ -24,7 +24,8 @@ func BindAPI(router *gin.Engine, authMiddleware *middleware.GinJWTMiddleware) er
 		admin.POST("/alert", handler.AddAlertHandler)
 		admin.DELETE("/alert/:alert_id", handler.DeleteAlertHandler)
 
-		admin.POST("/experiment", handler.AddExperimentHandler)
+		admin.POST("/experiment", handler.AdminAddExperimentHandler)
+		admin.GET("/experiments", handler.AdminListExperimentsHandler)
 	}
 
 	rendezvous := v1.Group("/")
