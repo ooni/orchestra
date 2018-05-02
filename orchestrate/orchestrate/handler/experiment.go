@@ -58,8 +58,8 @@ func GetExperimentsForUser(uID string, since string,
 	return experiments, nil
 }
 
-// ListTasksHandler lists all the tasks for a user
-func ListTasksHandler(c *gin.Context) {
+// ListExperimentsHandler lists all the tasks for a user
+func ListExperimentsHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
 	userID := c.MustGet("userID").(string)
@@ -81,13 +81,13 @@ func ListTasksHandler(c *gin.Context) {
 	return
 }
 
-// GetTaskHandler get a specific task
-func GetTaskHandler(c *gin.Context) {
+// GetExperimentsHandler get a specific task
+func GetExperimentsHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
-	taskID := c.Param("task_id")
+	expID := c.Param("exp_id")
 	userID := c.MustGet("userID").(string)
-	exp, err := sched.GetExperiment(db, taskID)
+	exp, err := sched.GetExperiment(db, expID)
 	if exp.ClientID != userID {
 		c.JSON(http.StatusUnauthorized,
 			gin.H{"error": "access denied"})
@@ -108,19 +108,22 @@ func GetTaskHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK,
-		gin.H{"id": exp.ID,
-			"test_name": exp.TestName,
-			"args_idx":  exp.ArgsIdx})
+		gin.H{
+			"id":                exp.ID,
+			"signed_experiment": exp.SignedExperiment,
+			"test_name":         exp.TestName,
+			"args_idx":          exp.ArgsIdx,
+		})
 	return
 }
 
-// AcceptTaskHandler mark a task as accepted
-func AcceptTaskHandler(c *gin.Context) {
+// AcceptExperimentHandler mark a task as accepted
+func AcceptExperimentHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
-	taskID := c.Param("task_id")
+	expID := c.Param("exp_id")
 	userID := c.MustGet("userID").(string)
-	err := sched.SetExperimentState(taskID,
+	err := sched.SetExperimentState(expID,
 		userID,
 		"accepted",
 		[]string{"ready", "notified"},
@@ -148,13 +151,13 @@ func AcceptTaskHandler(c *gin.Context) {
 	return
 }
 
-// RejectTaskHandler reject a certain task
-func RejectTaskHandler(c *gin.Context) {
+// RejectExperimentHandler reject a certain task
+func RejectExperimentHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
-	taskID := c.Param("task_id")
+	expID := c.Param("exp_id")
 	userID := c.MustGet("userID").(string)
-	err := sched.SetExperimentState(taskID,
+	err := sched.SetExperimentState(expID,
 		userID,
 		"rejected",
 		[]string{"ready", "notified", "accepted"},
@@ -182,8 +185,8 @@ func RejectTaskHandler(c *gin.Context) {
 	return
 }
 
-// DoneTaskHandler mark a certain task as done
-func DoneTaskHandler(c *gin.Context) {
+// DoneExperimentHandler mark a certain task as done
+func DoneExperimentHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
 
 	taskID := c.Param("task_id")

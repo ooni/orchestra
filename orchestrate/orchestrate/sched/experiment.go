@@ -40,6 +40,8 @@ type ClientExperimentData struct {
 var validSigningKeys = map[string]*rsa.PublicKey{}
 
 func loadSigningKeys() error {
+	// XXX this is just dummy testing key
+	// Maybe we should move these keys into the database
 	// ID: 581ec75b81726d2a0e8268ee0612531cc117e4302856e049f909d71bc8e42299
 	keyPEM := []byte(`-----BEGIN RSA PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxfU1kBg7LwMmFR2DsObh
@@ -83,8 +85,8 @@ func ParseSignedExperiment(ed *ExperimentData) (*jwt.Token, error) {
 	return token, nil
 }
 
-// CreateExperimentForClient creates a new task and stores it in the JobDB
-func CreateClientExperiment(jDB *JobDB, ed *ExperimentData, cID string) (*ClientExperimentData, error) {
+// CreateClientExperiment creates a new experiment and adds it to the database
+func CreateClientExperiment(db *sqlx.DB, ed *ExperimentData, cID string) (*ClientExperimentData, error) {
 	// XXX maybe there is more powerful golang ideom for this
 	clientExp := ClientExperimentData{
 		ExperimentNo:     ed.ExperimentNo,
@@ -93,7 +95,7 @@ func CreateClientExperiment(jDB *JobDB, ed *ExperimentData, cID string) (*Client
 		SignedExperiment: ed.SignedExperiment,
 	}
 
-	tx, err := jDB.db.Begin()
+	tx, err := db.Begin()
 	if err != nil {
 		ctx.WithError(err).Error("failed to open CreateExperimentForClient transaction")
 		return nil, err
