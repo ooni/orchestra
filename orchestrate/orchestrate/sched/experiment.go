@@ -42,7 +42,7 @@ var validSigningKeys = map[string]*rsa.PublicKey{}
 func loadSigningKeys() error {
 	// XXX this is just dummy testing key
 	// Maybe we should move these keys into the database
-	// ID: 581ec75b81726d2a0e8268ee0612531cc117e4302856e049f909d71bc8e42299
+	// ID: 1a12c28ec026952d114b5ad4adfb940c2aa9d42b7f0bc5b2db561f6c23064ce9
 	keyPEM := []byte(`-----BEGIN RSA PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxfU1kBg7LwMmFR2DsObh
 b6wL4fRfxOgSeXjcwYUg6LhF3yVVDyRLPMg0KUQoUlO+mscsLoiW6T02RFQgH2Y4
