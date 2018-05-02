@@ -133,7 +133,7 @@ func GetTableInfo(j *Job) (int64, string, string, error) {
 	} else if j.Type == ExperimentJob {
 		id = j.ExperimentNo
 		columnName = "experiment_no"
-		tableName = common.JobAlertsTable
+		tableName = common.JobExperimentsTable
 	} else {
 		return id, tableName, columnName, errors.New("invalid job type")
 	}
@@ -469,26 +469,26 @@ func (j *Job) Run(jDB *JobDB) {
 				}
 				continue
 			}
-			err = NotifyGorush(notification)
-			if err != nil {
+			if err = NotifyGorush(notification); err != nil {
 				ctx.WithError(err).Errorf("failed to notify alert to %s",
 					t.ClientID)
 			}
 		} else if j.Type == ExperimentJob {
 			clientExp, err := CreateClientExperiment(jDB, j.Data.(*ExperimentData), t.ClientID)
 			if err != nil {
-				if err == ErrUnsupportedPlatform {
-					ctx.Debugf("unsupported platform")
-				} else {
-					ctx.WithError(err).Errorf("failed to create clientExperiment for %s",
-						t.ClientID)
-				}
+				ctx.WithError(err).Errorf("failed to create clientExperiment for %s",
+					t.ClientID)
 				continue
 			}
 			notification, err := MakeExperimentNotifcation(j, t, clientExp.ID)
 			if err != nil {
-				ctx.WithError(err).Errorf("failed to create experiment notification for %s",
-					clientExp.ID)
+				if err == ErrUnsupportedPlatform {
+					ctx.Debugf("unsupported platform")
+				} else {
+					ctx.WithError(err).Errorf("failed to create experiment notification for %s",
+						clientExp.ID)
+				}
+				continue
 			}
 			err = NotifyGorush(notification)
 			if err != nil {
@@ -720,6 +720,7 @@ func (s *Scheduler) RunJob(j *Job) {
 // Start the scheduler
 func (s *Scheduler) Start() {
 	ctx.Debug("starting scheduler")
+	loadSigningKeys()
 	// XXX currently when jobs are deleted the allJobs list will not be
 	// updated. We should find a way to check this and stop triggering a job in
 	// case it gets deleted.

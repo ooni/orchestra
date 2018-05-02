@@ -59,6 +59,7 @@ ZwIDAQAB
 	// It's a bit weird to use the ascii PEM encoding of the key to do a ID, but
 	// for the moment it's as good as anything.
 	keyID := hex.EncodeToString(h.Sum(nil))
+	ctx.Debugf("adding to valid keys %s", validSigningKeys)
 	validSigningKeys[keyID] = pubKey
 	return nil
 }
@@ -67,6 +68,7 @@ ZwIDAQAB
 func ParseSignedExperiment(ed *ExperimentData) (*jwt.Token, error) {
 	verifyKey, ok := validSigningKeys[ed.SigningKeyID]
 	if !ok {
+		ctx.Errorf("Did not find signing key: %s", ed.SigningKeyID)
 		return nil, errors.New("Could not find signing key")
 	}
 
@@ -121,13 +123,17 @@ func CreateClientExperiment(jDB *JobDB, ed *ExperimentData, cID string) (*Client
 
 		token, err := ParseSignedExperiment(ed)
 		if err != nil {
+			tx.Rollback()
 			ctx.WithError(err).Error("failed to ParseSignedExperiment")
 			return nil, err
 		}
-		args := token.Claims.(jwt.MapClaims)["args"].([]interface{})
-		// We just add all the indexes for the moment
-		for i := 0; i <= len(args); i++ {
-			clientExp.ArgsIdx = append(clientExp.ArgsIdx, i)
+		// XXX we may want to split this into some other function
+		if ed.TestName == "web_connectivity" {
+			urls := token.Claims.(jwt.MapClaims)["args"].(map[string]map[string]string)["urls"]
+			// We just add all the indexes for the moment
+			for i := 0; i <= len(urls); i++ {
+				clientExp.ArgsIdx = append(clientExp.ArgsIdx, i)
+			}
 		}
 
 		now := time.Now().UTC()
@@ -156,7 +162,8 @@ func NewExperimentData(jDB *JobDB, expNo int64) (*ExperimentData, error) {
 	query := fmt.Sprintf(`SELECT
 			experiment_no,
 			test_name,
-			signed_experiment
+			signed_experiment,
+			signing_key_id
 			FROM %s
 			WHERE experiment_no = $1`,
 		common.JobExperimentsTable)
@@ -164,7 +171,8 @@ func NewExperimentData(jDB *JobDB, expNo int64) (*ExperimentData, error) {
 	err := jDB.db.QueryRow(query, expNo).Scan(
 		&ed.ExperimentNo,
 		&ed.TestName,
-		&ed.SignedExperiment)
+		&ed.SignedExperiment,
+		&ed.SigningKeyID)
 	if err != nil {
 		ctx.WithError(err).Errorf("failed to get experiment_no %d", expNo)
 		return nil, err
@@ -182,12 +190,10 @@ func GetExperiment(db *sqlx.DB, experimentID string) (*ClientExperimentData, err
 		client_experiments.state,
 		job_experiments.test_name, job_experiments.signing_key_id,
 		job_experiments.signed_experiment
-		FROM %s
-		WHERE client_experiments.id = $1
-		JOIN %s
-		ON job_experiments.experiment_no = client_experiments.experiment_no`,
-		common.ClientExperimentsTable,
-		common.JobExperimentsTable)
+		FROM client_experiments
+		JOIN job_experiments
+		ON job_experiments.experiment_no = client_experiments.experiment_no
+		WHERE client_experiments.id = $1`)
 	err = db.QueryRow(query, experimentID).Scan(
 		&exp.ID, &exp.ClientID,
 		&exp.ExperimentNo, pq.Array(&exp.ArgsIdx),

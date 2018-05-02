@@ -209,6 +209,7 @@ class AdminNewExperiment extends React.Component {
       urls: [
         {value: 'http://', error: null}
       ],
+      comment: '',
       targetCountries: [],
       targetPlatforms: [],
       duration: {W: 1},
@@ -278,7 +279,10 @@ class AdminNewExperiment extends React.Component {
   }
 
   onNettestChange ({target}) {
-    this.setState({ nettest: target.value})
+    this.setState({
+      nettest: target.value,
+      comment: `${target.value} experiment`
+    })
   }
 
   onUrlsChange (value) {
@@ -373,7 +377,7 @@ class AdminNewExperiment extends React.Component {
                       startMoment: this.state.startMoment,
                       repeatCount: this.state.repeatCount
                   }),
-      // XXX we currently don't set this
+      'comment': this.state.comment,
       'delay': 0,
       'signed_experiment': this.state.signedExperiment,
       'target': {

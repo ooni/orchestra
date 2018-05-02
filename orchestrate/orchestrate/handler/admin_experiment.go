@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"github.com/ooni/orchestra/common"
 	"github.com/ooni/orchestra/orchestrate/orchestrate/sched"
 )
 
@@ -21,12 +23,13 @@ type ExperimentData struct {
 	Target           Target
 	State            string
 	SignedExperiment string
+	SigningKeyID     string
 
 	CreationTime time.Time
 }
 
 // NewExperiment populates the ExperimentData struct
-func NewExperiment(q CreateExperimentQuery) (*ExperimentData, error) {
+func NewExperiment(q CreateExperimentQuery, signingKeyID string) (*ExperimentData, error) {
 	schedule, err := sched.ParseSchedule(q.Schedule)
 	if err != nil {
 		return nil, err
@@ -36,6 +39,7 @@ func NewExperiment(q CreateExperimentQuery) (*ExperimentData, error) {
 		ExperimentNo:     -1,
 		Schedule:         schedule,
 		ScheduleString:   q.Schedule,
+		SigningKeyID:     signingKeyID,
 		Delay:            q.Delay,
 		Comment:          q.Comment,
 		Target:           q.Target,
@@ -111,9 +115,25 @@ func AddExperiment(db *sqlx.DB, s *sched.Scheduler, exp *ExperimentData) error {
 	return nil
 }
 
+func GetSigningKeyID(db *sqlx.DB, userID string) (string, error) {
+	var keyID string
+	query := fmt.Sprintf(`SELECT
+								keyid
+								FROM %s
+								WHERE username = $1`,
+		pq.QuoteIdentifier(common.AccountsTable))
+	err := db.QueryRow(query, userID).Scan(&keyID)
+	if err != nil {
+		return "", err
+	}
+	return keyID, nil
+}
+
 // AddExperimentHandler is used to create a new experiment
 func AddExperimentHandler(c *gin.Context) {
 	db := c.MustGet("DB").(*sqlx.DB)
+	userID := c.MustGet("userID").(string)
+
 	scheduler := c.MustGet("Scheduler").(*sched.Scheduler)
 
 	var query CreateExperimentQuery
@@ -124,8 +144,9 @@ func AddExperimentHandler(c *gin.Context) {
 			gin.H{"error": "invalid request"})
 		return
 	}
+	signingKeyID, err := GetSigningKeyID(db, userID)
 
-	experiment, err := NewExperiment(query)
+	experiment, err := NewExperiment(query, signingKeyID)
 	if err != nil {
 		ctx.WithError(err).Error("failed to create experiment")
 		c.JSON(http.StatusBadRequest,
