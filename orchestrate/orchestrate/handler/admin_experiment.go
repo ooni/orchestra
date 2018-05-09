@@ -170,16 +170,16 @@ func AdminAddExperimentHandler(c *gin.Context) {
 	return
 }
 
-// GetExperimentsForUser lists all the tasks a user has
-func AdminListExperiments(db *sqlx.DB) ([]*ExperimentData, error) {
+// AdminListExperiments lists all the tasks a user has
+func AdminListExperiments(db *sqlx.DB) ([]ExperimentData, error) {
 	var (
 		err         error
-		experiments []*ExperimentData
+		experiments []ExperimentData
 	)
 
 	query := `SELECT
 		experiment_no, comment,
-		test_name,  signing_key_id,
+		test_name,  COALESCE(signing_key_id, ''),
 		signed_experiment, creation_time,
 		schedule, delay,
 		target_countries, target_platforms,
@@ -196,11 +196,10 @@ func AdminListExperiments(db *sqlx.DB) ([]*ExperimentData, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var (
-			exp    ExperimentData
-			target Target
-		)
-		rows.Scan(&exp.ExperimentNo, &exp.Comment,
+		exp := ExperimentData{}
+		target := Target{}
+
+		err := rows.Scan(&exp.ExperimentNo, &exp.Comment,
 			&exp.TestName, &exp.SigningKeyID,
 			&exp.SignedExperiment, &exp.CreationTime,
 			&exp.ScheduleString, &exp.Delay,
@@ -212,7 +211,9 @@ func AdminListExperiments(db *sqlx.DB) ([]*ExperimentData, error) {
 			ctx.WithError(err).Error("failed to get task")
 			return experiments, err
 		}
-		experiments = append(experiments, &exp)
+		ctx.Debugf("target: %v", target)
+		ctx.Debugf("exp: %v", exp)
+		experiments = append(experiments, exp)
 	}
 	return experiments, nil
 }
