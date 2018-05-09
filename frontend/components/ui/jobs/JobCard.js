@@ -55,10 +55,10 @@ class JobCard extends React.Component {
 
     let targetCountries = 'ANY',
         targetPlatforms = 'ANY'
-    if (target.countries.length > 0) {
+    if (target.countries && target.countries.length > 0) {
       targetCountries = target.countries.join(',')
     }
-    if (target.platforms.length > 0) {
+    if (target.platforms && target.platforms.length > 0) {
       targetPlatforms = target.platforms.join(',')
     }
     let subtitle
