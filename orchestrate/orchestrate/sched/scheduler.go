@@ -472,6 +472,7 @@ func (j *Job) Run(jDB *JobDB) {
 					t.ClientID)
 			}
 		} else if j.Type == ExperimentJob {
+			ctx.Debug("Creating client experiment")
 			clientExp, err := CreateClientExperiment(jDB.db, j.Data.(*ExperimentData), t.ClientID)
 			if err != nil {
 				ctx.WithError(err).Errorf("failed to create clientExperiment for %s",

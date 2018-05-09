@@ -2,14 +2,18 @@ package handler
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	jwt "github.com/hellais/jwt-go"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/ooni/orchestra/common"
+	"github.com/ooni/orchestra/orchestrate/orchestrate/keystore"
 	"github.com/ooni/orchestra/orchestrate/orchestrate/sched"
 )
 
@@ -38,6 +42,14 @@ func NewExperiment(q CreateExperimentQuery, signingKeyID string) (*ExperimentDat
 		return nil, err
 	}
 
+	// XXX actually verify that it's signed properly
+	tokenStr, err := jwt.DecodeSegment(strings.Split(q.SignedExperiment, ".")[1])
+	if err != nil {
+		return nil, err
+	}
+	orch := keystore.OrchestraClaims{}
+	json.Unmarshal([]byte(tokenStr), &orch)
+
 	return &ExperimentData{
 		ExperimentNo:     -1,
 		Schedule:         schedule,
@@ -46,6 +58,7 @@ func NewExperiment(q CreateExperimentQuery, signingKeyID string) (*ExperimentDat
 		Delay:            q.Delay,
 		Comment:          q.Comment,
 		Target:           q.Target,
+		TestName:         orch.TestName,
 		State:            "active",
 		SignedExperiment: q.SignedExperiment, // XXX we should validate this
 		CreationTime:     time.Now().UTC(),
@@ -78,7 +91,7 @@ func AddExperiment(db *sqlx.DB, s *sched.Scheduler, exp *ExperimentData) error {
 		target_countries, target_platforms,
 		creation_time, times_run,
 		next_run_at, is_done,
-		state,
+		state, signing_key_id,
 		test_name, signed_experiment
 	) VALUES (
 		DEFAULT, $1,
@@ -86,8 +99,8 @@ func AddExperiment(db *sqlx.DB, s *sched.Scheduler, exp *ExperimentData) error {
 		$4, $5,
 		$6, $7,
 		$8, $9,
-		$10,
-		$11, $12)
+		$10, $11,
+		$12, $13)
 	RETURNING experiment_no`)
 
 	if err != nil {
@@ -101,7 +114,7 @@ func AddExperiment(db *sqlx.DB, s *sched.Scheduler, exp *ExperimentData) error {
 		pq.Array(exp.Target.Countries), pq.Array(exp.Target.Platforms),
 		exp.Schedule.StartTime, 0,
 		exp.Schedule.StartTime, false,
-		exp.State,
+		exp.State, exp.SigningKeyID,
 		exp.TestName, exp.SignedExperiment).Scan(&exp.ExperimentNo)
 	if err != nil {
 		tx.Rollback()
@@ -211,8 +224,6 @@ func AdminListExperiments(db *sqlx.DB) ([]ExperimentData, error) {
 			ctx.WithError(err).Error("failed to get task")
 			return experiments, err
 		}
-		ctx.Debugf("target: %v", target)
-		ctx.Debugf("exp: %v", exp)
 		experiments = append(experiments, exp)
 	}
 	return experiments, nil

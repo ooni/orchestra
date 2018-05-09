@@ -132,6 +132,7 @@ func CreateClientExperiment(db *sqlx.DB, ed *ExperimentData, cID string) (*Clien
 		}
 		// XXX we may want to split this into some other function
 		if ed.TestName == "web_connectivity" {
+			// XXX there is a bug here
 			urls := token.Claims.(jwt.MapClaims)["args"].(map[string]map[string]string)["urls"]
 			// We just add all the indexes for the moment
 			for i := 0; i <= len(urls); i++ {
