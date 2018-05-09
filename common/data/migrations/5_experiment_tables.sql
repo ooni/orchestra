@@ -129,7 +129,7 @@ DROP SEQUENCE task_no_seq;
 
 ALTER TABLE "public"."accounts"
   ALTER COLUMN "username" SET NOT NULL,
-  ALTER COLUMN "username" SET UNIQUE,
+  ADD UNIQUE (username),
   ADD COLUMN "keyid" VARCHAR;
 
 -- +migrate StatementEnd
