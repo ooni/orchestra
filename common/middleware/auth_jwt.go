@@ -213,7 +213,6 @@ func (mw *GinJWTMiddleware) middlewareImpl(auth Authorizator, c *gin.Context) {
 // Payload needs to be json in the form of {"username": "USERNAME", "password": "PASSWORD"}.
 // Reply will be of the form {"token": "TOKEN"}.
 func (mw *GinJWTMiddleware) LoginHandler(c *gin.Context) {
-
 	// Initial middleware default setting.
 	mw.MiddlewareInit()
 
@@ -440,14 +439,19 @@ func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 							keyid, password_hash, role
 							FROM %s WHERE username = $1`,
 				pq.QuoteIdentifier(common.AccountsTable))
+			var keyid sql.NullString
 			err := db.QueryRow(query, userId).Scan(
-				&account.KeyID,
+				&keyid,
 				&passwordHash,
 				&account.Role)
+			if keyid.Valid {
+				account.KeyID = keyid.String
+			}
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return account, false
 				}
+				ctx.WithError(err).Error("Failed to run query")
 				return account, false
 			}
 			err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))

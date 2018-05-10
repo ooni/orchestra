@@ -26,11 +26,9 @@ func GetExperimentsForUser(uID string, since string,
 		job_experiments.test_name, job_experiments.signing_key_id,
 		job_experiments.signed_experiment
 		FROM client_experiments
-		WHERE
-			state = 'ready' AND
-			probe_id = $1 AND creation_time >= $2
 		JOIN job_experiments
-		ON job_experiments.experiment_no = client_experiments.experiment_no`
+		ON (job_experiments.experiment_no = client_experiments.experiment_no)
+		WHERE client_experiments.state = 'ready' AND client_experiments.probe_id = $1 AND job_experiments.creation_time >= $2;`
 	rows, err := db.Query(query, uID, since)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -44,7 +42,7 @@ func GetExperimentsForUser(uID string, since string,
 		var (
 			exp sched.ClientExperimentData
 		)
-		rows.Scan(&exp.ID,
+		err := rows.Scan(&exp.ID,
 			&exp.ExperimentNo, pq.Array(&exp.ArgsIdx),
 			&exp.State,
 			&exp.TestName, &exp.SigningKeyID,

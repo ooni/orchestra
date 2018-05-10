@@ -639,25 +639,19 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			j            Job
-			schedule     string
-			nextRunAtStr string
+			j        Job
+			schedule string
 		)
 		err := rows.Scan(&alertNo,
 			&j.Comment,
 			&schedule,
 			&j.Delay,
 			&j.TimesRun,
-			&nextRunAtStr,
+			&j.NextRunAt,
 			&j.IsDone,
 			&experimentNo)
 		if err != nil {
 			ctx.WithError(err).Error("failed to iterate over jobs")
-			return allJobs, err
-		}
-		j.NextRunAt, err = time.Parse(ISOUTCTimeLayout, nextRunAtStr)
-		if err != nil {
-			ctx.WithError(err).Error("invalid time string")
 			return allJobs, err
 		}
 		j.Schedule, err = ParseSchedule(schedule)

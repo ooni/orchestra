@@ -27,14 +27,14 @@ type ExperimentData struct {
 
 // ClientExperimentData is the data for the task
 type ClientExperimentData struct {
-	ID               string `json:"id"`
-	ClientID         string `json:"client_id"`
-	ExperimentNo     int64  `json:"-"`
-	TestName         string `json:"test_name" binding:"required"`
-	SigningKeyID     string `json:"signing_key_id"`
-	SignedExperiment string `json:"signed_experiment"`
-	ArgsIdx          []int  `json:"args_idx"`
-	State            string `json:"state"`
+	ID               string  `json:"id"`
+	ClientID         string  `json:"client_id"`
+	ExperimentNo     int64   `json:"-"`
+	TestName         string  `json:"test_name" binding:"required"`
+	SigningKeyID     string  `json:"signing_key_id"`
+	SignedExperiment string  `json:"signed_experiment"`
+	ArgsIdx          []int64 `json:"args_idx"`
+	State            string  `json:"state"`
 }
 
 var validSigningKeys = map[string]*rsa.PublicKey{}
@@ -133,10 +133,11 @@ func CreateClientExperiment(db *sqlx.DB, ed *ExperimentData, cID string) (*Clien
 		// XXX we may want to split this into some other function
 		if ed.TestName == "web_connectivity" {
 			// XXX there is a bug here
-			urls := token.Claims.(jwt.MapClaims)["args"].(map[string]map[string]string)["urls"]
+			ctx.Debugf("%v")
+			urls := token.Claims.(jwt.MapClaims)["args"].(map[string]interface{})["urls"].([]interface{})
 			// We just add all the indexes for the moment
 			for i := 0; i <= len(urls); i++ {
-				clientExp.ArgsIdx = append(clientExp.ArgsIdx, i)
+				clientExp.ArgsIdx = append(clientExp.ArgsIdx, int64(i))
 			}
 		}
 
