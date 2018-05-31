@@ -1,14 +1,9 @@
 package sched
 
 import (
-	"bytes"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -18,7 +13,6 @@ import (
 	"github.com/jmoiron/sqlx/types"
 	"github.com/lib/pq"
 	"github.com/ooni/orchestra/common"
-	"github.com/spf13/viper"
 )
 
 var ctx = log.WithFields(log.Fields{
@@ -256,152 +250,6 @@ func (j *Job) WaitAndRun(jDB *JobDB) {
 	j.jobTimer = time.AfterFunc(waitDuration, jobRun)
 }
 
-// NotifyReq is the reuqest for sending this particular notification message
-// XXX this is duplicated in proteus-notify
-type NotifyReq struct {
-	ClientIDs []string               `json:"client_ids"`
-	Event     map[string]interface{} `json:"event"`
-}
-
-// GoRushNotification all the notification metadata for gorush
-type GoRushNotification struct {
-	Tokens           []string               `json:"tokens"`
-	Platform         int                    `json:"platform"`
-	Message          string                 `json:"message"`
-	Topic            string                 `json:"topic"`
-	To               string                 `json:"to"`
-	Data             map[string]interface{} `json:"data"`
-	ContentAvailable bool                   `json:"content_available"`
-	Notification     map[string]string      `json:"notification"`
-}
-
-// GoRushReq a wrapper for a gorush notification request
-type GoRushReq struct {
-	Notifications []*GoRushNotification `json:"notifications"`
-}
-
-// NotifyGorush tell gorush to notify clients
-func NotifyGorush(notification *GoRushNotification) error {
-	var (
-		err error
-	)
-
-	path, _ := url.Parse("/api/push")
-	baseURL, err := url.Parse(viper.GetString("core.gorush-url"))
-	if err != nil {
-		return err
-	}
-
-	notifyReq := GoRushReq{
-		Notifications: []*GoRushNotification{notification},
-	}
-
-	jsonStr, err := json.Marshal(notifyReq)
-	if err != nil {
-		ctx.WithError(err).Error("failed to marshal data")
-		return err
-	}
-	u := baseURL.ResolveReference(path)
-	ctx.Debugf("sending notify request: %s", jsonStr)
-	req, err := http.NewRequest("POST",
-		u.String(),
-		bytes.NewBuffer(jsonStr))
-	if err != nil {
-		ctx.WithError(err).Error("failed to send request")
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	if viper.IsSet("auth.gorush-basic-auth-user") {
-		req.SetBasicAuth(viper.GetString("auth.gorush-basic-auth-user"),
-			viper.GetString("auth.gorush-basic-auth-password"))
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		ctx.WithError(err).Error("http request failed")
-		return err
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		ctx.WithError(err).Error("failed to read response body")
-		return err
-	}
-	ctx.Debugf("got response: %s", body)
-	// XXX do we also want to check the body?
-	if resp.StatusCode != 200 {
-		ctx.Debugf("got invalid status code: %d", resp.StatusCode)
-		return errors.New("http request returned invalid status code")
-	}
-	return nil
-}
-
-func MakeAlertNotifcation(j *Job, jt *JobTarget) (*GoRushNotification, error) {
-	var notificationType = "default"
-	notification := &GoRushNotification{
-		Tokens: []string{jt.Token},
-	}
-	ctx.Debugf("making alert data for %v", j)
-	alertData := j.Data.(*AlertData)
-	if _, ok := alertData.Extra["href"]; ok {
-		notificationType = "open_href"
-	}
-	notification.Message = alertData.Message
-	notification.Data = map[string]interface{}{
-		"type":    notificationType,
-		"payload": alertData.Extra,
-	}
-	notification.Notification = make(map[string]string)
-
-	if jt.Platform == "ios" {
-		notification.Platform = 1
-		notification.Topic = viper.GetString("core.notify-topic-ios")
-	} else if jt.Platform == "android" {
-		notification.Notification["click_action"] = viper.GetString(
-			"core.notify-click-action-android")
-		notification.Platform = 2
-		/* We don't need to send a topic on Android. As the response message of
-		   failed requests say: `Must use either "registration_ids" field or
-		   "to", not both`. And we need `registration_ids` because we send in
-		   multicast to many clients. More evidence, as usual, on SO:
-		   <https://stackoverflow.com/a/33440105>. */
-	} else {
-		return nil, ErrUnsupportedPlatform
-	}
-	return notification, nil
-}
-
-var ErrUnsupportedPlatform = errors.New("unsupported platform")
-
-func MakeExperimentNotifcation(j *Job, jt *JobTarget, expID string) (*GoRushNotification, error) {
-	notification := &GoRushNotification{
-		Tokens: []string{jt.Token},
-	}
-	notification.Data = map[string]interface{}{
-		"type": "run_experiment",
-		"payload": map[string]string{
-			"experiment_id": expID,
-		},
-	}
-	notification.ContentAvailable = true
-	notification.Notification = make(map[string]string)
-
-	if jt.Platform == "ios" {
-		notification.Platform = 1
-		notification.Topic = viper.GetString("core.notify-topic-ios")
-	} else if jt.Platform == "android" {
-		notification.Platform = 2
-		/* We don't need to send a topic on Android. As the response message of
-		   failed requests say: `Must use either "registration_ids" field or
-		   "to", not both`. And we need `registration_ids` because we send in
-		   multicast to many clients. More evidence, as usual, on SO:
-		   <https://stackoverflow.com/a/33440105>. */
-	} else {
-		return nil, ErrUnsupportedPlatform
-	}
-	return notification, nil
-}
-
 // ErrInconsistentState when you try to accept an already accepted task
 var ErrInconsistentState = errors.New("task already accepted")
 
@@ -411,6 +259,7 @@ var ErrTaskNotFound = errors.New("task not found")
 // ErrAccessDenied not enough permissions
 var ErrAccessDenied = errors.New("access denied")
 
+// RefreshData reloads the experiment or alert data from the database
 func (j *Job) RefreshData(jDB *JobDB) error {
 	var err error
 	ctx.Debugf("refreshing data for %v", j)
@@ -431,13 +280,85 @@ func (j *Job) RefreshData(jDB *JobDB) error {
 	return nil
 }
 
+// AlertWithTarget sends an alert to the specified target
+func AlertWithTarget(j *Job, t *JobTarget) {
+	notification, err := MakeAlertNotifcation(j, t)
+	if err != nil {
+		if err == ErrUnsupportedPlatform {
+			ctx.Debugf("unsupported platform")
+		} else {
+			ctx.WithError(err).Errorf("failed to make notification %s",
+				t.ClientID)
+		}
+		return
+	}
+	if err = NotifyGorush(notification); err != nil {
+		ctx.WithError(err).Errorf("failed to notify alert to %s",
+			t.ClientID)
+	}
+}
+
+func ExperimentWithTarget(jDB *JobDB, j *Job, t *JobTarget) {
+	ctx.Debug("Creating client experiment")
+	clientExp, err := CreateClientExperiment(jDB.db, j.Data.(*ExperimentData), t.ClientID)
+	if err != nil {
+		ctx.WithError(err).Errorf("failed to create clientExperiment for %s",
+			t.ClientID)
+		return
+	}
+
+	notification, err := MakeExperimentNotifcation(j, t, clientExp.ID)
+	if err != nil {
+		if err == ErrUnsupportedPlatform {
+			ctx.Debugf("unsupported platform")
+		} else {
+			ctx.WithError(err).Errorf("failed to create experiment notification for %s",
+				clientExp.ID)
+		}
+		return
+	}
+
+	err = NotifyGorush(notification)
+	if err != nil {
+		ctx.WithError(err).Errorf("failed to notify experiment to %s",
+			t.ClientID)
+	}
+
+	err = SetExperimentNotified(jDB, clientExp.ID, clientExp.ClientID)
+	if err != nil {
+		ctx.WithError(err).Error("failed to update task state")
+	}
+}
+
+// JobWasRun is called to indicate that the job was run. It schedules a
+// goroutine to re-run the job at some time in the future.
+func (j *Job) JobWasRun(jDB *JobDB, lastRunAt time.Time) {
+	j.TimesRun = j.TimesRun + 1
+	if j.Schedule.Repeat != -1 && j.TimesRun >= j.Schedule.Repeat {
+		j.IsDone = true
+	} else {
+		d := j.Schedule.Duration.ToDuration()
+		ctx.Debugf("adding %s", d)
+		j.NextRunAt = lastRunAt.Add(d)
+	}
+	ctx.Debugf("next run will be at %s", j.NextRunAt)
+	ctx.Debugf("times run %d", j.TimesRun)
+	err := j.Save(jDB)
+	if err != nil {
+		ctx.Error("failed to save job state to DB")
+	}
+	if j.ShouldWait() {
+		go j.WaitAndRun(jDB)
+	}
+}
+
 // Run the given job
 func (j *Job) Run(jDB *JobDB) {
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
 	if !j.ShouldRun() {
-		ctx.Error("inconsitency in should run detected..")
+		ctx.Error("inconsitency in ShouldRun() detected..")
 		return
 	}
 	if err := j.RefreshData(jDB); err != nil {
@@ -457,70 +378,15 @@ func (j *Job) Run(jDB *JobDB) {
 		// In here shall go logic to connect to notification server and notify
 		// them of the task
 		if j.Type == AlertJob {
-			notification, err := MakeAlertNotifcation(j, t)
-			if err != nil {
-				if err == ErrUnsupportedPlatform {
-					ctx.Debugf("unsupported platform")
-				} else {
-					ctx.WithError(err).Errorf("failed to make notification %s",
-						t.ClientID)
-				}
-				continue
-			}
-			if err = NotifyGorush(notification); err != nil {
-				ctx.WithError(err).Errorf("failed to notify alert to %s",
-					t.ClientID)
-			}
+			AlertWithTarget(j, t)
 		} else if j.Type == ExperimentJob {
-			ctx.Debug("Creating client experiment")
-			clientExp, err := CreateClientExperiment(jDB.db, j.Data.(*ExperimentData), t.ClientID)
-			if err != nil {
-				ctx.WithError(err).Errorf("failed to create clientExperiment for %s",
-					t.ClientID)
-				continue
-			}
-			notification, err := MakeExperimentNotifcation(j, t, clientExp.ID)
-			if err != nil {
-				if err == ErrUnsupportedPlatform {
-					ctx.Debugf("unsupported platform")
-				} else {
-					ctx.WithError(err).Errorf("failed to create experiment notification for %s",
-						clientExp.ID)
-				}
-				continue
-			}
-			err = NotifyGorush(notification)
-			if err != nil {
-				ctx.WithError(err).Errorf("failed to notify experiment to %s",
-					t.ClientID)
-			}
-			err = SetExperimentNotified(jDB, clientExp.ID, clientExp.ClientID)
-			if err != nil {
-				ctx.WithError(err).Error("failed to update task state")
-			}
+			ExperimentWithTarget(jDB, j, t)
 		}
 		ctx.Debugf("notifying %s", t.ClientID)
 	}
 
 	ctx.Debugf("successfully ran at %s", lastRunAt)
-	// XXX maybe move these elsewhere
-	j.TimesRun = j.TimesRun + 1
-	if j.Schedule.Repeat != -1 && j.TimesRun >= j.Schedule.Repeat {
-		j.IsDone = true
-	} else {
-		d := j.Schedule.Duration.ToDuration()
-		ctx.Debugf("adding %s", d)
-		j.NextRunAt = lastRunAt.Add(d)
-	}
-	ctx.Debugf("next run will be at %s", j.NextRunAt)
-	ctx.Debugf("times run %d", j.TimesRun)
-	err = j.Save(jDB)
-	if err != nil {
-		ctx.Error("failed to save job state to DB")
-	}
-	if j.ShouldWait() {
-		go j.WaitAndRun(jDB)
-	}
+	j.JobWasRun(jDB, lastRunAt)
 }
 
 // Save the job to the job database
