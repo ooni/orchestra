@@ -1,3 +1,14 @@
+# orchestra 0.2.1 [2018-07-13]
+
+Changes:
+
+* Rename proteus to orchestra
+* Switch to dep for dependency management
+
+Adds:
+
+* Pagination support for result listing
+
 # proteus 0.2.0 [2018-01-25]
 
 Fixes:
