@@ -125,6 +125,8 @@ var keygenCmd = &cobra.Command{
 	},
 }
 
+/*
+XXX disable the keygen command
 func init() {
 	RootCmd.AddCommand(keygenCmd)
 
@@ -134,3 +136,4 @@ func init() {
 	// and all subcommands, e.g.:
 	keygenCmd.PersistentFlags().StringVar(&outputFile, "f", "orchestrate-key", "Specify where to write the key to")
 }
+*/
