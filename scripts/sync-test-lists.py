@@ -275,7 +275,7 @@ def dirname(s):
 
 def parse_args():
     p = argparse.ArgumentParser(description='test-lists: perform operations related to test-list synchronization')
-    p.add_argument('--working-dir', metavar='DIR', type=dirname, help='where we should be cloning the git repository to', required=True)
+    p.add_argument('--working-dir', metavar='DIR', type=dirname, help='The working directory for this script. It should be preserved across runs.', required=True)
     p.add_argument('--postgres', metavar='DSN', help='libpq data source name', required=True)
     opt = p.parse_args()
     return opt
