@@ -1,68 +1,31 @@
 import os
 import csv
+import json
+import shutil
 import argparse
 from glob import glob
 
-import pycountry
+# pip install psycopg2 GitPython
 import psycopg2
 import git
 
 TEST_LISTS_GIT_URL = 'https://github.com/citizenlab/test-lists/'
+COUNTRY_UTIL_URL = 'https://github.com/hellais/country-util'
 
-CREATE_URL_CATEGORIES_TABLE = """
-CREATE SEQUENCE IF NOT EXISTS cat_no_seq;
-
-CREATE TABLE IF NOT EXISTS url_categories
-(
-    cat_no INT NOT NULL default nextval('cat_no_seq') PRIMARY KEY,
-    cat_code VARCHAR UNIQUE NOT NULL,
-    cat_desc VARCHAR NOT NULL,
-    cat_long_desc VARCHAR,
-    cat_old_codes VARCHAR
-);
-"""
-
-# XXX can a url belong to more than one category? (probably not)
-CREATE_URL_TABLE = """
-CREATE SEQUENCE IF NOT EXISTS url_no_seq;
-
-CREATE TABLE IF NOT EXISTS urls
-(
-    url_no INT NOT NULL default nextval('url_no_seq') PRIMARY KEY,
-    url VARCHAR,
-    cat_no INT,
-    country_no INT,
-    date_added TIMESTAMP WITH TIME ZONE,
-    source VARCHAR,
-    notes VARCHAR,
-    active BOOLEAN,
-    UNIQUE (url, country_no)
-);
-"""
-
-CREATE_COUNTRY_TABLE = """
-CREATE SEQUENCE IF NOT EXISTS country_no_seq;
-
-CREATE TABLE IF NOT EXISTS countries
-(
-    country_no INT NOT NULL default nextval('country_no_seq') PRIMARY KEY,
-    name VARCHAR UNIQUE NOT NULL,
-    alpha_2 VARCHAR(2) UNIQUE NOT NULL,
-    alpha_3 VARCHAR(3) UNIQUE NOT NULL
-);
-"""
 class ProgressHandler(git.remote.RemoteProgress):
     def update(self, op_code, cur_count, max_count=None, message=''):
         print('update(%s, %s, %s, %s)' % (op_code, cur_count, max_count, message))
 
 def init_repo(working_dir):
     """
-    To be run on first start
+    To be run on first run.
+    We will initially clone the repository into test-lists.tmp, but then will
+    move it into test-lists, once the database is intialized.
     """
-    repo_dir = os.path.join(working_dir, 'test-lists')
+    repo_dir = os.path.join(working_dir, 'test-lists.tmp')
     if os.path.isdir(repo_dir):
-        print("%s already existing. Skipping clone" % repo_dir)
-        return git.Repo(repo_dir)
+        print("%s already existing. Deleting it." % repo_dir)
+        shutil.rmtree(repo_dir)
     repo = git.Repo.clone_from(TEST_LISTS_GIT_URL,
                                repo_dir,
                                progress=ProgressHandler())
@@ -79,18 +42,17 @@ def _iterate_csv(file_path, skip_header=False):
 def init_category_codes(working_dir, postgres):
     pgconn = psycopg2.connect(dsn=postgres)
     with pgconn, pgconn.cursor() as c:
-        csv_path = os.path.join(working_dir, 'test-lists', 'lists', '00-LEGEND-new_category_codes.csv')
+        csv_path = os.path.join(working_dir, 'test-lists.tmp', 'lists', '00-LEGEND-new_category_codes.csv')
         for row in _iterate_csv(csv_path, skip_header=True):
             cat_desc, cat_code, cat_old_codes, cat_long_desc = row
+            cat_old_codes = list(
+                filter(lambda x: x != "",
+                    map(lambda x: x.strip(), cat_old_codes.split(' '))))
             c.execute('INSERT INTO url_categories (cat_code, cat_desc, cat_long_desc, cat_old_codes)'
                       ' VALUES (%s, %s, %s, %s)'
                       ' ON CONFLICT DO NOTHING RETURNING cat_code',
                       (cat_code, cat_desc, cat_long_desc, cat_old_codes))
             # XXX maybe we care to know when there is a dup?
-
-country_name_fixes = {
-    'TW': 'Taiwan' # This is a fix to map "Taiwan, Province of China" to "Taiwan"
-}
 
 special_countries = (
     ('Unknown Country', 'ZZ', 'ZZZ'),
@@ -112,28 +74,39 @@ def get_cat_code_no(postgres):
         cat_code_no = {str(_[0]): _[1] for _ in c}
     return cat_code_no
 
-def init_countries(postgres):
+def init_countries(working_dir, postgres):
+    repo_dir = os.path.join(working_dir, 'country-util')
+    if os.path.isdir(repo_dir):
+        print("%s already existing. Deleting it." % repo_dir)
+        shutil.rmtree(repo_dir)
+    repo = git.Repo.clone_from(COUNTRY_UTIL_URL,
+                               repo_dir,
+                               progress=ProgressHandler())
+    with open(os.path.join(repo_dir, 'data', 'country-list.json')) as in_file:
+        country_list = json.load(in_file)
+
     pgconn = psycopg2.connect(dsn=postgres)
     with pgconn, pgconn.cursor() as c:
-        for country in pycountry.countries:
-            alpha_2 = country.alpha_2
-            alpha_3 = country.alpha_3
-            name = country_name_fixes.get(alpha_2, country.name)
-            c.execute('INSERT INTO countries (name, alpha_2, alpha_3)'
-                      ' VALUES (%s, %s, %s)'
+        for country in country_list:
+            alpha_2 = country['iso3166_alpha2']
+            alpha_3 = country['iso3166_alpha3']
+            full_name = country['iso3166_name']
+            name = country['name']
+            c.execute('INSERT INTO countries (full_name, name, alpha_2, alpha_3)'
+                      ' VALUES (%s, %s, %s, %s)'
                       ' ON CONFLICT DO NOTHING RETURNING country_no',
-                      (name, alpha_2, alpha_3))
+                      (full_name, name, alpha_2, alpha_3))
 
         for name, alpha_2, alpha_3 in special_countries:
-            c.execute('INSERT INTO countries (name, alpha_2, alpha_3)'
-                      ' VALUES (%s, %s, %s)'
+            c.execute('INSERT INTO countries (full_name, name, alpha_2, alpha_3)'
+                      ' VALUES (%s, %s, %s, %s)'
                       ' ON CONFLICT DO NOTHING RETURNING country_no',
-                      (name, alpha_2, alpha_3))
+                      (name, name, alpha_2, alpha_3))
 
 def init_url_lists(working_dir, postgres, cat_code_no, country_alpha_2_no):
     pgconn = psycopg2.connect(dsn=postgres)
     with pgconn, pgconn.cursor() as c:
-        csv_glob = os.path.join(working_dir, 'test-lists', 'lists', '*.csv')
+        csv_glob = os.path.join(working_dir, 'test-lists.tmp', 'lists', '*.csv')
         for csv_path in glob(csv_glob):
             alpha_2 = os.path.basename(csv_path).split('.csv')[0].upper()
             if alpha_2 == 'GLOBAL':
@@ -171,11 +144,10 @@ def sync_repo(working_dir):
         print("%s does not exist. Try running with --init" % repo_dir)
         raise RuntimeError("%s does not exist" % repo_dir)
     repo = git.Repo(repo_dir)
-    #previous_commit = repo.head.commit
-    #repo.remotes.origin.pull()
-    #if repo.head.commit != previous_commit:
-    #    diffs = previous_commit.diff(repo.head.commit)
-    diffs = repo.head.commit.diff("HEAD~1")
+    previous_commit = repo.head.commit
+    repo.remotes.origin.pull()
+    if repo.head.commit != previous_commit:
+        diffs = previous_commit.diff(repo.head.commit)
     return diffs
 
 
@@ -278,27 +250,21 @@ def update(working_dir, postgres):
         print("Updating test list: %s" % changed_path)
         update_country_list(changed_path, working_dir, postgres, cat_code_no, country_alpha_2_no)
 
-def init_db(postgres):
-    pgconn = psycopg2.connect(dsn=postgres)
-    with pgconn, pgconn.cursor() as c:
-        c.execute(CREATE_URL_TABLE)
-        c.execute(CREATE_URL_CATEGORIES_TABLE)
-        c.execute(CREATE_COUNTRY_TABLE)
-
 def init(working_dir, postgres):
-    print("Initialising DB")
-    init_db(postgres)
     print("Initialising git repo")
     init_repo(working_dir)
     print("Initialising category codes")
     init_category_codes(working_dir, postgres)
     print("Initialising countries")
-    init_countries(postgres)
+    init_countries(working_dir, postgres)
 
     print("Initialising url lists")
     cat_code_no = get_cat_code_no(postgres)
     country_alpha_2_no = get_country_alpha_2_no(postgres)
     init_url_lists(working_dir, postgres, cat_code_no, country_alpha_2_no)
+    # Mark it as initialized
+    os.rename(os.path.join(working_dir, 'test-lists.tmp'),
+              os.path.join(working_dir, 'test-lists'))
 
 def dirname(s):
     if not os.path.isdir(s):
@@ -310,15 +276,13 @@ def dirname(s):
 def parse_args():
     p = argparse.ArgumentParser(description='test-lists: perform operations related to test-list synchronization')
     p.add_argument('--working-dir', metavar='DIR', type=dirname, help='where we should be cloning the git repository to', required=True)
-    p.add_argument('--init', action='store_true', help='if we should be running the initialisation routine')
     p.add_argument('--postgres', metavar='DSN', help='libpq data source name', required=True)
     opt = p.parse_args()
     return opt
 
 def main():
     opt = parse_args()
-    if opt.init is True:
-        print("Initialising database and git repo")
+    if not os.path.isdir(os.path.join(opt.working_dir, 'test-lists')):
         init(opt.working_dir, opt.postgres)
     update(opt.working_dir, opt.postgres)
 
