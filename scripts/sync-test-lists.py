@@ -224,7 +224,7 @@ class GitToPostgres(object):
 
             cursor.execute('SELECT cat_no, source, notes, url_no, active FROM urls'
                       ' WHERE country_no = %s AND url = %s', (country_no, url))
-            url_in_db = [_ for _ in c]
+            url_in_db = [_ for _ in cursor]
             if len(url_in_db) == 0:
                 try:
                     cursor.execute('INSERT INTO urls (url, cat_no, country_no, date_added, source, notes, active)'
