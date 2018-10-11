@@ -30,18 +30,14 @@ special_countries = (
     ('European Union', 'EU', 'EUE')
 )
 
-def get_country_alpha_2_no(postgres):
-    pgconn = psycopg2.connect(dsn=postgres)
-    with pgconn, pgconn.cursor() as c:
-        c.execute('SELECT alpha_2, country_no FROM countries')
-        country_alpha_2_no = {str(_[0]): _[1] for _ in c}
+def get_country_alpha_2_no(cursor):
+    cursor.execute('SELECT alpha_2, country_no FROM countries')
+    country_alpha_2_no = {str(_[0]): _[1] for _ in cursor}
     return country_alpha_2_no
 
-def get_cat_code_no(postgres):
-    pgconn = psycopg2.connect(dsn=postgres)
-    with pgconn, pgconn.cursor() as c:
-        c.execute('SELECT cat_code, cat_no FROM url_categories')
-        cat_code_no = {str(_[0]): _[1] for _ in c}
+def get_cat_code_no(cursor):
+    cursor.execute('SELECT cat_code, cat_no FROM url_categories')
+    cat_code_no = {str(_[0]): _[1] for _ in cursor}
     return cat_code_no
 
 CREATE_SYNC_TEST_LISTS_TABLE = """
@@ -143,10 +139,10 @@ class GitToPostgres(object):
                       (name, name, alpha_2, alpha_3))
 
     def init_url_lists(self, cursor):
-        cat_code_no = get_cat_code_no(self.pgdsn)
-        country_alpha_2_no = get_country_alpha_2_no(self.pgdsn)
+        cat_code_no = get_cat_code_no(cursor)
+        country_alpha_2_no = get_country_alpha_2_no(cursor)
 
-        csv_glob = os.path.join(self.working_dir, 'test-lists.tmp', 'lists', '*.csv')
+        csv_glob = os.path.join(self.working_dir, 'test-lists', 'lists', '*.csv')
         for csv_path in glob(csv_glob):
             alpha_2 = os.path.basename(csv_path).split('.csv')[0].upper()
             if alpha_2 == 'GLOBAL':
@@ -189,25 +185,37 @@ class GitToPostgres(object):
         country_no = country_alpha_2_no[alpha_2]
 
         # for each URL in DB, if it's not in the newest CSV, mark it inactive
-        cursor.execute('SELECT url_no, url FROM urls'
-                  ' WHERE country_no = %s AND active = %s', (country_no, True))
-        db_urlno_urls = [_ for _ in cursor]
+        cursor.execute('SELECT url, cat_no, source, notes, url_no, active FROM urls'
+                       ' WHERE country_no = %s', (country_no, ))
+        url_in_db_map = {}
+        for row in cursor:
+            if row[0] in url_in_db_map:
+                print("WARNING: duplicate entry in the DB")
+            url_in_db_map[row[0]] = {
+                'url': row[0],
+                'cat_no': row[1],
+                'source': row[2],
+                'notes': row[3],
+                'url_no': row[4],
+                'active': row[5]
+            }
         csv_urls = set([row[0] for row in _iterate_csv(csv_path, skip_header=True)]) # XXX check for dupes, etc
-        print("for country %s, have %s active urls in db" % (alpha_2, len(db_urlno_urls)))
+        db_active_urls = list(filter(lambda x: x['active'] == True, url_in_db_map.values()))
+        print("for country %s, have %s active urls in db" % (alpha_2, len(db_active_urls)))
         print("for country %s, have %s urls in newest csv" % (alpha_2, len(csv_urls)))
-        for db_urlno_url in db_urlno_urls:
-            if db_urlno_url[1] not in csv_urls:
+        for url in db_active_urls:
+            if url['url'] not in csv_urls:
                 # mark inactive
                 try:
                     cursor.execute('UPDATE urls '
                               'SET active = %s'
                               ' WHERE url_no = %s',
-                              (False, db_urlno_url[0]))
+                              (False, url['url_no']))
                 except:
                     print("Failed to mark url_no:%s inactive" % db_urlno_url[0])
                     raise RuntimeError("Failed to mark url_no:%s inactive" % db_urlno_url[0])
 
-        # now go through urls in the newest csv. insert them if they're *not*
+
         # in the db, and update them if they *are* in the db.
         for row in _iterate_csv(csv_path, skip_header=True):
             url, cat_code, _, date_added, source, notes = row
@@ -222,10 +230,8 @@ class GitToPostgres(object):
                 print("INVALID country code %s" % alpha_2)
                 continue
 
-            cursor.execute('SELECT cat_no, source, notes, url_no, active FROM urls'
-                      ' WHERE country_no = %s AND url = %s', (country_no, url))
-            url_in_db = [_ for _ in cursor]
-            if len(url_in_db) == 0:
+            url_in_db = url_in_db_map.get(url, None)
+            if url_in_db is None:
                 try:
                     cursor.execute('INSERT INTO urls (url, cat_no, country_no, date_added, source, notes, active)'
                               ' VALUES (%s, %s, %s, %s, %s, %s, %s)'
@@ -234,25 +240,25 @@ class GitToPostgres(object):
                 except:
                     print("INVALID row in %s: %s" % (csv_path, row))
                     raise RuntimeError("INVALID row in %s: %s" % (csv_path, row))
-            elif len(url_in_db) == 1:
-                url_no = url_in_db[0][3]
-                if url_in_db[0][0] != cat_no or url_in_db[0][1] != source or url_in_db[0][2] != notes or url_in_db[0][4] != True:
-                    try:
-                        cursor.execute('UPDATE urls '
-                                  'SET cat_no = %s,'
-                                  '    source = %s,'
-                                  '    notes = %s,'
-                                  '    active = %s'
-                                  ' WHERE url_no = %s',
-                                  (cat_no, source, notes, True, url_no))
-                    except:
-                        print("Failed to update %s with values: %s" % (csv_path, row))
-                        raise RuntimeError("Failed to update %s with values: %s" % (csv_path, row))
-                else:
-                    pass
-                    #print("Value unchanged, skipping")
+            elif (url_in_db['cat_no'] != cat_no
+                  or url_in_db['source'] != source
+                  or url_in_db['notes'] != notes
+                  or url_in_db['active'] is False):
+                try:
+                    url_no = url_in_db[3]
+                    cursor.execute('UPDATE urls '
+                              'SET cat_no = %s,'
+                              '    source = %s,'
+                              '    notes = %s,'
+                              '    active = %s'
+                              ' WHERE url_no = %s',
+                              (cat_no, source, notes, True, url_no))
+                except:
+                    print("Failed to update %s with values: %s" % (csv_path, row))
+                    raise RuntimeError("Failed to update %s with values: %s" % (csv_path, row))
             else:
-                print("Duplicate entries found in database. Something is wrong see: %s" % url_in_db)
+                # Skip items that don't require update or insert
+                continue
 
     def update_url_lists(self, cursor):
         last_commit = self.test_lists_repo.commit(self.last_commit_hash)
@@ -260,8 +266,8 @@ class GitToPostgres(object):
             print("No changes made")
             return
         diffs = last_commit.diff(self.test_lists_repo.head.commit)
-        cat_code_no = get_cat_code_no(self.pgdsn)
-        country_alpha_2_no = get_country_alpha_2_no(self.pgdsn)
+        cat_code_no = get_cat_code_no(cursor)
+        country_alpha_2_no = get_country_alpha_2_no(cursor)
         for diff in diffs:
             changed_path = diff.b_path
             if not changed_path.startswith("lists/"):
