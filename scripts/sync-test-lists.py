@@ -4,6 +4,7 @@ import json
 import shutil
 import argparse
 from glob import glob
+from cStringIO import StringIO
 
 # pip install psycopg2 GitPython
 import psycopg2
@@ -151,6 +152,8 @@ class GitToPostgres(object):
             if len(alpha_2) != 2: # Skip every non two letter country code (ex. 00-LEGEND-category_codes)
                 continue
 
+            print("Inserting into urls")
+            insert_buf = StringIO()
             for row in _iterate_csv(csv_path, skip_header=True):
                 url, cat_code, _, date_added, source, notes = row
                 try:
@@ -163,15 +166,16 @@ class GitToPostgres(object):
                 except KeyError:
                     print("INVALID country code %s" % alpha_2)
                     continue
-                try:
-                    print("inserting into urls")
-                    cursor.execute('INSERT INTO urls (url, cat_no, country_no, date_added, source, notes, active)'
-                              ' VALUES (%s, %s, %s, %s, %s, %s, %s)'
-                              ' ON CONFLICT DO NOTHING RETURNING url_no',
-                              (url, cat_no, country_no, date_added, source, notes, True))
-                except:
-                    print("INVALID row in %s: %s" % (csv_path, row))
-                    raise RuntimeError("INVALID row in %s: %s" % (csv_path, row))
+                row = [url, str(cat_no), str(country_no), date_added, source, notes, 'true']
+                bad_chars = ["\r", "\n", "\t"]
+                for r in row:
+                    if any([c in r for c in bad_chars]):
+                        raise RuntimeError("Bad char in row %s" % row)
+                line = "\t".join(row)
+                insert_buf.write(line)
+                insert_buf.write("\n")
+
+            cursor.copy_from(insert_buf, 'urls', columns=('url', 'cat_no', 'country_no', 'date_added', 'source', 'notes', 'active'))
 
     def update_urls_by_path(self, cursor, changed_path, cat_code_no, country_alpha_2_no):
         csv_path = os.path.join(self.working_dir, 'test-lists', changed_path)
