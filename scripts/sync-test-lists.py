@@ -167,7 +167,7 @@ class GitToPostgres(object):
                     print("INVALID country code %s" % alpha_2)
                     continue
                 row = [url, str(cat_no), str(country_no), date_added, source, notes, 'true']
-                bad_chars = ["\r", "\n", "\t"]
+                bad_chars = ["\r", "\n", "\t", "\\"]
                 for r in row:
                     if any([c in r for c in bad_chars]):
                         raise RuntimeError("Bad char in row %s" % row)
