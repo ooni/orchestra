@@ -25,7 +25,7 @@ def _iterate_csv(file_path, skip_header=False):
         for row in reader:
             yield row
 
-special_countries = (
+SPECIAL_COUNTRIES = (
     ('Unknown Country', 'ZZ', 'ZZZ'),
     ('Global', 'XX', 'XXX'),
     ('European Union', 'EU', 'EUE')
@@ -117,7 +117,7 @@ class GitToPostgres(object):
         if os.path.isdir(repo_dir):
             print("%s already existing. Deleting it." % repo_dir)
             shutil.rmtree(repo_dir)
-        repo = git.Repo.clone_from(COUNTRY_UTIL_URL,
+        git.Repo.clone_from(COUNTRY_UTIL_URL,
                                    repo_dir,
                                    progress=ProgressHandler())
         with open(os.path.join(repo_dir, 'data', 'country-list.json')) as in_file:
@@ -133,7 +133,7 @@ class GitToPostgres(object):
                       ' ON CONFLICT DO NOTHING RETURNING country_no',
                       (full_name, name, alpha_2, alpha_3))
 
-        for name, alpha_2, alpha_3 in special_countries:
+        for name, alpha_2, alpha_3 in SPECIAL_COUNTRIES:
             cursor.execute('INSERT INTO countries (full_name, name, alpha_2, alpha_3)'
                       ' VALUES (%s, %s, %s, %s)'
                       ' ON CONFLICT DO NOTHING RETURNING country_no',
@@ -217,8 +217,8 @@ class GitToPostgres(object):
                               ' WHERE url_no = %s',
                               (False, url['url_no']))
                 except:
-                    print("Failed to mark url_no:%s inactive" % db_urlno_url[0])
-                    raise RuntimeError("Failed to mark url_no:%s inactive" % db_urlno_url[0])
+                    print("Failed to mark url_no:%s inactive" % url['url_no'])
+                    raise RuntimeError("Failed to mark url_no:%s inactive" % url['url_no'])
 
 
         # in the db, and update them if they *are* in the db.
