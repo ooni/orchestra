@@ -30,6 +30,7 @@ func BindAPI(router *gin.Engine, authMiddleware *middleware.GinJWTMiddleware) er
 	rendezvous.Use(authMiddleware.MiddlewareFunc(middleware.NullAuthorizor))
 	{
 		rendezvous.GET("/urls", handler.URLsHandler)
+		rendezvous.GET("/test-list/urls", handler.URLsHandler)
 		rendezvous.GET("/collectors", handler.CollectorsHandler)
 		rendezvous.GET("/test-helpers", handler.TestHelpersHandler)
 	}
