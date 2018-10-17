@@ -52,24 +52,30 @@ CREATE TABLE IF NOT EXISTS sync_test_lists
 class GitToPostgres(object):
     def __init__(self, working_dir, pgdsn):
         self.working_dir = working_dir
-        self.pgdsn = pgdsn
         self.test_lists_repo = None
-        self.last_commit_hash = None
-        self.read_sync_table()
+        self.pgconn = psycopg2.connect(dsn=pgdsn)
+        with self.pgconn: # PG transaction
+            self.last_commit_hash = self.get_db_head()
 
-    def read_sync_table(self):
-        pgconn = psycopg2.connect(dsn=self.pgdsn)
-        with pgconn, pgconn.cursor() as c:
+    def get_db_head(self):
+        with self.pgconn.cursor() as c:
             c.execute(CREATE_SYNC_TEST_LISTS_TABLE)
-        with pgconn, pgconn.cursor() as c:
             c.execute('SELECT commit_hash FROM sync_test_lists'
                       ' ORDER BY executed_at DESC LIMIT 1;')
             row = c.fetchone()
         if row is not None:
-            self.last_commit_hash = row[0]
+            return row[0]
+        else:
+            return None
+
+    def get_remote_head(self):
+        return git.cmd.Git().ls_remote(TEST_LISTS_GIT_URL, 'HEAD').split('\t', 1)[0]
+
+    def get_local_head(self):
+        return self.test_lists_repo.head.commit.binsha.encode('hex')
 
     def write_sync_table(self, cursor):
-        last_commit_hash = self.test_lists_repo.head.commit.binsha.encode('hex')
+        last_commit_hash = self.get_local_head()
         if last_commit_hash == self.last_commit_hash:
             print("Already in sync")
             return
@@ -283,10 +289,19 @@ class GitToPostgres(object):
             self.update_urls_by_path(cursor, changed_path, cat_code_no, country_alpha_2_no)
 
     def run(self):
+        if self.get_remote_head() == self.last_commit_hash:
+            # short-circuit without fetching git repo
+            print("Already in sync")
+            return
+
         self.pull_or_clone_test_lists()
 
-        pgconn = psycopg2.connect(dsn=self.pgdsn)
-        with pgconn, pgconn.cursor() as cursor:
+        with self.pgconn, self.pgconn.cursor() as cursor: # PG transaction
+            # `sync_test_lists` table is used to prevent two concurrent runs of
+            # the script. Maybe it's enough to rely on transaction semantics,
+            # but it needs more careful review of the code, so let it be lock :)
+            cursor.execute('LOCK TABLE sync_test_lists IN ACCESS EXCLUSIVE MODE NOWAIT')
+
             if self.last_commit_hash is None:
                 print("Initialising category codes")
                 self.init_category_codes(cursor)
