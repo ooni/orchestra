@@ -175,6 +175,7 @@ class GitToPostgres(object):
                 insert_buf.write(line)
                 insert_buf.write("\n")
 
+            insert_buf.seek(0)
             cursor.copy_from(insert_buf, 'urls', columns=('url', 'cat_no', 'country_no', 'date_added', 'source', 'notes', 'active'))
 
     def update_urls_by_path(self, cursor, changed_path, cat_code_no, country_alpha_2_no):
