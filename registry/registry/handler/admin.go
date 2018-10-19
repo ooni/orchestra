@@ -42,7 +42,7 @@ type ActiveClient struct {
 func getClientCount(db *sqlx.DB) (int64, error) {
 	var count int64
 
-	query := fmt.Sprintf("SELECT COUNT(*) FROM %s",
+	query := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE is_token_expired = false",
 		pq.QuoteIdentifier(common.ActiveProbesTable))
 
 	row := db.QueryRow(query)
@@ -65,7 +65,10 @@ func getClientCountries(db *sqlx.DB) ([]CountryCount, error) {
 
 	countryCounts := make([]CountryCount, 0)
 
-	query := fmt.Sprintf("SELECT COUNT(*), probe_cc FROM %s GROUP BY probe_cc",
+	query := fmt.Sprintf(`SELECT COUNT(*), probe_cc
+		FROM %s
+		WHERE is_token_expired = false
+		GROUP BY probe_cc`,
 		pq.QuoteIdentifier(common.ActiveProbesTable))
 
 	rows, err := db.Query(query)
@@ -141,7 +144,9 @@ func ListClients(db *sqlx.DB, q ClientsQuery) ([]ActiveClient, error) {
 			network_type, available_bandwidth,
 			lang_code,
 			token, probe_family,
-			probe_id FROM %s`,
+			probe_id
+			FROM %s
+			WHERE is_token_expired = false`,
 		pq.QuoteIdentifier(common.ActiveProbesTable))
 
 	query, args = filterClients(q, query, args)
