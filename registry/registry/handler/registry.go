@@ -128,7 +128,8 @@ func Update(db *sqlx.DB, clientID string, req ClientData) error {
 			lang_code = $11,
 			token = $12,
 			probe_family = $13,
-			probe_id = $14
+			probe_id = $14,
+			is_token_expired = false
 			WHERE id = $1`,
 			pq.QuoteIdentifier(common.ActiveProbesTable))
 
@@ -168,7 +169,7 @@ func Update(db *sqlx.DB, clientID string, req ClientData) error {
 
 // Register a new client
 func Register(db *sqlx.DB, req ClientData) (string, error) {
-	if (req.Platform == "ios" || req.Platform == "android") && req.Token == "" {
+	if req.Platform == "ios" || req.Platform == "android" {
 		return "", errors.New("missing device token")
 	}
 	if req.Password == "" {
