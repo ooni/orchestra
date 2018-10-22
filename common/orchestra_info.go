@@ -34,7 +34,7 @@ func orchestraVersion(major int, minor int, patchVersion int, suffix string) str
 var CurrentOrchestraVersion = OrchestraVersion{
 	Major:  0,
 	Minor:  2,
-	Patch:  0,
+	Patch:  2,
 	Suffix: "",
 }
 
