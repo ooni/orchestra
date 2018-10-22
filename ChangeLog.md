@@ -1,3 +1,10 @@
+# orchestra 0.2.2 [2018-10-22]
+
+Adds:
+
+* test-lists/urls endpoint
+* Support for returning full list of URLs with limit=-1
+
 # orchestra 0.2.1 [2018-07-13]
 
 Changes:
