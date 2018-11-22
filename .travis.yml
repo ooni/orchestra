@@ -1,11 +1,13 @@
 language: go
 go:
-  - 1.8.5
+  - 1.9.7
   # XXX temporarily disabled, because tip produces inconsistent go fmt results
   #- tip
 install:
   # Install dep
   - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+  # Install govendor XXX we should drop this entirely in favour of dep
+  - go get -u github.com/kardianos/govendor
 script:
   - make vendor
   - make check

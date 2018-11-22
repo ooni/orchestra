@@ -30,6 +30,8 @@ var (
 	yubikeyKeymode = KeymodeTouch | KeymodePinAlways
 )
 
+// SetupHSM will initialize a pkcs11 context based on the path to the pkcs11
+// library
 func SetupHSM(libPath string) (*pkcs11.Ctx, pkcs11.SessionHandle, error) {
 	if libPath == "" {
 		return nil, 0, errors.New("libPath is empty")
@@ -66,6 +68,7 @@ func SetupHSM(libPath string) (*pkcs11.Ctx, pkcs11.SessionHandle, error) {
 	return p, session, nil
 }
 
+// LoginPrompt will show an interactive login prompt to receive the HSM pin
 func LoginPrompt(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, userFlag uint) error {
 	var (
 		pinType string
@@ -130,6 +133,7 @@ func getKeyID(privKey *rsa.PrivateKey) (string, error) {
 	return keyID, nil
 }
 
+// AddKey will add a private key to the device
 func AddKey(libPath string, privKey *rsa.PrivateKey, certBytes []byte) error {
 	/*
 		keyID, err := getKeyID(privKey)
@@ -187,6 +191,7 @@ func AddKey(libPath string, privKey *rsa.PrivateKey, certBytes []byte) error {
 	return nil
 }
 
+// ListKeys will list all the keys on the device
 func ListKeys(libPath string) error {
 	fmt.Println("Listing keys")
 	ctx, session, err := SetupHSM(libPath)
