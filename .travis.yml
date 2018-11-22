@@ -1,6 +1,6 @@
 language: go
 go:
-  - 1.8.5
+  - 1.9.7
   # XXX temporarily disabled, because tip produces inconsistent go fmt results
   #- tip
 install:
