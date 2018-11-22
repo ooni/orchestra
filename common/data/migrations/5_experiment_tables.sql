@@ -8,8 +8,6 @@ CREATE SEQUENCE task_no_seq;
 DROP SEQUENCE experiment_no_seq;
 DROP TABLE job_experiments;
 
-CREATE SEQUENCE task_no_seq;
-
 CREATE TABLE job_tasks (
   task_no INTEGER DEFAULT nextval('task_no_seq'::regclass) PRIMARY KEY NOT NULL,
   test_name OOTEST,
