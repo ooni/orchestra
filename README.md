@@ -1,5 +1,9 @@
 # OONI Orchestra
 
+[![Build Status](https://travis-ci.org/ooni/orchestra.svg)](https://travis-ci.org/ooni/orchestra)
+[![Release](https://img.shields.io/github/release/ooni/orchestra.svg?style=flat-square)](https://github.com/ooni/orchestra/releases)
+
+
 The OONI Probe Orchestration System.
 
 This repository contains the various microservices that compose the OONI
