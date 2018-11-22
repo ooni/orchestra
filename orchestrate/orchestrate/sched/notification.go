@@ -91,7 +91,8 @@ type GoRushReq struct {
 	Notifications []*GoRushNotification `json:"notifications"`
 }
 
-func MakeAlertNotifcation(j *Job, jt *JobTarget) (*GoRushNotification, error) {
+// MakeAlertNotification will make a Job and JobTarget into a GoRushNotification
+func MakeAlertNotification(j *Job, jt *JobTarget) (*GoRushNotification, error) {
 	var notificationType = "default"
 	notification := &GoRushNotification{
 		Tokens: []string{jt.Token},
@@ -126,9 +127,11 @@ func MakeAlertNotifcation(j *Job, jt *JobTarget) (*GoRushNotification, error) {
 	return notification, nil
 }
 
+// ErrUnsupportedPlatform when the platform is not supported
 var ErrUnsupportedPlatform = errors.New("unsupported platform")
 
-func MakeExperimentNotifcation(j *Job, jt *JobTarget, expID string) (*GoRushNotification, error) {
+// MakeExperimentNotification makes a GorushNotification for a given JobTarget and Experiment
+func MakeExperimentNotification(j *Job, jt *JobTarget, expID string) (*GoRushNotification, error) {
 	notification := &GoRushNotification{
 		Tokens: []string{jt.Token},
 	}

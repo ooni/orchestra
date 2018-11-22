@@ -34,10 +34,13 @@ type JobTarget struct {
 	Platform string
 }
 
+// JobType can be one of AlertJob or ExperimentJob
 type JobType int
 
 const (
-	AlertJob      JobType = 0
+	// AlertJob is for alerts
+	AlertJob JobType = 0
+	// ExperimentJob is for experiments
 	ExperimentJob JobType = 1
 )
 
@@ -59,6 +62,7 @@ type Job struct {
 	Data     interface{}
 }
 
+// NewAlertJob will create a new alert struct
 func NewAlertJob(alertNo int64, comment string, schedule Schedule, delay int64) *Job {
 	return &Job{
 		AlertNo:   alertNo,
@@ -72,6 +76,8 @@ func NewAlertJob(alertNo int64, comment string, schedule Schedule, delay int64) 
 		Type:      AlertJob,
 	}
 }
+
+// NewExperimentJob will create a new experiment struct
 func NewExperimentJob(expNo int64, comment string, schedule Schedule, delay int64) *Job {
 	return &Job{
 		ExperimentNo: expNo,
@@ -114,6 +120,7 @@ func NewAlertData(jDB *JobDB, alertNo int64) (*AlertData, error) {
 	return &ad, nil
 }
 
+// GetTableInfo returns the id, tableName and columnName for a given task (alert or experiment)
 func GetTableInfo(j *Job) (int64, string, string, error) {
 	var (
 		tableName  string
@@ -282,7 +289,7 @@ func (j *Job) RefreshData(jDB *JobDB) error {
 
 // AlertWithTarget sends an alert to the specified target
 func AlertWithTarget(j *Job, t *JobTarget) {
-	notification, err := MakeAlertNotifcation(j, t)
+	notification, err := MakeAlertNotification(j, t)
 	if err != nil {
 		if err == ErrUnsupportedPlatform {
 			ctx.Debugf("unsupported platform")
@@ -298,6 +305,7 @@ func AlertWithTarget(j *Job, t *JobTarget) {
 	}
 }
 
+// ExperimentWithTarget will populate the JobTarget for a given experiment
 func ExperimentWithTarget(jDB *JobDB, j *Job, t *JobTarget) {
 	ctx.Debug("Creating client experiment")
 	clientExp, err := CreateClientExperiment(jDB.db, j.Data.(*ExperimentData), t.ClientID)
@@ -307,7 +315,7 @@ func ExperimentWithTarget(jDB *JobDB, j *Job, t *JobTarget) {
 		return
 	}
 
-	notification, err := MakeExperimentNotifcation(j, t, clientExp.ID)
+	notification, err := MakeExperimentNotification(j, t, clientExp.ID)
 	if err != nil {
 		if err == ErrUnsupportedPlatform {
 			ctx.Debugf("unsupported platform")
