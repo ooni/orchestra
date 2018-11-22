@@ -131,6 +131,7 @@ func AddExperiment(db *sqlx.DB, s *sched.Scheduler, exp *ExperimentData) error {
 	return nil
 }
 
+// GetSigningKeyID returns the signing keyID of a given user
 func GetSigningKeyID(db *sqlx.DB, userID string) (string, error) {
 	var keyID string
 	query := fmt.Sprintf(`SELECT
