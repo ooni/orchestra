@@ -6,6 +6,8 @@ go:
 install:
   # Install dep
   - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+  # Install govendor XXX we should drop this entirely in favour of dep
+  - go get -u github.com/kardianos/govendor
 script:
   - make vendor
   - make check
