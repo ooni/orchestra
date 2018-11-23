@@ -50,7 +50,7 @@ var signCmd = &cobra.Command{
 
 	$ python -c 'import json,base64;print(base64.b64encode(json.dumps({"iss": "art", "exp": 15000, "foo": "bar"})))'
 	eyJpc3MiOiAiYXJ0IiwgImZvbyI6ICJiYXIiLCAiZXhwIjogMTUwMDB9
-	$ echo "eyJpc3MiOiAiYXJ0IiwgImZvbyI6ICJiYXIiLCAiZXhwIjogMTUwMDB9" | ooni-orchestrate sign
+	$ echo "eyJpc3MiOiAiYXJ0IiwgImZvbyI6ICJiYXIiLCAiZXhwIjogMTUwMDB9" | ooni-operator sign
 `)
 			return
 		}

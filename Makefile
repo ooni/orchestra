@@ -61,7 +61,7 @@ endif
 			common/data/... $$extra_dirs;                                     \
 	done
 
-build-all: bindata build-orchestrate build-registry
+build-all: bindata build-orchestrate build-registry build-operator
 
 build-orchestrate:
 	go build ${LDFLAGS} -o bin/ooni-orchestrate orchestrate/main.go

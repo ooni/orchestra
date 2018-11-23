@@ -33,8 +33,9 @@ You should now have inside of `./bin` a series of binaries. The ones you care
 about are:
 
 ```
-./bin/ooni-orchestra
+./bin/ooni-orchestrate
 ./bin/ooni-registry
+./bin/ooni-operator
 ```
 
 They both take a config file--you can use
@@ -65,7 +66,6 @@ You should then be able to start the services by running:
 ```
 ./bin/ooni-orchestrate --config orchestrate/ooni-orchestrate.toml start
 ```
-
 
 ## Components
 
@@ -197,3 +197,99 @@ in case of an error:
 A notification includes in the payload of the silent notification a pingback
 URL that the client needs to connect to in order to receive the task that it
 need to run to perform the actual measurement.
+
+## Orchestration signing workflow
+
+### Requirements
+
+The requirements for running this are:
+* [yubico-piv-tool](https://developers.yubico.com/yubico-piv-tool/) (on macOS `brew install yubico-piv-tool`)
+* [yubikey piv manager](https://developers.yubico.com/yubikey-piv-manager)
+
+### Config file for ooni-operator
+
+In order to start signing orchestration requests you should create a file in
+`$HOME/.ooni-operator/config.toml` containing the following:
+
+```
+[core]
+environment = "development"
+log-level = "debug"
+
+[operator]
+private-key = "private/ooni-orchestrate.priv"
+public-key = "private/ooni-orchestrate.pub"
+pkcs11-lib-path = "/usr/local/lib/libykcs11.dylib"
+token-serial = "1234"
+user-pin = "81239213"
+so-pin = "fccccdeadbeef"
+key-id = 11
+```
+
+The values you will want to change in this config file are:
+
+`user-pin`, which should be set to the user pin of your yubikey. I recommend using the YubiKey PIV manager for setting up the user pin (see: https://developers.yubico.com/yubikey-piv-manager/), but it can also be done using the yubikey CLI tools.
+
+`so-pin`, which should be set to what the YubiKey PIV manager calls the "Management Key".
+
+`pkcs11-lib-path`, if you are on macos and installed `yubico-piv-tool` using homebrew this should be ok. Otherwise change it to the path to the dynamic library for  `libykcs11.xx`.
+In theory by changing this it should work with any other HSM that implements PKCS#11, though the code does include some hacks that are yubikey specific, so it may break and you should be prepared to fix it yourself 😸 .
+
+What you may want to change (but it has not been tested extensively) is:
+
+`key-id`, this is an ID used to reference the key on the yubikey 4. It may be useful to change this to something else if you plan on using the yubikey for something other than OONI Probe orchestration, though it's not recommended.
+
+What you should not change (unless you want to experiment with other HSMs):
+
+`token-serial`, this is a magic number that yubikey 4 uses to identify the key using it's pkcs11 implementation. You may have to change this when using other HSMs.
+
+### Creating keys
+
+You should create your shiny new key by running:
+
+```
+./bin/ooni-operator keygen
+```
+
+If you have configured the `config.toml` file properly, you should not be prompted to enter any SO pin (or you will if you omitted that value in the config) and you should soon have a key fresh new key loaded into your yubikey.
+
+The keyid is currently generated in a bit of ghetto way (due to the lack of a standard key serialisation scheme). See: https://github.com/ooni/orchestra/blob/feature/orchestration-signing/orchestrate/orchestrate/sched/experiment.go#L46
+
+Basically you can just do:
+```
+shasum -a 256 private/ooni-orchestrate.pub
+```
+To get your public key fingerprint.
+
+If you want to test the full workflow, be sure to replace the keyPEM (https://github.com/ooni/orchestra/blob/feature/orchestration-signing/orchestrate/orchestrate/sched/experiment.go#L46) with your own public key.
+
+### Signing tokens
+
+To sign tokens you should copy paste the command on the web UI into your terminal, but be sure to add a path to your config file (since it's passed via stdin you need to have your pins in the config file).
+
+Example:
+
+```
+echo "SOMEBLOB" | \
+  ./bin/ooni-operator sign
+```
+
+You will then be prompted to tap the yubikey 4 button and you will get back a signed token. Copy paste that token in the web UI and you are good to go.
+
+Notes: I still need to improve the validation of these fields, so you mess something up you may get a messed up signed_experiment scheduled.
+
+### Adding users
+
+There is now a feature to add new users to the database. To add a user you need to have:
+
+* a username
+* a password
+* a keyid
+
+You can add a user by doing:
+
+```
+./bin/ooni-orchestrate --config private/ooni-orchestrate.toml adduser -u jon -p mypassword -k KEYID
+```
+
+Be sure to have a valid database string (for example a database setup on localhost) that you have run one of the backend on at least once (so the DB tables have been created).
