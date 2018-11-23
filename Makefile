@@ -67,6 +67,8 @@ build-orchestrate:
 	go build ${LDFLAGS} -o bin/ooni-orchestrate orchestrate/main.go
 build-registry:
 	go build ${LDFLAGS} -o bin/ooni-registry registry/main.go
+build-operator:
+	go build ${LDFLAGS} -o bin/ooni-operator operator/main.go
 
 orchestra: vendor build-all
 
