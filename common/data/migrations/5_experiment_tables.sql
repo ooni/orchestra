@@ -21,7 +21,7 @@ SELECT
 INTO job_alerts_tmp
 FROM job_alerts;
 
--- The down migration script is likely broken from here downwards.
+-- The down migration script is untested from here down
 SELECT
 	id,
 	comment,
@@ -44,6 +44,11 @@ ALTER TABLE public.job_alerts
 	ALTER COLUMN "alert_no" SET DEFAULT nextval('alert_no_seq'::regclass),
 	ALTER COLUMN "alert_no" SET NOT NULL,
 	ADD PRIMARY KEY ("alert_no");
+
+ALTER TABLE "public"."accounts"
+  ADD COLUMN "salt";
+
+DROP TABLE  account_keys;
 
 -- +migrate StatementEnd
 
@@ -106,7 +111,7 @@ ALTER TABLE public.job_alerts
 	ALTER COLUMN "alert_no" SET NOT NULL,
 	ADD PRIMARY KEY ("alert_no");
 
-CREATE TABLE IF NOT EXISTS client_experiments
+CREATE TABLE client_experiments
 (
     id UUID NOT NULL,
     probe_id UUID,
@@ -127,7 +132,15 @@ DROP SEQUENCE task_no_seq;
 
 ALTER TABLE "public"."accounts"
   ALTER COLUMN "username" SET NOT NULL,
-  ADD UNIQUE (username),
-  ADD COLUMN "keyid" VARCHAR;
+  DROP COLUMN "salt", -- The salt is already part of the hash due to bcrypt
+  ADD UNIQUE (username);
+
+-- Every account can only have 1 key
+CREATE TABLE IF NOT EXISTS account_keys
+(
+    account_id INTEGER REFERENCES accounts(id) UNIQUE NOT NULL,
+    key_fingerprint VARCHAR,
+    key_data VARCHAR
+);
 
 -- +migrate StatementEnd
