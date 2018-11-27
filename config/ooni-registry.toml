@@ -1,0 +1,14 @@
+[core]
+environment = "development"
+log-level = "debug"
+
+[auth]
+# must be in sync amongst all instances using JWT
+jwt-secret = "CHANGEME"
+
+[api]
+port = 8080
+address = "0.0.0.0"
+
+[database]
+url = "postgres://orchestra:changeme@db/orchestra?sslmode=disable"

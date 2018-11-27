@@ -1,0 +1,18 @@
+# iron/go:dev is the alpine image with the go tools added
+FROM iron/go:dev
+WORKDIR /app
+
+# Requirements to building pkcs11
+RUN apk update \
+    && apk add libtool libltdl
+
+ENV SRC_DIR=/go/src/github.com/ooni/orchestra/
+ADD . $SRC_DIR
+RUN cd $SRC_DIR \
+    && make build-orchestrate \
+    && cp bin/ooni-orchestrate /app/
+
+RUN mkdir /etc/ooni-orchestra
+
+ENTRYPOINT ["./ooni-orchestrate"]
+CMD ["--config", "/etc/ooni-orchestra/ooni-orchestrate.toml", "start"]

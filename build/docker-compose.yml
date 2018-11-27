@@ -1,0 +1,48 @@
+version: '3'
+services:
+  registry:
+    build:
+      context: ../
+      dockerfile: build/Dockerfile.registry
+    ports:
+    - "8080:8080"
+    volumes:
+    - ../config/ooni-registry.toml:/etc/ooni-orchestra/ooni-registry.toml
+    links:
+    - db
+  orchestrate:
+    build:
+      context: ../
+      dockerfile: build/Dockerfile.orchestrate
+    ports:
+    - "8082:8082"
+    volumes:
+    - ../config/ooni-orchestrate.toml:/etc/ooni-orchestra/ooni-orchestrate.toml
+    links:
+    - db
+    - gorush
+  frontend:
+    build:
+      context: ../
+      dockerfile: build/Dockerfile.frontend
+    environment:
+      REGISTRY_URL: "http://registry:8080/"
+      ORCHESTRATE_URL: "http://orchestrate:8082/"
+    ports:
+    - "3000:3000"
+    links:
+    - orchestrate
+    - registry
+  gorush:
+    image: appleboy/gorush
+    ports:
+    - "8081:8088"
+    volumes:
+    - ../config/gorush.toml:/config.toml
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: orchestra
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: orchestra

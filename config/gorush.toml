@@ -1,0 +1,40 @@
+core:
+  port: "8088"
+  worker_num: 8
+  queue_num: 8192
+  max_notification: 100
+  mode: "release"
+  ssl: false
+  cert_path: ""
+  key_path: ""
+  http_proxy: ""
+  pid:
+    enabled: true
+    path: "gorush.pid"
+    override: true
+api:
+  push_uri: "/api/push"
+  stat_go_uri: "/api/stat/go"
+  stat_app_uri: "/api/stat/app"
+  config_uri: "/api/config"
+  sys_stat_uri: "/sys/stats"
+  metric_uri: "/metrics"
+android:
+  enabled: false
+  apikey: "YOUR_API_KEY"
+  max_retry: 0
+ios:
+  enabled: false
+  key_path: "key.pem"
+  password: "" # certificate password, default as empty string.
+  production: false
+  max_retry: 0 # resend fail notification, default value zero is disabled
+log:
+  format: "string" # string or json
+  access_log: "stdout" # stdout: output to console, or define log path like "log/access_log"
+  access_level: "debug"
+  error_log: "stderr" # stderr: output to console, or define log path like "log/error_log"
+  error_level: "error"
+  hide_token: true
+stat:
+  engine: "memory"

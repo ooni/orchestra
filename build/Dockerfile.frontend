@@ -1,0 +1,23 @@
+FROM node:carbon
+
+USER root
+COPY frontend/ /usr/src/app
+RUN set -ex \
+    && chown -R node:node /usr/src/app \
+    && :
+# END root
+
+USER node
+WORKDIR /usr/src/app
+
+# .cache removal leads to two times smaller image and
+RUN set -ex \
+    && yarn install \
+    && yarn run build \
+    && rm -rf /home/node/.cache \
+    && :
+
+EXPOSE 3000
+
+USER daemon
+CMD [ "yarn", "run", "start" ]
