@@ -1,4 +1,7 @@
 FROM node:carbon
+ENV REGISTRY_URL http://127.0.0.1:8080
+ENV ORCHESTRATE_URL http://127.0.0.1:8082
+ENV NODE_ENV production
 
 USER root
 COPY frontend/ /usr/src/app
