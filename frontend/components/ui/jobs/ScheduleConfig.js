@@ -89,10 +89,10 @@ const ScheduleConfig = (props) => {
         value={repeatCount}
         onChange={({target}) => {onRepeatChange(target.value)}}
         />}
+      <RepeatString duration={duration} repeatCount={repeatCount} />
       <DurationPicker onChange={onDurationChange}
                       duration={duration} />
 
-      <RepeatString duration={duration} repeatCount={repeatCount} />
       </div>}
       </FormGroup>
     </Box>

@@ -6,11 +6,10 @@ import Immutable from 'immutable'
 import moment from 'moment'
 
 import AlarmIcon from '@material-ui/icons/Alarm'
-//import Slider from 'react-toolbox/lib/slider/Slider'
+import Slider from '@material-ui/lab/Slider'
 
 import { Flex, Box } from 'ooni-components'
-
-const Slider = () => <div>Not implemented</div>
+import styled from 'styled-components'
 
 export class DesignatorSlider extends React.Component {
   static propTypes = {
@@ -31,14 +30,14 @@ export class DesignatorSlider extends React.Component {
 
   constructor(props) {
     super(props)
-      console.log("Setting value to", props.defaultValue)
+    console.log("Setting value to", props.defaultValue)
     this.state = {
       value: props.defaultValue
     }
     this.onChange = this.onChange.bind(this)
   }
 
-  onChange (value) {
+  onChange (event, value) {
     this.setState({value})
     this.props.onChange(this.props.unit, value)
   }
@@ -58,6 +57,13 @@ export class DesignatorSlider extends React.Component {
   }
 
 }
+
+const SliderContainer = styled.div`
+padding-top: 8px;
+p {
+  padding-bottom: 8px;
+}
+`
 
 export class DurationPicker extends React.Component {
   static propTypes = {
@@ -94,19 +100,31 @@ export class DurationPicker extends React.Component {
       duration
     } = this.state
     return (
-      <div className='picker' style={{width: '400px'}}>
+      <div>
+        <SliderContainer>
         <p>months</p>
         <DesignatorSlider defaultValue={duration.get("M")} unit="M" max={12} onChange={this.setDuration} />
+        </SliderContainer>
+        <SliderContainer>
         <p>weeks</p>
         <DesignatorSlider defaultValue={duration.get("W")} unit="W" max={4} onChange={this.setDuration} />
+        </SliderContainer>
+        <SliderContainer>
         <p>days</p>
         <DesignatorSlider defaultValue={duration.get("D")} unit="D" max={30} onChange={this.setDuration} />
+        </SliderContainer>
+        <SliderContainer>
         <p>hours</p>
         <DesignatorSlider defaultValue={duration.get("h")} unit="h" max={24} onChange={this.setDuration} />
+        </SliderContainer>
+        <SliderContainer>
         <p>minutes</p>
         <DesignatorSlider defaultValue={duration.get("m")} unit="m" max={60} onChange={this.setDuration} />
+        </SliderContainer>
+        <SliderContainer>
         <p>seconds</p>
         <DesignatorSlider defaultValue={duration.get("s")} unit="s" max={60} onChange={this.setDuration} />
+        </SliderContainer>
       </div>
     )
   }

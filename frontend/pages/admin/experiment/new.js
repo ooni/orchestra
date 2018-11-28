@@ -308,8 +308,8 @@ class AdminNewExperiment extends React.Component {
     this.setState({ signedExperiment: target.value})
   }
 
-  onDurationChange ({target}) {
-    this.setState({ duration: target.value });
+  onDurationChange (duration) {
+    this.setState({ duration });
   }
 
   onRepeatChange (repeatCount) {
