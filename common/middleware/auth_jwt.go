@@ -440,7 +440,7 @@ func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 							accounts.password_hash,
 							accounts.role
 							FROM %s
-							JOIN account_keys ON account_keys.account_id = accounts.id
+							LEFT JOIN account_keys ON account_keys.account_id = accounts.id
 							WHERE username = $1`,
 				pq.QuoteIdentifier(common.AccountsTable))
 			var keyid sql.NullString
