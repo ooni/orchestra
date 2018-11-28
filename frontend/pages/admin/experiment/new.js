@@ -188,7 +188,7 @@ const ExperimentSign = ({data, signedExperiment, onSignedChange}) => {
     <div>
     <p>Copy paste the following into your terminal</p>
     <Heading h={4}>Sign</Heading>
-    <CodeFormat>echo "{data}" | orchestrate sign</CodeFormat>
+    <CodeFormat>echo "{data}" | ./bin/ooni-operator sign</CodeFormat>
     <Heading h={4}>Paste</Heading>
     <TextField
       label="Signed Experiment"
