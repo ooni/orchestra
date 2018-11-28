@@ -49,6 +49,7 @@ func performRequestJSONWithJWT(r http.Handler, method, path, authToken string, r
 // Shared by all tests
 var orchTest *OrchestraTest
 
+// NewOrchestraTest populates the OrchestraTest struct with sane defaults
 func NewOrchestraTest() *OrchestraTest {
 	return &OrchestraTest{
 		pgUser:     "orchestra",
@@ -69,6 +70,7 @@ type OrchestraTest struct {
 	pgURL      string
 }
 
+// GetPGURL returns the postgres db URL
 func (o *OrchestraTest) GetPGURL(dbname string) string {
 	return fmt.Sprintf("postgres://%s:%s@localhost:%s/%s?sslmode=disable", o.pgUser, o.pgPassword, o.pgPort, dbname)
 }
@@ -122,6 +124,7 @@ func (o *OrchestraTest) Teardown() error {
 	return o.dockerPool.Purge(o.pgResource)
 }
 
+// NewOrchestrateRouter creates a router object to use for testing
 func NewOrchestrateRouter(dbURL string) (*gin.Engine, error) {
 	router := orchestrate.SetupRouter(dbURL)
 	if router == nil {
@@ -130,6 +133,7 @@ func NewOrchestrateRouter(dbURL string) (*gin.Engine, error) {
 	return router, nil
 }
 
+// NewRegistryRouter creates a router object to use for testing
 func NewRegistryRouter(dbURL string) (*gin.Engine, error) {
 	fmt.Println(dbURL)
 	router := registry.SetupRouter(dbURL)
