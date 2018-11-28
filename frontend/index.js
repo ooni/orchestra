@@ -2,9 +2,10 @@ const express = require('express')
 const next = require('next')
 
 process.env.NODE_ENV = process.env.NODE_ENV || 'production'
-process.env.PORT = process.env.PORT || 3000
-
 const dev = process.env.NODE_ENV !== 'production'
+
+process.env.PORT = process.env.PORT || dev ? 3001 : 3000
+
 if (dev === true) {
   process.env.REGISTRY_URL = process.env.REGISTRY_URL || "http://127.0.0.1:8080"
   process.env.ORCHESTRATE_URL = process.env.ORCHESTRATE_URL || "http://127.0.0.1:8082"

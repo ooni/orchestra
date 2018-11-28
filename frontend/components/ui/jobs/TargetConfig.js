@@ -11,7 +11,7 @@ import {
 const TargetConfig = (props) => {
   return (
     <Flex>
-      <Box w={1/2} pr={2}>
+      <Box width={1/2} pr={2}>
       <Heading h={4}>Country</Heading>
       <Select
         name='countries'
@@ -22,7 +22,7 @@ const TargetConfig = (props) => {
       />
       </Box>
 
-      <Box w={1/2}>
+      <Box width={1/2}>
       <Heading h={4}>Platform</Heading>
       <Select
         name='platform'

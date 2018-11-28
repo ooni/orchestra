@@ -3,16 +3,30 @@ import PropTypes from 'prop-types'
 import Head from 'next/head'
 import Router from 'next/router'
 
-import { withStyles } from 'material-ui/styles'
-import Button from 'material-ui/Button'
-import Input, { InputLabel } from 'material-ui/Input'
-import Checkbox from 'material-ui/Checkbox'
-import { FormGroup, FormControlLabel } from 'material-ui/Form'
-import Card, { CardHeader, CardContent, CardActions } from 'material-ui/Card'
-import TextField from 'material-ui/TextField'
-import List, { ListItem, ListItemText } from 'material-ui/List'
-import Stepper, { Step, StepLabel } from 'material-ui/Stepper'
-import { CircularProgress } from 'material-ui/Progress'
+
+import { withStyles } from '@material-ui/core/styles'
+import Button from '@material-ui/core/Button'
+import Input from '@material-ui/core/Input'
+import InputLabel from '@material-ui/core/InputLabel'
+import Checkbox from '@material-ui/core/Checkbox'
+import FormGroup from '@material-ui/core/FormGroup'
+import FormControlLabel from '@material-ui/core/FormControlLabel'
+
+import Card from '@material-ui/core/Card'
+import CardHeader from '@material-ui/core/CardHeader'
+import CardContent from '@material-ui/core/CardContent'
+import CardActions from '@material-ui/core/CardActions'
+
+import TextField from '@material-ui/core/TextField'
+
+import List from '@material-ui/core/List'
+import ListItem from '@material-ui/core/ListItem'
+import ListItemText from '@material-ui/core/ListItemText'
+
+import Stepper from '@material-ui/core/Stepper'
+import Step from '@material-ui/core/Step'
+import StepLabel from '@material-ui/core/StepLabel'
+import CircularProgress from '@material-ui/core/CircularProgress'
 
 import Layout from '../../../components/layout'
 import Session from '../../../components/session'
@@ -82,31 +96,31 @@ class JobCreateConfirm extends React.Component {
         <Heading h={2}>New Alert Review</Heading>
 
         <Flex wrap>
-        <Box w={1} pb={3}>
+        <Box width={1} pb={3}>
         <InputLabel>Message</InputLabel>
         <Text>{alertMessage}</Text>
         </Box>
 
-        <Box w={1} pb={3}>
+        <Box width={1} pb={3}>
         <InputLabel>Link</InputLabel>
         <Text>{href}</Text>
         </Box>
 
-        <Box w={1} pb={3}>
+        <Box width={1} pb={3}>
         <InputLabel>Target countries</InputLabel>
         <Text>{targetCountries.join(',')}</Text>
         </Box>
-        <Box w={1} pb={3}>
+        <Box width={1} pb={3}>
         <InputLabel>Target platforms</InputLabel>
         <Text>{targetPlatforms.join(',')}</Text>
         </Box>
 
-        <Box w={1} pb={3}>
+        <Box width={1} pb={3}>
         <InputLabel>Start Time</InputLabel>
         <Text>{startTimeCaption}</Text>
         </Box>
 
-        <Box w={1} pb={3}>
+        <Box width={1} pb={3}>
         <InputLabel>Duration</InputLabel>
         <DurationCaption
           duration={duration}
@@ -407,7 +421,7 @@ class AdminJobsAdd extends React.Component {
             </p>
             <p style={{paddingBottom: '20px'}}>Return to this page once you have done that</p>
             <Flex wrap>
-              <Box w={1}>
+              <Box width={1}>
               <InputLabel>Message</InputLabel>
               <Input
                 fullWidth
@@ -415,7 +429,7 @@ class AdminJobsAdd extends React.Component {
                 placeholder="make it short"
                 type="text" />
               </Box>
-              <Box w={1} pt={3}>
+              <Box width={1} pt={3}>
               <InputLabel>Link</InputLabel>
               <Input
                 fullWidth
@@ -423,7 +437,7 @@ class AdminJobsAdd extends React.Component {
                 placeholder="https://msg.ooni.io/xxx"
                 type="text" />
               </Box>
-              <Box w={1} pt={1}>
+              <Box width={1} pt={1}>
               <Input
                 fullWidth
                 onChange={this.onAltHrefChange}

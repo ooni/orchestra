@@ -3,7 +3,7 @@ import Head from 'next/head'
 
 import Layout from '../components/layout'
 
-import { Heading, Container } from 'ooni-components'
+import { Text, Heading, Container } from 'ooni-components'
 
 export default () => {
   return (
@@ -13,6 +13,8 @@ export default () => {
       </Head>
       <Container>
         <Heading h={1}>Welcome to the OONI Orchestra!</Heading>
+        <Text>registry: {process.env.REGISTRY_URL}</Text>
+        <Text>orchestrate: {process.env.ORCHESTRATE_URL}</Text>
       </Container>
     </Layout>
   )

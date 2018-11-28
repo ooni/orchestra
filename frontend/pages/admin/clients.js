@@ -11,9 +11,16 @@ import {
   Container
 } from 'ooni-components'
 
-import Button from 'material-ui/Button'
-import Card, { CardHeader, CardContent, CardActions } from 'material-ui/Card'
-import List, { ListItem, ListItemText } from 'material-ui/List'
+import Button from '@material-ui/core/Button'
+
+import Card from '@material-ui/core/Card'
+import CardHeader from '@material-ui/core/CardHeader'
+import CardContent from '@material-ui/core/CardContent'
+import CardActions from '@material-ui/core/CardActions'
+
+import List from '@material-ui/core/List'
+import ListItem from '@material-ui/core/ListItem'
+import ListItemText from '@material-ui/core/ListItemText'
 
 import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown'
@@ -237,7 +244,7 @@ export default class AdminClients extends React.Component {
           <Flex wrap>
           {results && results.map((d) => {
             return (
-              <Box key={d.client_id} w={1/3}>
+              <Box key={d.client_id} width={1/3}>
               <ActiveClient
                 clientId={d.client_id}
                 probeAsn={d.probe_asn}

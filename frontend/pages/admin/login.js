@@ -3,12 +3,12 @@ import Router from 'next/router'
 import Session from '../../components/session'
 import Layout from '../../components/layout'
 
-import { withStyles } from 'material-ui/styles'
+import { withStyles } from '@material-ui/styles'
 
-import Button from 'material-ui/Button'
-import Input from 'material-ui/Input'
+import Button from '@material-ui/core/Button'
+import Input from '@material-ui/core/Input'
 
-import Card, { CardHeader, CardContent, CardActions } from 'material-ui/Card'
+import Card, { CardHeader, CardContent, CardActions } from '@material-ui/core/Card'
 
 import { Flex, Box, Grid } from 'ooni-components'
 

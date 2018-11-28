@@ -2,14 +2,17 @@ import React from 'react'
 
 import Head from 'next/head'
 
-import Button from 'material-ui/Button'
-import Checkbox from 'material-ui/Checkbox'
-import { FormGroup, FormControlLabel } from 'material-ui/Form'
-import Input, { InputLabel } from 'material-ui/Input'
+import Button from '@material-ui/core/Button'
+import Checkbox from '@material-ui/core/Checkbox'
 
-import MomentUtils from 'material-ui-pickers/utils/moment-utils'
-import MuiPickersUtilsProvider from 'material-ui-pickers/utils/MuiPickersUtilsProvider'
-import DateTimePicker from 'material-ui-pickers/DateTimePicker'
+import FormGroup from '@material-ui/core/FormGroup'
+import FormControlLabel from '@material-ui/core/FormControlLabel'
+
+import Input from '@material-ui/core/Input'
+import InputLabel from '@material-ui/core/InputLabel'
+
+import MomentUtils from '@date-io/moment'
+import { DateTimePicker, MuiPickersUtilsProvider } from 'material-ui-pickers'
 
 import {
   DurationPicker,

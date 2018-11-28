@@ -6,9 +6,9 @@ import Link from 'next/link'
 
 import Immutable from 'immutable'
 
-import Avatar from 'material-ui/Avatar'
+import Avatar from '@material-ui/core/Avatar'
 
-import Button from 'material-ui/Button'
+import Button from '@material-ui/core/Button'
 
 import moment from 'moment'
 

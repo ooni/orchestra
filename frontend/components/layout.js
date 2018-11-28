@@ -4,8 +4,8 @@ import PropTypes from 'prop-types'
 import Router from 'next/router'
 import NProgress from 'nprogress'
 
-import Toolbar from 'material-ui/Toolbar'
-import Button from 'material-ui/Button'
+import Toolbar from '@material-ui/core/Toolbar'
+import Button from '@material-ui/core/Button'
 
 
 import Link from 'next/link'

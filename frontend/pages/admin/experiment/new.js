@@ -3,18 +3,32 @@ import PropTypes from 'prop-types'
 import Head from 'next/head'
 import Router from 'next/router'
 
-import { withStyles } from 'material-ui/styles'
-import Button from 'material-ui/Button'
-import Input, { InputLabel } from 'material-ui/Input'
-import Checkbox from 'material-ui/Checkbox'
-import { FormGroup, FormControlLabel } from 'material-ui/Form'
-import Card, { CardHeader, CardContent, CardActions } from 'material-ui/Card'
-import TextField from 'material-ui/TextField'
-import List, { ListItem, ListItemText } from 'material-ui/List'
-import Stepper, { Step, StepLabel } from 'material-ui/Stepper'
-import { CircularProgress } from 'material-ui/Progress'
-import Select from 'material-ui/Select'
-import { MenuItem } from 'material-ui/Menu'
+import { withStyles } from '@material-ui/core/styles'
+import Button from '@material-ui/core/Button'
+import Input from '@material-ui/core/Input'
+import InputLabel from '@material-ui/core/InputLabel'
+import Checkbox from '@material-ui/core/Checkbox'
+
+import FormGroup from '@material-ui/core/FormGroup'
+import FormControlLabel from '@material-ui/core/FormControlLabel'
+
+import Card from '@material-ui/core/Card'
+import CardHeader from '@material-ui/core/CardHeader'
+import CardContent from '@material-ui/core/CardContent'
+import CardActions from '@material-ui/core/CardActions'
+
+import TextField from '@material-ui/core/TextField'
+
+import List from '@material-ui/core/List'
+import ListItem from '@material-ui/core/ListItem'
+import ListItemText from '@material-ui/core/ListItemText'
+
+import Stepper from '@material-ui/core/Stepper'
+import Step from '@material-ui/core/Step'
+import StepLabel from '@material-ui/core/StepLabel'
+import CircularProgress from '@material-ui/core/CircularProgress'
+import Select from '@material-ui/core/Select'
+import MenuItem from '@material-ui/core/MenuItem'
 
 import MdDelete from 'react-icons/lib/md/delete'
 
@@ -136,7 +150,7 @@ class AddURLsSection extends React.Component {
     const { urls } = this.state
 
     return (
-      <Box w={2/3}>
+      <Box width={2/3}>
       <Heading h={4} pb={1}>URLs</Heading>
         {urls.length == 0
         && <div>
@@ -491,7 +505,7 @@ class AdminNewExperiment extends React.Component {
           {activeStep === 0 && <Container>
             <Heading h={2}>New Experiment</Heading>
             <Flex wrap>
-              <Box w={1/3}>
+              <Box width={1/3}>
               <Select
                 value={this.state.nettest}
                 onChange={this.onNettestChange}>
@@ -504,7 +518,7 @@ class AdminNewExperiment extends React.Component {
               && <AddURLsSection
                     urls={this.state.urls}
                     onUpdatedURLs={this.onUrlsChange} />}
-              <Box w={1} pt={1}>
+              <Box width={1} pt={1}>
               </Box>
             </Flex>
             <hr/>
