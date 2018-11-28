@@ -36,7 +36,7 @@ services:
   gorush:
     image: appleboy/gorush
     ports:
-    - "8081:8088"
+    - "8081:8081"
     volumes:
     - ../config/gorush.toml:/config.toml
   db:
