@@ -585,16 +585,20 @@ func (s *Scheduler) RunJob(j *Job) {
 }
 
 // Start the scheduler
-func (s *Scheduler) Start() {
+func (s *Scheduler) Start() error {
 	ctx.Debug("starting scheduler")
-	loadSigningKeys()
+	err := loadSigningKeys(s.jobDB.db)
+	if err != nil {
+		ctx.WithError(err).Error("failed to load signing keys")
+		return err
+	}
 	// XXX currently when jobs are deleted the allJobs list will not be
 	// updated. We should find a way to check this and stop triggering a job in
 	// case it gets deleted.
 	allJobs, err := s.jobDB.GetAll()
 	if err != nil {
 		ctx.WithError(err).Error("failed to list all jobs")
-		return
+		return err
 	}
 	for _, j := range allJobs {
 		if j.Type == AlertJob {
@@ -604,6 +608,7 @@ func (s *Scheduler) Start() {
 		}
 		s.RunJob(j)
 	}
+	return nil
 }
 
 // Shutdown do all the shutdown logic

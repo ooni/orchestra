@@ -135,8 +135,9 @@ func AddExperiment(db *sqlx.DB, s *sched.Scheduler, exp *ExperimentData) error {
 func GetSigningKeyID(db *sqlx.DB, userID string) (string, error) {
 	var keyID string
 	query := fmt.Sprintf(`SELECT
-								keyid
+								key_fingerprint
 								FROM %s
+								JOIN account_keys ON account_keys.account_id = accounts.id
 								WHERE username = $1`,
 		pq.QuoteIdentifier(common.AccountsTable))
 	err := db.QueryRow(query, userID).Scan(&keyID)

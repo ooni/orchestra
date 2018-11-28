@@ -2,9 +2,7 @@ package sched
 
 import (
 	"crypto/rsa"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
@@ -39,31 +37,32 @@ type ClientExperimentData struct {
 
 var validSigningKeys = map[string]*rsa.PublicKey{}
 
-func loadSigningKeys() error {
-	// XXX this is just dummy testing key
-	// Maybe we should move these keys into the database
-	// ID: 1a12c28ec026952d114b5ad4adfb940c2aa9d42b7f0bc5b2db561f6c23064ce9
-	keyPEM := []byte(`-----BEGIN RSA PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxfU1kBg7LwMmFR2DsObh
-b6wL4fRfxOgSeXjcwYUg6LhF3yVVDyRLPMg0KUQoUlO+mscsLoiW6T02RFQgH2Y4
-PjNt3XvpJwjGvLH4+qiB7rcJqRlkqdIVzonK1TOqBlspNAdj+SYeluj6+Z1mVisb
-yVmUv8KIPLfPp4y2yPfdCEb/vZNck4VviWsjYPMO3RUV8hbnYqOC8XX1jEA84B73
-xwuapz6PIP0EP02OvzO/g2ggOsaJjfGtc04OxnrXYLh6SAThQOdas4m3vXuooMsI
-IqsOXuKwezyr5JQBDTuZL0uv4/X6iBD4mWWXGbg0vVmGVJttRJHL1IEJj2kDi3UW
-ZwIDAQAB
------END RSA PUBLIC KEY-----
-`)
-	h := sha256.New()
-	pubKey, err := jwt.ParseRSAPublicKeyFromPEM(keyPEM)
+func loadSigningKeys(db *sqlx.DB) error {
+	query := `SELECT
+	key_data,
+	key_fingerprint
+	FROM account_keys`
+
+	rows, err := db.Query(query)
 	if err != nil {
+		ctx.WithError(err).Error("failed to obtain targets")
 		return err
 	}
-	h.Write(keyPEM)
-	// It's a bit weird to use the ascii PEM encoding of the key to do a ID, but
-	// for the moment it's as good as anything.
-	keyID := hex.EncodeToString(h.Sum(nil))
-	ctx.Debugf("adding to valid keys %s", validSigningKeys)
-	validSigningKeys[keyID] = pubKey
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			keyPEM         []byte
+			keyFingerprint string
+		)
+		err = rows.Scan(&keyPEM, &keyFingerprint)
+		pubKey, err := jwt.ParseRSAPublicKeyFromPEM(keyPEM)
+		if err != nil {
+			ctx.WithError(err).Error("failed to parse key")
+			return err
+		}
+		validSigningKeys[keyFingerprint] = pubKey
+	}
 	return nil
 }
 
@@ -133,7 +132,6 @@ func CreateClientExperiment(db *sqlx.DB, ed *ExperimentData, cID string) (*Clien
 		// XXX we may want to split this into some other function
 		if ed.TestName == "web_connectivity" {
 			// XXX there is a bug here
-			ctx.Debugf("%v")
 			urls := token.Claims.(jwt.MapClaims)["args"].(map[string]interface{})["urls"].([]interface{})
 			// We just add all the indexes for the moment
 			for i := 0; i <= len(urls); i++ {

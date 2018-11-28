@@ -250,7 +250,7 @@ func (mw *GinJWTMiddleware) LoginHandler(c *gin.Context) {
 	tokenString, err := token.SignedString(mw.Key)
 
 	if err != nil {
-		mw.unauthorized(c, http.StatusUnauthorized, "Create JWT Token faild")
+		mw.unauthorized(c, http.StatusUnauthorized, "Create JWT Token failed")
 		return
 	}
 
@@ -436,8 +436,12 @@ func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 			}
 			// XXX set the last_login value
 			query := fmt.Sprintf(`SELECT
-							keyid, password_hash, role
-							FROM %s WHERE username = $1`,
+							account_keys.key_fingerprint,
+							accounts.password_hash,
+							accounts.role
+							FROM %s
+							JOIN account_keys ON account_keys.account_id = accounts.id
+							WHERE username = $1`,
 				pq.QuoteIdentifier(common.AccountsTable))
 			var keyid sql.NullString
 			err := db.QueryRow(query, userId).Scan(
