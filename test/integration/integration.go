@@ -38,6 +38,7 @@ func performRequestJSON(r http.Handler, method, path string, reqJSON interface{}
 // Shared by all tests
 var orchTest *OrchestraTest
 
+// NewOrchestraTest populates the OrchestraTest struct with sane defaults
 func NewOrchestraTest() *OrchestraTest {
 	return &OrchestraTest{
 		pgUser:     "orchestra",
@@ -58,6 +59,7 @@ type OrchestraTest struct {
 	pgURL      string
 }
 
+// Setup should be run once per test-suite
 func (o *OrchestraTest) Setup() error {
 	var err error
 	o.dockerPool, err = dockertest.NewPool("")
@@ -93,10 +95,12 @@ func (o *OrchestraTest) Setup() error {
 	return nil
 }
 
+// Teardown should be run at the end of a test suite
 func (o *OrchestraTest) Teardown() error {
 	return o.dockerPool.Purge(o.pgResource)
 }
 
+// NewOrchestrateRouter creates a router object to use for testing
 func NewOrchestrateRouter(dbURL string) (*gin.Engine, error) {
 	router := orchestrate.SetupRouter(dbURL)
 	if router == nil {
@@ -105,6 +109,7 @@ func NewOrchestrateRouter(dbURL string) (*gin.Engine, error) {
 	return router, nil
 }
 
+// NewRegistryRouter creates a router object to use for testing
 func NewRegistryRouter(dbURL string) (*gin.Engine, error) {
 	fmt.Println(dbURL)
 	router := registry.SetupRouter(dbURL)
