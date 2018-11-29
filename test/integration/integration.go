@@ -18,9 +18,16 @@ import (
 )
 
 func performRequest(r http.Handler, method, path string, body io.Reader) (*httptest.ResponseRecorder, error) {
+	return performRequestWithJWT(r, method, path, "", body)
+}
+
+func performRequestWithJWT(r http.Handler, method, path, authToken string, body io.Reader) (*httptest.ResponseRecorder, error) {
 	req, err := http.NewRequest(method, path, body)
 	if err != nil {
 		return nil, err
+	}
+	if authToken != "" {
+		req.Header.Add("Authorization", `Bearer `+authToken)
 	}
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -28,11 +35,15 @@ func performRequest(r http.Handler, method, path string, body io.Reader) (*httpt
 }
 
 func performRequestJSON(r http.Handler, method, path string, reqJSON interface{}) (*httptest.ResponseRecorder, error) {
+	return performRequestJSONWithJWT(r, method, path, "", reqJSON)
+}
+
+func performRequestJSONWithJWT(r http.Handler, method, path, authToken string, reqJSON interface{}) (*httptest.ResponseRecorder, error) {
 	body, err := json.Marshal(reqJSON)
 	if err != nil {
 		return nil, err
 	}
-	return performRequest(r, method, path, bytes.NewReader(body))
+	return performRequestWithJWT(r, method, path, authToken, bytes.NewReader(body))
 }
 
 // Shared by all tests

@@ -39,7 +39,7 @@ type Account struct {
 // is returned. On success, the wrapped middleware is called, and the userID is made available as
 // c.Get("userID").(string).
 // Users can get a token by posting a json request to LoginHandler. The token then needs to be passed in
-// the Authentication header. Example: Authorization:Bearer XXX_TOKEN_XXX
+// the Authentication header. Example: `Authorization: Bearer XXX_TOKEN_XXX`
 type GinJWTMiddleware struct {
 	// Realm name to display to the user. Required.
 	Realm string
