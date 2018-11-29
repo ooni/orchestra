@@ -53,7 +53,7 @@ func NewOrchestraTest() *OrchestraTest {
 	return &OrchestraTest{
 		pgUser:     "orchestra",
 		pgPassword: "changeme",
-		pgDB:       "orchestra",
+		pgDB:       "testingorchestra",
 	}
 }
 
@@ -69,6 +69,11 @@ type OrchestraTest struct {
 	pgURL      string
 }
 
+func (o *OrchestraTest) GetPGURL(dbname string) string {
+	return fmt.Sprintf("postgres://%s:%s@localhost:%s/%s?sslmode=disable", o.pgUser, o.pgPassword, o.pgPort, dbname)
+}
+
+// Setup should be run once per test-suite
 func (o *OrchestraTest) Setup() error {
 	var err error
 	o.dockerPool, err = dockertest.NewPool("")
@@ -91,7 +96,7 @@ func (o *OrchestraTest) Setup() error {
 	if err = o.dockerPool.Retry(func() error {
 		var err error
 		o.pgPort = o.pgResource.GetPort("5432/tcp")
-		o.pgURL = fmt.Sprintf("postgres://%s:%s@localhost:%s/%s?sslmode=disable", o.pgUser, o.pgPassword, o.pgPort, o.pgDB)
+		o.pgURL = o.GetPGURL(o.pgDB)
 		o.db, err = sql.Open("postgres", o.pgURL)
 		if err != nil {
 			return err
@@ -104,6 +109,15 @@ func (o *OrchestraTest) Setup() error {
 	return nil
 }
 
+// CleanDB will drop all the tables created by the orchstra user
+func (o *OrchestraTest) CleanDB() error {
+	if _, err := o.db.Exec("DROP SCHEMA public CASCADE;CREATE SCHEMA public;"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Teardown should be run at the end of a test suite
 func (o *OrchestraTest) Teardown() error {
 	return o.dockerPool.Purge(o.pgResource)
 }

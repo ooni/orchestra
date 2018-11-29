@@ -57,9 +57,14 @@ func login(r http.Handler, username, password string) (string, error) {
 }
 
 func TestRegistryUpdate(t *testing.T) {
+	err := orchTest.CleanDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	r, err := NewRegistryRouter(orchTest.pgURL)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	cd := registry_handler.ClientData{
