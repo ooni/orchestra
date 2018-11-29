@@ -14,25 +14,22 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-var privKeyPath string
-
-func signLocal(claims keystore.OrchestraClaims) {
+// SignLocal is used to sign a OrchestraClaim with a local key
+func SignLocal(privKeyPath string, claims keystore.OrchestraClaims) (string, error) {
 	keyPEM, err := ioutil.ReadFile(privKeyPath)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	privKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyPEM)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
 	ss, err := token.SignedString(privKey)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	fmt.Println("Signed claims: ")
-	fmt.Printf("%v", ss)
-	fmt.Println("")
+	return ss, nil
 }
 
 // signCmd represents the sign command
