@@ -70,6 +70,7 @@ type OrchestraTest struct {
 	pgURL      string
 }
 
+// GetPGURL returns the URL for the postgres DB given a name
 func (o *OrchestraTest) GetPGURL(dbname string) string {
 	return fmt.Sprintf("postgres://%s:%s@localhost:%s/%s?sslmode=disable", o.pgUser, o.pgPassword, o.pgPort, dbname)
 }
