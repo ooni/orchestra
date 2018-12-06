@@ -103,10 +103,10 @@ class TestGitToPostgres(unittest.TestCase):
         gtp = stl.GitToPostgres(working_dir=self.working_dir, pgdsn=self.pgdsn)
 
         gtp.pull_or_clone_test_lists()
-        gtp.test_lists_repo.head.reference = gtp.test_lists_repo.commit(HASH)
-        gtp.test_lists_repo.head.reset(index=True, working_tree=True)
+        gtp.test_lists_repo.git.reset('--hard', HASH)
         gtp.sync_db()
 
+        gtp = stl.GitToPostgres(working_dir=self.working_dir, pgdsn=self.pgdsn)
         # Now we re-run the workflow from this commit onwards
         gtp.run()
 
