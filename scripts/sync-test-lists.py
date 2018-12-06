@@ -224,9 +224,9 @@ class GitToPostgres(object):
                               'SET active = %s'
                               ' WHERE url_no = %s',
                               (False, url['url_no']))
-                except:
+                except Exception as exc:
                     print("Failed to mark url_no:%s inactive" % url['url_no'])
-                    raise RuntimeError("Failed to mark url_no:%s inactive" % url['url_no'])
+                    raise exc
 
 
         # in the db, and update them if they *are* in the db.
@@ -250,9 +250,9 @@ class GitToPostgres(object):
                               ' VALUES (%s, %s, %s, %s, %s, %s, %s)'
                               ' ON CONFLICT DO NOTHING RETURNING url_no',
                               (url, cat_no, country_no, date_added, source, notes, True))
-                except:
+                except Exception as exc:
                     print("INVALID row in %s: %s" % (csv_path, row))
-                    raise RuntimeError("INVALID row in %s: %s" % (csv_path, row))
+                    raise exc
             elif (url_in_db['cat_no'] != cat_no
                   or url_in_db['source'] != source
                   or url_in_db['notes'] != notes
@@ -266,9 +266,9 @@ class GitToPostgres(object):
                               '    active = %s'
                               ' WHERE url_no = %s',
                               (cat_no, source, notes, True, url_no))
-                except:
+                except Exception as exc:
                     print("Failed to update %s with values: %s" % (csv_path, row))
-                    raise RuntimeError("Failed to update %s with values: %s" % (csv_path, row))
+                    raise exc
             else:
                 # Skip items that don't require update or insert
                 continue
