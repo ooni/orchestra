@@ -258,7 +258,7 @@ class GitToPostgres(object):
                   or url_in_db['notes'] != notes
                   or url_in_db['active'] is False):
                 try:
-                    url_no = url_in_db[3]
+                    url_no = url_in_db['url_no']
                     cursor.execute('UPDATE urls '
                               'SET cat_no = %s,'
                               '    source = %s,'
