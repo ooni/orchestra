@@ -290,14 +290,7 @@ class GitToPostgres(object):
             print("Updating test list: %s" % changed_path)
             self.update_urls_by_path(cursor, changed_path, cat_code_no, country_alpha_2_no)
 
-    def run(self):
-        if self.get_remote_head() == self.last_commit_hash:
-            # short-circuit without fetching git repo
-            print("Already in sync")
-            return
-
-        self.pull_or_clone_test_lists()
-
+    def sync_db(self):
         with self.pgconn, self.pgconn.cursor() as cursor: # PG transaction
             # `sync_test_lists` table is used to prevent two concurrent runs of
             # the script. Maybe it's enough to rely on transaction semantics,
@@ -314,6 +307,16 @@ class GitToPostgres(object):
                 self.update_url_lists(cursor)
 
             self.write_sync_table(cursor)
+
+    def run(self):
+        if self.get_remote_head() == self.last_commit_hash:
+            # short-circuit without fetching git repo
+            print("Already in sync")
+            return
+
+        self.pull_or_clone_test_lists()
+        self.sync_db()
+
 
 def dirname(s):
     if not os.path.isdir(s):
