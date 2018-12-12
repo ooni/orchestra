@@ -4,3 +4,4 @@ coverage*.txt
 private/
 .GITHUB_TOKEN
 /vendor
+*.pyc

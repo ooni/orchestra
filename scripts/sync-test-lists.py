@@ -224,9 +224,9 @@ class GitToPostgres(object):
                               'SET active = %s'
                               ' WHERE url_no = %s',
                               (False, url['url_no']))
-                except:
+                except Exception as exc:
                     print("Failed to mark url_no:%s inactive" % url['url_no'])
-                    raise RuntimeError("Failed to mark url_no:%s inactive" % url['url_no'])
+                    raise exc
 
 
         # in the db, and update them if they *are* in the db.
@@ -250,15 +250,15 @@ class GitToPostgres(object):
                               ' VALUES (%s, %s, %s, %s, %s, %s, %s)'
                               ' ON CONFLICT DO NOTHING RETURNING url_no',
                               (url, cat_no, country_no, date_added, source, notes, True))
-                except:
+                except Exception as exc:
                     print("INVALID row in %s: %s" % (csv_path, row))
-                    raise RuntimeError("INVALID row in %s: %s" % (csv_path, row))
+                    raise exc
             elif (url_in_db['cat_no'] != cat_no
                   or url_in_db['source'] != source
                   or url_in_db['notes'] != notes
                   or url_in_db['active'] is False):
                 try:
-                    url_no = url_in_db[3]
+                    url_no = url_in_db['url_no']
                     cursor.execute('UPDATE urls '
                               'SET cat_no = %s,'
                               '    source = %s,'
@@ -266,9 +266,9 @@ class GitToPostgres(object):
                               '    active = %s'
                               ' WHERE url_no = %s',
                               (cat_no, source, notes, True, url_no))
-                except:
+                except Exception as exc:
                     print("Failed to update %s with values: %s" % (csv_path, row))
-                    raise RuntimeError("Failed to update %s with values: %s" % (csv_path, row))
+                    raise exc
             else:
                 # Skip items that don't require update or insert
                 continue
@@ -290,14 +290,7 @@ class GitToPostgres(object):
             print("Updating test list: %s" % changed_path)
             self.update_urls_by_path(cursor, changed_path, cat_code_no, country_alpha_2_no)
 
-    def run(self):
-        if self.get_remote_head() == self.last_commit_hash:
-            # short-circuit without fetching git repo
-            print("Already in sync")
-            return
-
-        self.pull_or_clone_test_lists()
-
+    def sync_db(self):
         with self.pgconn, self.pgconn.cursor() as cursor: # PG transaction
             # `sync_test_lists` table is used to prevent two concurrent runs of
             # the script. Maybe it's enough to rely on transaction semantics,
@@ -314,6 +307,16 @@ class GitToPostgres(object):
                 self.update_url_lists(cursor)
 
             self.write_sync_table(cursor)
+
+    def run(self):
+        if self.get_remote_head() == self.last_commit_hash:
+            # short-circuit without fetching git repo
+            print("Already in sync")
+            return
+
+        self.pull_or_clone_test_lists()
+        self.sync_db()
+
 
 def dirname(s):
     if not os.path.isdir(s):
