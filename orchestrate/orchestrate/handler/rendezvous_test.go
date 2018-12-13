@@ -29,6 +29,12 @@ func TestGetTestHelpers(t *testing.T) {
 	if len(th) != 1 {
 		t.Errorf("inconsistent count: %d", len(th))
 	}
+	if th[0].Address != "https://example.com" {
+		t.Errorf("adress does not match: %s", th[0].Address)
+	}
+	if th[0].Type != "https" {
+		t.Errorf("type does not match: %s", th[0].Type)
+	}
 }
 
 func TestGetCollectors(t *testing.T) {
