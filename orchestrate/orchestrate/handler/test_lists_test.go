@@ -17,7 +17,7 @@ func TestGetURLsWithRow(t *testing.T) {
 	db := sqlx.NewDb(mockDB, "sqlmock")
 
 	rows := sqlmock.NewRows([]string{"url", "cat_code", "alpha_2"}).
-		AddRow("http://example.com",
+		AddRow("http://example.com/",
 			"FEXP", "IT")
 
 	mock.ExpectPrepare("^SELECT url, cat_code, alpha_2")
