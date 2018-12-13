@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -31,7 +32,8 @@ func prepareURLsQuery(q URLsQuery, db *sqlx.DB) (*sql.Stmt, []interface{}, error
 		alpha_2
 		FROM %s urls
 		INNER JOIN %s countries ON urls.country_no = countries.country_no
-		INNER JOIN %s url_cats ON urls.cat_no = url_cats.cat_no`,
+		INNER JOIN %s url_cats ON urls.cat_no = url_cats.cat_no
+		WHERE active = true`,
 		pq.QuoteIdentifier(common.URLsTable),
 		pq.QuoteIdentifier(common.CountriesTable),
 		pq.QuoteIdentifier(common.URLCategoriesTable))
@@ -62,6 +64,28 @@ type URLInfo struct {
 	CountryCode  string `json:"country_code"`
 }
 
+func isValidURL(urlStr string) bool {
+	u, err := url.ParseRequestURI(urlStr)
+	if err != nil {
+		// XXX maybe this should be a more serious error
+		ctx.WithError(err).Errorf("%s url is invalid", urlStr)
+		return false
+	}
+	if u.Path == "" {
+		ctx.Errorf("%s url contains empty path", urlStr)
+		return false
+	}
+	if u.Host == "" {
+		ctx.Errorf("%s url contains empty host", urlStr)
+		return false
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		ctx.Errorf("%s url scheme is not http or https", urlStr)
+		return false
+	}
+	return true
+}
+
 // GetURLs returns a slice of test inputs
 func GetURLs(q URLsQuery, db *sqlx.DB) ([]URLInfo, error) {
 	var (
@@ -84,13 +108,17 @@ func GetURLs(q URLsQuery, db *sqlx.DB) ([]URLInfo, error) {
 		return urls, err
 	}
 	for rows.Next() {
-		var url URLInfo
-		err = rows.Scan(&url.URL, &url.CategoryCode, &url.CountryCode)
+		var ui URLInfo
+		err = rows.Scan(&ui.URL, &ui.CategoryCode, &ui.CountryCode)
 		if err != nil {
 			ctx.WithError(err).Error("failed to get test input row (urls)")
 			continue
 		}
-		urls = append(urls, url)
+		if isValidURL(ui.URL) != true {
+			ctx.Errorf("%s invalid URL skipping", ui.URL)
+			continue
+		}
+		urls = append(urls, ui)
 	}
 	return urls, nil
 }
