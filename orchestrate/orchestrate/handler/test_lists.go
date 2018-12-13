@@ -39,7 +39,7 @@ func prepareURLsQuery(q URLsQuery, db *sqlx.DB) (*sql.Stmt, []interface{}, error
 		pq.QuoteIdentifier(common.URLCategoriesTable))
 	// countries is always greater than zero
 	markerIdx++
-	query += fmt.Sprintf(" WHERE alpha_2 = ANY($%d)", markerIdx)
+	query += fmt.Sprintf(" AND alpha_2 = ANY($%d)", markerIdx)
 	args = append(args, pq.StringArray(countryCodes))
 	if q.CategoryCodes != "" {
 		markerIdx++
