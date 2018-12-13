@@ -89,14 +89,29 @@ class TestGitToPostgres(unittest.TestCase):
         print("pg_dsn: {}".format(self.pgdsn))
         print("working_dir: {}".format(self.working_dir))
 
-        # Wait 2 seconds for docker to come online
-        time.sleep(2)
+        while True:
+            try:
+                pgconn = psycopg2.connect(dsn=self.pgdsn)
+                with pgconn.cursor() as c:
+                    c.execute(CREATE_TABLES)
+                pgconn.commit()
+                pgconn.close()
+                break
+            except Exception:
+                print("waiting for pg to come online...")
+                time.sleep(1)
 
-        pgconn = psycopg2.connect(dsn=self.pgdsn)
-        with pgconn.cursor() as c:
-            c.execute(CREATE_TABLES)
-        pgconn.commit()
-        pgconn.close()
+    def test_big_diff(self):
+        HASH = "beee52b55bb60188696163cf5cf7cdf094b3008f"
+        gtp = stl.GitToPostgres(working_dir=self.working_dir, pgdsn=self.pgdsn)
+
+        gtp.pull_or_clone_test_lists()
+        gtp.test_lists_repo.git.reset('--hard', HASH)
+        gtp.sync_db()
+
+        gtp = stl.GitToPostgres(working_dir=self.working_dir, pgdsn=self.pgdsn)
+        # Now we re-run the workflow from this commit onwards
+        gtp.run()
 
     def test_problematic_hash(self):
         HASH = "bee38ec1a956acf2b7b89ac5d3c1b629cd44b145"
