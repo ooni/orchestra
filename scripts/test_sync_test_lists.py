@@ -89,14 +89,17 @@ class TestGitToPostgres(unittest.TestCase):
         print("pg_dsn: {}".format(self.pgdsn))
         print("working_dir: {}".format(self.working_dir))
 
-        # Wait 2 seconds for docker to come online
-        time.sleep(2)
-
-        pgconn = psycopg2.connect(dsn=self.pgdsn)
-        with pgconn.cursor() as c:
-            c.execute(CREATE_TABLES)
-        pgconn.commit()
-        pgconn.close()
+        while True:
+            try:
+                pgconn = psycopg2.connect(dsn=self.pgdsn)
+                with pgconn.cursor() as c:
+                    c.execute(CREATE_TABLES)
+                pgconn.commit()
+                pgconn.close()
+                break
+            except Exception:
+                print("waiting for pg to come online...")
+                time.sleep(1)
 
     def test_problematic_hash(self):
         HASH = "bee38ec1a956acf2b7b89ac5d3c1b629cd44b145"
