@@ -113,7 +113,7 @@ func GetTestHelpers(names string, db *sqlx.DB) ([]TestHelperInfo, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var testHelper TestHelperInfo
-		err = rows.Scan(&testHelper.Name, &testHelper.Address, &testHelper.Type)
+		err = rows.Scan(&testHelper.Name, &testHelper.Type, &testHelper.Address)
 		if err != nil {
 			ctx.WithError(err).Error("failed to get test_helper row")
 			continue
