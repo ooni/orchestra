@@ -100,6 +100,50 @@ func TestRegistryUpdate(t *testing.T) {
 	fmt.Printf("Update status: %s", status)
 }
 
+func TestEmptyToken(t *testing.T) {
+	err := orchTest.CleanDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r, err := NewRegistryRouter(orchTest.pgURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cd := registry_handler.ClientData{
+		ProbeCC:            "IT",
+		ProbeASN:           "AS1234",
+		Platform:           "android",
+		SoftwareName:       "ooni-testing",
+		SoftwareVersion:    "0.0.1",
+		SupportedTests:     []string{"web_connectivity"},
+		NetworkType:        "wifi",
+		AvailableBandwidth: "100",
+		Language:           "en",
+		Token:              "",
+		Password:           testingPassword,
+	}
+	clientID, err := registerClient(r, cd)
+	if err != nil {
+		t.Error(err)
+	}
+
+	fmt.Printf("Registered: %s\n", clientID)
+	token, err := login(r, clientID, testingPassword)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Printf("Login token: %s", token)
+
+	cd.Token = "XXX-Some-Real-Token"
+	status, err := updateClient(r, clientID, token, cd)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Printf("Update status: %s", status)
+}
+
 func TestMain(m *testing.M) {
 	orchTest = NewOrchestraTest()
 	err := orchTest.Setup()
