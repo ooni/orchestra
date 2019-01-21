@@ -17,10 +17,10 @@ func TestParseSchedule(t *testing.T) {
 		t.Errorf("expected Repeat to be 42 (got: %d)", s.Repeat)
 	}
 	if s.Duration.Weeks != 1.3 {
-		t.Error("expected 1.3 weeks duration (got: %f)", s.Duration.Weeks)
+		t.Errorf("expected 1.3 weeks duration (got: %f)", s.Duration.Weeks)
 	}
 	if s.Duration.Minutes != 2.0 {
-		t.Error("expected 2.0 minutes duration (got: %f)", s.Duration.Minutes)
+		t.Errorf("expected 2.0 minutes duration (got: %f)", s.Duration.Minutes)
 	}
 
 	s, err = ParseSchedule("R/2018-12-16T16:20:30Z/PT2M")
@@ -48,7 +48,7 @@ func TestToDuration(t *testing.T) {
 	febHours := (2.2*28 + 1) * 24
 	decHours := (2.2*31 + 1) * 24
 	if d.Hours() < febHours || d.Hours() > decHours {
-		t.Errorf("expected duration to be in range (1478, 1637) (got: %d)",
+		t.Errorf("expected duration to be in range (1478, 1637) (got: %f)",
 			d.Hours())
 	}
 }

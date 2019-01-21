@@ -134,7 +134,7 @@ func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
 		defer stmt.Close()
 
 		taskArgsStr, err := json.Marshal(t.Arguments)
-		ctx.Debugf("task args: %#", t.Arguments)
+		ctx.Debugf("task args: %v", t.Arguments)
 		if err != nil {
 			ctx.WithError(err).Error("failed to serialise task arguments in createTask")
 			return "", err
