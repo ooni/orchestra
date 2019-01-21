@@ -8,6 +8,6 @@ ALTER TABLE active_probes DROP COLUMN "is_token_expired";
 -- +migrate Up
 -- +migrate StatementBegin
 
-ALTER TABLE active_probes ADD COLUMN "is_token_expired" BOOLEAN SET DEFAULT false SET NOT NULL;
+ALTER TABLE active_probes ADD COLUMN "is_token_expired" BOOLEAN NOT NULL DEFAULT false;
 
 -- +migrate StatementEnd
