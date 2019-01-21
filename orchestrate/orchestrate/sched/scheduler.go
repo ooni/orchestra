@@ -457,9 +457,9 @@ func gorushPush(baseURL *url.URL, notifyReq GoRushReq) error {
 			errorStr == "NotRegistered" ||
 			errorStr == "InvalidRegistration" {
 			return ErrExpiredToken
-		} else {
-			ctx.Errorf("Unhandled token error: %s", errorStr)
 		}
+		ctx.Errorf("Unhandled token error: %s", errorStr)
+		return fmt.Errorf("Unhandled token error: %s", errorStr)
 	}
 
 	return nil
