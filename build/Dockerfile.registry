@@ -1,0 +1,14 @@
+# iron/go:dev is the alpine image with the go tools added
+FROM iron/go:dev
+WORKDIR /app
+
+ENV SRC_DIR=/go/src/github.com/ooni/orchestra/
+ADD . $SRC_DIR
+RUN cd $SRC_DIR \
+    && make build-registry \
+    && cp bin/ooni-registry /app/
+
+RUN mkdir /etc/ooni-orchestra
+
+ENTRYPOINT ["./ooni-registry"]
+CMD ["--config", "/etc/ooni-orchestra/ooni-registry.toml", "start"]

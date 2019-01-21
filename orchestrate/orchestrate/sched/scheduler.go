@@ -1,14 +1,9 @@
 package sched
 
 import (
-	"bytes"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -18,8 +13,6 @@ import (
 	"github.com/jmoiron/sqlx/types"
 	"github.com/lib/pq"
 	"github.com/ooni/orchestra/common"
-	"github.com/satori/go.uuid"
-	"github.com/spf13/viper"
 )
 
 var ctx = log.WithFields(log.Fields{
@@ -29,47 +22,35 @@ var ctx = log.WithFields(log.Fields{
 
 // AlertData is the alert message
 type AlertData struct {
-	ID      string                 `json:"id"`
+	AlertNo int64                  `json:"alert_no"`
 	Message string                 `json:"message" binding:"required"`
 	Extra   map[string]interface{} `json:"extra"`
 }
 
-// TaskData is the data for the task
-type TaskData struct {
-	ID        string                 `json:"id"`
-	TestName  string                 `json:"test_name" binding:"required"`
-	Arguments map[string]interface{} `json:"arguments"`
-	State     string
-}
-
 // JobTarget the target of a job
 type JobTarget struct {
-	ClientID  string
-	TaskID    *string
-	TaskData  *TaskData
-	AlertData *AlertData
-	Token     string
-	Platform  string
+	ClientID string
+	Token    string
+	Platform string
 }
 
-// NewJobTarget create a new job target instance
-func NewJobTarget(cID string, token string, plat string, tid *string, td *TaskData, ad *AlertData) *JobTarget {
-	return &JobTarget{
-		ClientID:  cID,
-		TaskID:    tid,
-		TaskData:  td,
-		AlertData: ad,
-		Token:     token,
-		Platform:  plat,
-	}
-}
+// JobType can be one of AlertJob or ExperimentJob
+type JobType int
+
+const (
+	// AlertJob is for alerts
+	AlertJob JobType = 0
+	// ExperimentJob is for experiments
+	ExperimentJob JobType = 1
+)
 
 // Job container
 type Job struct {
-	ID       string
-	Schedule Schedule
-	Delay    int64
-	Comment  string
+	AlertNo      int64
+	ExperimentNo int64
+	Schedule     Schedule
+	Delay        int64
+	Comment      string
 
 	NextRunAt time.Time
 	TimesRun  int64
@@ -77,12 +58,14 @@ type Job struct {
 	lock     sync.RWMutex
 	jobTimer *time.Timer
 	IsDone   bool
+	Type     JobType
+	Data     interface{}
 }
 
-// NewJob create a new job
-func NewJob(jID string, comment string, schedule Schedule, delay int64) *Job {
+// NewAlertJob will create a new alert struct
+func NewAlertJob(alertNo int64, comment string, schedule Schedule, delay int64) *Job {
 	return &Job{
-		ID:        jID,
+		AlertNo:   alertNo,
 		Comment:   comment,
 		Schedule:  schedule,
 		Delay:     delay,
@@ -90,173 +73,111 @@ func NewJob(jID string, comment string, schedule Schedule, delay int64) *Job {
 		lock:      sync.RWMutex{},
 		IsDone:    false,
 		NextRunAt: schedule.StartTime,
+		Type:      AlertJob,
 	}
 }
 
-// CreateTask creates a new task and stores it in the JobDB
-func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
-	tx, err := jDB.db.Begin()
+// NewExperimentJob will create a new experiment struct
+func NewExperimentJob(expNo int64, comment string, schedule Schedule, delay int64) *Job {
+	return &Job{
+		ExperimentNo: expNo,
+		Comment:      comment,
+		Schedule:     schedule,
+		Delay:        delay,
+		TimesRun:     0,
+		lock:         sync.RWMutex{},
+		IsDone:       false,
+		NextRunAt:    schedule.StartTime,
+		Type:         ExperimentJob,
+	}
+}
+
+// NewAlertData creates a struct for alerting usage
+func NewAlertData(jDB *JobDB, alertNo int64) (*AlertData, error) {
+	var (
+		alertExtra types.JSONText
+	)
+	ad := AlertData{}
+	query := fmt.Sprintf(`SELECT
+			message,
+			extra
+			FROM %s
+			WHERE alert_no = $1`,
+		pq.QuoteIdentifier(common.JobAlertsTable))
+	err := jDB.db.QueryRow(query, alertNo).Scan(
+		&ad.Message,
+		&alertExtra)
 	if err != nil {
-		ctx.WithError(err).Error("failed to open createTask transaction")
-		return "", err
+		ctx.WithError(err).Errorf("failed to get alert_no %d", alertNo)
+		return nil, err
+	}
+	err = alertExtra.Unmarshal(&ad.Extra)
+	if err != nil {
+		ctx.WithError(err).Error("failed to unmarshal json for alert")
+		return nil, err
 	}
 
-	var taskID = uuid.NewV4().String()
-	{
-		query := fmt.Sprintf(`INSERT INTO %s (
-			id, probe_id,
-			job_id, test_name,
-			arguments,
-			state,
-			progress,
-			creation_time,
-			notification_time,
-			accept_time,
-			done_time,
-			last_updated
-		) VALUES (
-			$1, $2,
-			$3, $4,
-			$5,
-			$6,
-			$7,
-			$8,
-			$9,
-			$10,
-			$11,
-			$12)`,
-			pq.QuoteIdentifier(common.TasksTable))
-		stmt, err := tx.Prepare(query)
-		if err != nil {
-			ctx.WithError(err).Error("failed to prepare task create query")
-			return "", err
-		}
-		defer stmt.Close()
+	return &ad, nil
+}
 
-		taskArgsStr, err := json.Marshal(t.Arguments)
-		ctx.Debugf("task args: %#", t.Arguments)
-		if err != nil {
-			ctx.WithError(err).Error("failed to serialise task arguments in createTask")
-			return "", err
-		}
-		now := time.Now().UTC()
-		_, err = stmt.Exec(taskID, cID,
-			j.ID, t.TestName,
-			taskArgsStr,
-			"ready",
-			0,
-			now,
-			nil,
-			nil,
-			nil,
-			now)
-		if err != nil {
-			tx.Rollback()
-			ctx.WithError(err).Error("failed to insert into tasks table")
-			return "", err
-		}
-		if err = tx.Commit(); err != nil {
-			ctx.WithError(err).Error("failed to commit transaction in tasks table, rolling back")
-			return "", err
-		}
+// GetTableInfo returns the id, tableName and columnName for a given task (alert or experiment)
+func GetTableInfo(j *Job) (int64, string, string, error) {
+	var (
+		tableName  string
+		columnName string
+		id         int64
+	)
+	if j.Type == AlertJob {
+		id = j.AlertNo
+		columnName = "alert_no"
+		tableName = common.JobAlertsTable
+	} else if j.Type == ExperimentJob {
+		id = j.ExperimentNo
+		columnName = "experiment_no"
+		tableName = common.JobExperimentsTable
+	} else {
+		return id, tableName, columnName, errors.New("invalid job type")
 	}
-
-	return taskID, nil
+	return id, tableName, columnName, nil
 }
 
 // GetTargets returns all the targets for the job
-func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
+func (j *Job) GetTargets(jDB *JobDB) ([]*JobTarget, error) {
 	var (
 		err             error
 		query           string
 		targetCountries []string
 		targetPlatforms []string
 		targets         []*JobTarget
-
-		taskNo    sql.NullInt64
-		alertNo   sql.NullInt64
-		rows      *sql.Rows
-		taskData  *TaskData
-		alertData *AlertData
 	)
 	ctx.Debug("getting targets")
 
+	id, tableName, columnName, err := GetTableInfo(j)
+	if err != nil {
+		return targets, err
+	}
+
 	query = fmt.Sprintf(`SELECT
 		target_countries,
-		target_platforms,
-		task_no,
-		alert_no
+		target_platforms
 		FROM %s
-		WHERE id = $1`,
-		pq.QuoteIdentifier(common.JobsTable))
+		WHERE %s = $1`,
+		pq.QuoteIdentifier(tableName), columnName)
 
-	err = jDB.db.QueryRow(query, j.ID).Scan(
+	err = jDB.db.QueryRow(query, id).Scan(
 		pq.Array(&targetCountries),
-		pq.Array(&targetPlatforms),
-		&taskNo,
-		&alertNo)
+		pq.Array(&targetPlatforms))
 	if err != nil {
 		ctx.WithError(err).Error("failed to obtain targets")
 		if err == sql.ErrNoRows {
-			panic("could not find job with ID")
+			return nil, errors.New("could not find job with ID")
 		}
-		panic("other error in query")
-	}
-
-	if alertNo.Valid {
-		var (
-			alertExtra types.JSONText
-		)
-		ad := AlertData{}
-		query := fmt.Sprintf(`SELECT
-			message,
-			extra
-			FROM %s
-			WHERE alert_no = $1`,
-			pq.QuoteIdentifier(common.JobAlertsTable))
-		err = jDB.db.QueryRow(query, alertNo.Int64).Scan(
-			&ad.Message,
-			&alertExtra)
-		if err != nil {
-			ctx.WithError(err).Errorf("failed to get alert_no %d", alertNo.Int64)
-			panic("failed to get alert_no")
-		}
-		err = alertExtra.Unmarshal(&ad.Extra)
-		if err != nil {
-			ctx.WithError(err).Error("failed to unmarshal json for alert")
-			panic("invalid JSON in database")
-		}
-		alertData = &ad
-	} else if taskNo.Valid {
-		var (
-			taskArgs types.JSONText
-		)
-		td := TaskData{}
-		query := fmt.Sprintf(`SELECT
-			test_name,
-			arguments
-			FROM %s
-			WHERE task_no = $1`,
-			pq.QuoteIdentifier(common.JobTasksTable))
-		err = jDB.db.QueryRow(query, taskNo.Int64).Scan(
-			&td.TestName,
-			&taskArgs)
-		if err != nil {
-			ctx.WithError(err).Errorf("failed to get task_no %d", taskNo.Int64)
-			panic("failed to get task_no")
-		}
-		err = taskArgs.Unmarshal(&td.Arguments)
-		if err != nil {
-			ctx.WithError(err).Error("failed to unmarshal json for task")
-			panic("invalid JSON in database")
-		}
-		taskData = &td
-	} else {
-		panic("inconsistent database missing task_no or alert_no")
+		return nil, errors.New("other error in query")
 	}
 
 	// XXX this is really ghetto. There is probably a much better way of doing
 	// it.
+	var rows *sql.Rows
 	query = fmt.Sprintf("SELECT id, token, platform FROM %s",
 		pq.QuoteIdentifier(common.ActiveProbesTable))
 	if len(targetCountries) > 0 && len(targetPlatforms) > 0 {
@@ -275,34 +196,29 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	} else {
 		rows, err = jDB.db.Query(query)
 	}
-
 	if err != nil {
 		ctx.WithError(err).Error("failed to find targets")
-		return targets
+		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var (
 			clientID string
-			taskID   string
 			token    string
 			plat     string
 		)
 		err = rows.Scan(&clientID, &token, &plat)
 		if err != nil {
 			ctx.WithError(err).Error("failed to iterate over targets")
-			return targets
+			return nil, err
 		}
-		if taskData != nil {
-			taskID, err = j.CreateTask(clientID, taskData, jDB)
-			if err != nil {
-				ctx.WithError(err).Error("failed to create task")
-				return targets
-			}
-		}
-		targets = append(targets, NewJobTarget(clientID, token, plat, &taskID, taskData, alertData))
+		targets = append(targets, &JobTarget{
+			ClientID: clientID,
+			Token:    token,
+			Platform: plat,
+		})
 	}
-	return targets
+	return targets, nil
 }
 
 // GetWaitDuration gets the amount of time to wait for the task to run next
@@ -341,188 +257,6 @@ func (j *Job) WaitAndRun(jDB *JobDB) {
 	j.jobTimer = time.AfterFunc(waitDuration, jobRun)
 }
 
-// NotifyReq is the reuqest for sending this particular notification message
-// XXX this is duplicated in proteus-notify
-type NotifyReq struct {
-	ClientIDs []string               `json:"client_ids"`
-	Event     map[string]interface{} `json:"event"`
-}
-
-// TaskNotifyOrchestra this will tell the notify backend to notify the client of
-// the task
-func TaskNotifyOrchestra(bu string, jt *JobTarget) error {
-	var err error
-	path, _ := url.Parse("/api/v1/notify")
-
-	baseURL, err := url.Parse(bu)
-	if err != nil {
-		ctx.WithError(err).Error("invalid base url")
-		return err
-	}
-
-	notifyReq := NotifyReq{
-		ClientIDs: []string{jt.ClientID},
-		Event: map[string]interface{}{
-			"type":    "run_task",
-			"task_id": jt.TaskID,
-		},
-	}
-	jsonStr, err := json.Marshal(notifyReq)
-	if err != nil {
-		ctx.WithError(err).Error("failed to marshal data")
-		return err
-	}
-	u := baseURL.ResolveReference(path)
-	req, err := http.NewRequest("POST",
-		u.String(),
-		bytes.NewBuffer(jsonStr))
-	if err != nil {
-		ctx.WithError(err).Error("failed send request")
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		ctx.WithError(err).Error("http request failed")
-		return err
-	}
-	defer resp.Body.Close()
-	// XXX do we also want to check the body?
-	if resp.StatusCode != 200 {
-		return errors.New("http request returned invalid status code")
-	}
-	return nil
-}
-
-// GoRushNotification all the notification metadata for gorush
-type GoRushNotification struct {
-	Tokens           []string               `json:"tokens"`
-	Platform         int                    `json:"platform"`
-	Message          string                 `json:"message"`
-	Topic            string                 `json:"topic"`
-	To               string                 `json:"to"`
-	Data             map[string]interface{} `json:"data"`
-	ContentAvailable bool                   `json:"content_available"`
-	Notification     map[string]string      `json:"notification"`
-}
-
-// GoRushReq a wrapper for a gorush notification request
-type GoRushReq struct {
-	Notifications []*GoRushNotification `json:"notifications"`
-}
-
-// Notification payload of a notification to be sent to gorush
-type Notification struct {
-	Type    int // 1 is message 2 is Event
-	Message string
-	Event   map[string]interface{}
-}
-
-// NotifyGorush tell gorush to notify clients
-func NotifyGorush(bu string, jt *JobTarget) error {
-	var (
-		err error
-	)
-
-	path, _ := url.Parse("/api/push")
-
-	baseURL, err := url.Parse(bu)
-	if err != nil {
-		ctx.WithError(err).Error("invalid base url")
-		return err
-	}
-
-	notification := &GoRushNotification{
-		Tokens: []string{jt.Token},
-	}
-
-	if jt.AlertData != nil {
-		var (
-			notificationType = "default"
-		)
-		if _, ok := jt.AlertData.Extra["href"]; ok {
-			notificationType = "open_href"
-		}
-		notification.Message = jt.AlertData.Message
-		notification.Data = map[string]interface{}{
-			"type":    notificationType,
-			"payload": jt.AlertData.Extra,
-		}
-	} else if jt.TaskData != nil {
-		notification.Data = map[string]interface{}{
-			"type": "run_task",
-			"payload": map[string]string{
-				"task_id": *jt.TaskID,
-			},
-		}
-		notification.ContentAvailable = true
-	} else {
-		return errors.New("either alertData or TaskData must be set")
-	}
-
-	notification.Notification = make(map[string]string)
-
-	if jt.Platform == "ios" {
-		notification.Platform = 1
-		notification.Topic = viper.GetString("core.notify-topic-ios")
-	} else if jt.Platform == "android" {
-		notification.Notification["click_action"] = viper.GetString(
-			"core.notify-click-action-android")
-		notification.Platform = 2
-		/* We don't need to send a topic on Android. As the response message of
-		   failed requests say: `Must use either "registration_ids" field or
-		   "to", not both`. And we need `registration_ids` because we send in
-		   multicast to many clients. More evidence, as usual, on SO:
-		   <https://stackoverflow.com/a/33440105>. */
-	} else {
-		return errors.New("unsupported platform")
-	}
-
-	notifyReq := GoRushReq{
-		Notifications: []*GoRushNotification{notification},
-	}
-
-	jsonStr, err := json.Marshal(notifyReq)
-	if err != nil {
-		ctx.WithError(err).Error("failed to marshal data")
-		return err
-	}
-	u := baseURL.ResolveReference(path)
-	ctx.Debugf("sending notify request: %s", jsonStr)
-	req, err := http.NewRequest("POST",
-		u.String(),
-		bytes.NewBuffer(jsonStr))
-	if err != nil {
-		ctx.WithError(err).Error("failed to send request")
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	if viper.IsSet("auth.gorush-basic-auth-user") {
-		req.SetBasicAuth(viper.GetString("auth.gorush-basic-auth-user"),
-			viper.GetString("auth.gorush-basic-auth-password"))
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		ctx.WithError(err).Error("http request failed")
-		return err
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		ctx.WithError(err).Error("failed to read response body")
-		return err
-	}
-	ctx.Debugf("got response: %s", body)
-	// XXX do we also want to check the body?
-	if resp.StatusCode != 200 {
-		ctx.Debugf("got invalid status code: %d", resp.StatusCode)
-		return errors.New("http request returned invalid status code")
-	}
-	return nil
-}
-
 // ErrInconsistentState when you try to accept an already accepted task
 var ErrInconsistentState = errors.New("task already accepted")
 
@@ -532,151 +266,81 @@ var ErrTaskNotFound = errors.New("task not found")
 // ErrAccessDenied not enough permissions
 var ErrAccessDenied = errors.New("access denied")
 
-// GetTask returns the specified task with the ID
-func GetTask(tID string, uID string, db *sqlx.DB) (TaskData, error) {
-	var (
-		err      error
-		probeID  string
-		taskArgs types.JSONText
-	)
-	task := TaskData{}
-	query := fmt.Sprintf(`SELECT
-		id,
-		probe_id,
-		test_name,
-		arguments,
-		COALESCE(state, 'ready')
-		FROM %s
-		WHERE id = $1`,
-		pq.QuoteIdentifier(common.TasksTable))
-	err = db.QueryRow(query, tID).Scan(
-		&task.ID,
-		&probeID,
-		&task.TestName,
-		&taskArgs,
-		&task.State)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return task, ErrTaskNotFound
-		}
-		ctx.WithError(err).Error("failed to get task")
-		return task, err
-	}
-	if probeID != uID {
-		return task, ErrAccessDenied
-	}
-	err = taskArgs.Unmarshal(&task.Arguments)
-	if err != nil {
-		ctx.WithError(err).Error("failed to unmarshal json")
-		return task, err
-	}
-	return task, nil
-}
-
-// SetTaskState sets the state of the task
-func SetTaskState(tID string, uID string,
-	state string, validStates []string,
-	updateTimeCol string,
-	db *sqlx.DB) error {
+// RefreshData reloads the experiment or alert data from the database
+func (j *Job) RefreshData(jDB *JobDB) error {
 	var err error
-	task, err := GetTask(tID, uID, db)
-	if err != nil {
-		return err
-	}
-	stateConsistent := false
-	for _, s := range validStates {
-		if task.State == s {
-			stateConsistent = true
-			break
-		}
-	}
-	if !stateConsistent {
-		return ErrInconsistentState
-	}
-
-	query := fmt.Sprintf(`UPDATE %s SET
-		state = $2,
-		%s = $3,
-		last_updated = $3
-		WHERE id = $1`,
-		pq.QuoteIdentifier(common.TasksTable),
-		updateTimeCol)
-
-	_, err = db.Exec(query, tID, state, time.Now().UTC())
-	if err != nil {
-		ctx.WithError(err).Error("failed to get task")
-		return err
-	}
-	return nil
-}
-
-// Notify send a notification for the given JobTarget
-func Notify(jt *JobTarget, jDB *JobDB) error {
-	var err error
-	if jt.Platform != "android" && jt.Platform != "ios" {
-		ctx.Debugf("we don't support notifying to %s", jt.Platform)
-		return nil
-	}
-
-	if viper.IsSet("core.gorush-url") {
-		err = NotifyGorush(
-			viper.GetString("core.gorush-url"),
-			jt)
-	} else if viper.IsSet("core.notify-url") {
-		err = errors.New("proteus notify is deprecated")
-		/*
-			err = TaskNotifyOrchestra(
-				viper.GetString("core.notify-url"),
-				jt)
-		*/
-	} else {
-		err = errors.New("no valid notification service found")
-	}
-
-	if err != nil {
-		return err
-	}
-	if jt.TaskData != nil {
-		err = SetTaskState(jt.TaskData.ID,
-			jt.ClientID,
-			"notified",
-			[]string{"ready"},
-			"notification_time",
-			jDB.db)
+	ctx.Debugf("refreshing data for %v", j)
+	if j.Type == AlertJob {
+		j.Data, err = NewAlertData(jDB, j.AlertNo)
 		if err != nil {
-			ctx.WithError(err).Error("failed to update task state")
+			// XXX we should probably recover in some way
 			return err
 		}
+	} else if j.Type == ExperimentJob {
+		j.Data, err = NewExperimentData(jDB, j.ExperimentNo)
+		if err != nil {
+			return err
+		}
+	} else {
+		return err
 	}
 	return nil
 }
 
-// Run the given job
-func (j *Job) Run(jDB *JobDB) {
-	j.lock.Lock()
-	defer j.lock.Unlock()
+// AlertWithTarget sends an alert to the specified target
+func AlertWithTarget(j *Job, t *JobTarget) {
+	notification, err := MakeAlertNotification(j, t)
+	if err != nil {
+		if err == ErrUnsupportedPlatform {
+			ctx.Debugf("unsupported platform")
+		} else {
+			ctx.WithError(err).Errorf("failed to make notification %s",
+				t.ClientID)
+		}
+		return
+	}
+	if err = NotifyGorush(notification); err != nil {
+		ctx.WithError(err).Errorf("failed to notify alert to %s",
+			t.ClientID)
+	}
+}
 
-	if !j.ShouldRun() {
-		ctx.Error("inconsitency in should run detected..")
+// ExperimentWithTarget will populate the JobTarget for a given experiment
+func ExperimentWithTarget(jDB *JobDB, j *Job, t *JobTarget) {
+	ctx.Debug("Creating client experiment")
+	clientExp, err := CreateClientExperiment(jDB.db, j.Data.(*ExperimentData), t.ClientID)
+	if err != nil {
+		ctx.WithError(err).Errorf("failed to create clientExperiment for %s",
+			t.ClientID)
 		return
 	}
 
-	targets := j.GetTargets(jDB)
-	lastRunAt := time.Now().UTC()
-	for _, t := range targets {
-		// XXX
-		// In here shall go logic to connect to notification server and notify
-		// them of the task
-		ctx.Debugf("notifying %s", t.ClientID)
-		err := Notify(t, jDB)
-		if err != nil {
-			ctx.WithError(err).Errorf("failed to notify %s",
-				t.ClientID)
+	notification, err := MakeExperimentNotification(j, t, clientExp.ID)
+	if err != nil {
+		if err == ErrUnsupportedPlatform {
+			ctx.Debugf("unsupported platform")
+		} else {
+			ctx.WithError(err).Errorf("failed to create experiment notification for %s",
+				clientExp.ID)
 		}
+		return
 	}
 
-	ctx.Debugf("successfully ran at %s", lastRunAt)
-	// XXX maybe move these elsewhere
+	err = NotifyGorush(notification)
+	if err != nil {
+		ctx.WithError(err).Errorf("failed to notify experiment to %s",
+			t.ClientID)
+	}
+
+	err = SetExperimentNotified(jDB, clientExp.ID, clientExp.ClientID)
+	if err != nil {
+		ctx.WithError(err).Error("failed to update task state")
+	}
+}
+
+// JobWasRun is called to indicate that the job was run. It schedules a
+// goroutine to re-run the job at some time in the future.
+func (j *Job) JobWasRun(jDB *JobDB, lastRunAt time.Time) {
 	j.TimesRun = j.TimesRun + 1
 	if j.Schedule.Repeat != -1 && j.TimesRun >= j.Schedule.Repeat {
 		j.IsDone = true
@@ -696,6 +360,43 @@ func (j *Job) Run(jDB *JobDB) {
 	}
 }
 
+// Run the given job
+func (j *Job) Run(jDB *JobDB) {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+
+	if !j.ShouldRun() {
+		ctx.Error("inconsitency in ShouldRun() detected..")
+		return
+	}
+	if err := j.RefreshData(jDB); err != nil {
+		ctx.Error("failed to refresh data")
+		return
+	}
+
+	jobTargets, err := j.GetTargets(jDB)
+	if err != nil {
+		ctx.WithError(err).Error("failed to list targets")
+		return
+	}
+
+	lastRunAt := time.Now().UTC()
+	for _, t := range jobTargets {
+		// XXX
+		// In here shall go logic to connect to notification server and notify
+		// them of the task
+		if j.Type == AlertJob {
+			AlertWithTarget(j, t)
+		} else if j.Type == ExperimentJob {
+			ExperimentWithTarget(jDB, j, t)
+		}
+		ctx.Debugf("notifying %s", t.ClientID)
+	}
+
+	ctx.Debugf("successfully ran at %s", lastRunAt)
+	j.JobWasRun(jDB, lastRunAt)
+}
+
 // Save the job to the job database
 func (j *Job) Save(jDB *JobDB) error {
 	tx, err := jDB.db.Begin()
@@ -703,19 +404,25 @@ func (j *Job) Save(jDB *JobDB) error {
 		ctx.WithError(err).Error("failed to open transaction")
 		return err
 	}
+	id, tableName, columnName, err := GetTableInfo(j)
+	if err != nil {
+		return err
+	}
+
 	query := fmt.Sprintf(`UPDATE %s SET
 		times_run = $2,
 		next_run_at = $3,
 		is_done = $4
-		WHERE id = $1`,
-		pq.QuoteIdentifier(common.JobsTable))
+		WHERE %s = $1`,
+		pq.QuoteIdentifier(tableName), columnName)
+	ctx.Debugf("Saving the state to the DB with query %s", query)
 
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		ctx.WithError(err).Error("failed to prepare update jobs query")
 		return err
 	}
-	_, err = stmt.Exec(j.ID,
+	_, err = stmt.Exec(id,
 		j.TimesRun,
 		j.NextRunAt.UTC(),
 		j.IsDone)
@@ -772,16 +479,32 @@ type JobDB struct {
 
 // GetAll returns a list of all jobs in the database
 func (db *JobDB) GetAll() ([]*Job, error) {
+	var (
+		alertNo      sql.NullInt64
+		experimentNo sql.NullInt64
+	)
 	allJobs := []*Job{}
 	query := fmt.Sprintf(`SELECT
-		id, comment,
-		schedule, delay,
+		alert_no, comment,
+		schedule,
+		delay,
 		times_run,
 		next_run_at,
-		is_done
+		is_done, null
 		FROM %s
-		WHERE state = 'active'`,
-		pq.QuoteIdentifier(common.JobsTable))
+		WHERE state = 'active'
+		UNION
+		SELECT
+		null, comment,
+		schedule,
+		delay,
+		times_run,
+		next_run_at,
+		is_done, experiment_no
+		FROM %s
+		WHERE state = 'active';`,
+		pq.QuoteIdentifier(common.JobAlertsTable),
+		pq.QuoteIdentifier(common.JobExperimentsTable))
 	rows, err := db.db.Query(query)
 	if err != nil {
 		ctx.WithError(err).Error("failed to list jobs")
@@ -790,30 +513,34 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			j            Job
-			schedule     string
-			nextRunAtStr string
+			j        Job
+			schedule string
 		)
-		err := rows.Scan(&j.ID,
+		err := rows.Scan(&alertNo,
 			&j.Comment,
 			&schedule,
 			&j.Delay,
 			&j.TimesRun,
-			&nextRunAtStr,
-			&j.IsDone)
+			&j.NextRunAt,
+			&j.IsDone,
+			&experimentNo)
 		if err != nil {
 			ctx.WithError(err).Error("failed to iterate over jobs")
-			return allJobs, err
-		}
-		j.NextRunAt, err = time.Parse(ISOUTCTimeLayout, nextRunAtStr)
-		if err != nil {
-			ctx.WithError(err).Error("invalid time string")
 			return allJobs, err
 		}
 		j.Schedule, err = ParseSchedule(schedule)
 		if err != nil {
 			ctx.WithError(err).Error("invalid schedule")
 			return allJobs, err
+		}
+		if alertNo.Valid {
+			j.Type = AlertJob
+			j.AlertNo = alertNo.Int64
+		} else if experimentNo.Valid {
+			j.Type = ExperimentJob
+			j.ExperimentNo = experimentNo.Int64
+		} else {
+			return allJobs, errors.New("Either alert_no or experiment_no must be set")
 		}
 		j.lock = sync.RWMutex{}
 		allJobs = append(allJobs, &j)
@@ -824,26 +551,29 @@ func (db *JobDB) GetAll() ([]*Job, error) {
 // Scheduler is the datastructure for the scheduler
 type Scheduler struct {
 	jobDB       JobDB
-	runningJobs map[string]*Job
+	runningJobs map[string]map[int64]*Job
 	stopped     chan os.Signal
 }
 
 // NewScheduler creates a new instance of the scheduler
 func NewScheduler(db *sqlx.DB) *Scheduler {
 	return &Scheduler{
-		stopped:     make(chan os.Signal),
-		runningJobs: make(map[string]*Job),
-		jobDB:       JobDB{db: db}}
+		stopped: make(chan os.Signal),
+		runningJobs: map[string]map[int64]*Job{
+			"alerts":      make(map[int64]*Job),
+			"experiments": make(map[int64]*Job),
+		},
+		jobDB: JobDB{db: db}}
 }
 
-// DeleteJob will remove the job by removing it from the running jobs
-func (s *Scheduler) DeleteJob(jobID string) error {
-	job, ok := s.runningJobs[jobID]
+// DeleteJobAlert will remove the job by removing it from the running jobs
+func (s *Scheduler) DeleteJobAlert(alertNo int64) error {
+	job, ok := s.runningJobs["alerts"][alertNo]
 	if !ok {
 		return errors.New("Job is not part of the running jobs")
 	}
 	job.IsDone = true
-	delete(s.runningJobs, jobID)
+	delete(s.runningJobs["alerts"], alertNo)
 	return nil
 }
 
@@ -855,20 +585,30 @@ func (s *Scheduler) RunJob(j *Job) {
 }
 
 // Start the scheduler
-func (s *Scheduler) Start() {
+func (s *Scheduler) Start() error {
 	ctx.Debug("starting scheduler")
+	err := loadSigningKeys(s.jobDB.db)
+	if err != nil {
+		ctx.WithError(err).Error("failed to load signing keys")
+		return err
+	}
 	// XXX currently when jobs are deleted the allJobs list will not be
 	// updated. We should find a way to check this and stop triggering a job in
 	// case it gets deleted.
 	allJobs, err := s.jobDB.GetAll()
 	if err != nil {
 		ctx.WithError(err).Error("failed to list all jobs")
-		return
+		return err
 	}
 	for _, j := range allJobs {
-		s.runningJobs[j.ID] = j
+		if j.Type == AlertJob {
+			s.runningJobs["alerts"][j.AlertNo] = j
+		} else if j.Type == ExperimentJob {
+			s.runningJobs["experiments"][j.ExperimentNo] = j
+		}
 		s.RunJob(j)
 	}
+	return nil
 }
 
 // Shutdown do all the shutdown logic

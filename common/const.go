@@ -12,11 +12,11 @@ const JobsTable string = "jobs"
 // JobAlertsTable stores metadata about alert type jobs
 const JobAlertsTable string = "job_alerts"
 
-// JobTasksTable stores metadata abou task type jobs
-const JobTasksTable string = "job_tasks"
+// JobExperimentsTable stores metadata abou task type jobs
+const JobExperimentsTable string = "job_experiments"
 
-// TasksTable stores metadata about task
-const TasksTable string = "tasks"
+// ClientExperimentsTable stores metadata about task
+const ClientExperimentsTable string = "client_experiments"
 
 // AccountsTable stores account information
 const AccountsTable string = "accounts"

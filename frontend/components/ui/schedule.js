@@ -1,22 +1,24 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 
 import Immutable from 'immutable'
 
 import moment from 'moment'
 
-import FontIcon from 'react-toolbox/lib/font_icon/FontIcon'
-import Slider from 'react-toolbox/lib/slider/Slider'
+import AlarmIcon from '@material-ui/icons/Alarm'
+import Slider from '@material-ui/lab/Slider'
 
-import { Flex, Box } from 'reflexbox'
+import { Flex, Box } from 'ooni-components'
+import styled from 'styled-components'
 
 export class DesignatorSlider extends React.Component {
   static propTypes = {
-    unit: React.PropTypes.string.isRequired,
-    min: React.PropTypes.number,
-    max: React.PropTypes.number,
-    step: React.PropTypes.number,
-    defaultValue: React.PropTypes.number,
-    onChange: React.PropTypes.func
+    unit: PropTypes.string.isRequired,
+    min: PropTypes.number,
+    max: PropTypes.number,
+    step: PropTypes.number,
+    defaultValue: PropTypes.number,
+    onChange: PropTypes.func
   }
 
   static defaultProps = {
@@ -28,14 +30,14 @@ export class DesignatorSlider extends React.Component {
 
   constructor(props) {
     super(props)
-      console.log("Setting value to", props.defaultValue)
+    console.log("Setting value to", props.defaultValue)
     this.state = {
       value: props.defaultValue
     }
     this.onChange = this.onChange.bind(this)
   }
 
-  onChange (value) {
+  onChange (event, value) {
     this.setState({value})
     this.props.onChange(this.props.unit, value)
   }
@@ -56,10 +58,17 @@ export class DesignatorSlider extends React.Component {
 
 }
 
+const SliderContainer = styled.div`
+padding-top: 8px;
+p {
+  padding-bottom: 8px;
+}
+`
+
 export class DurationPicker extends React.Component {
   static propTypes = {
-    onChange: React.PropTypes.func.isRequired,
-    duration: React.PropTypes.object
+    onChange: PropTypes.func.isRequired,
+    duration: PropTypes.object
   }
 
   constructor(props) {
@@ -91,19 +100,31 @@ export class DurationPicker extends React.Component {
       duration
     } = this.state
     return (
-      <div className='picker' style={{width: '400px'}}>
+      <div>
+        <SliderContainer>
         <p>months</p>
         <DesignatorSlider defaultValue={duration.get("M")} unit="M" max={12} onChange={this.setDuration} />
+        </SliderContainer>
+        <SliderContainer>
         <p>weeks</p>
         <DesignatorSlider defaultValue={duration.get("W")} unit="W" max={4} onChange={this.setDuration} />
+        </SliderContainer>
+        <SliderContainer>
         <p>days</p>
         <DesignatorSlider defaultValue={duration.get("D")} unit="D" max={30} onChange={this.setDuration} />
+        </SliderContainer>
+        <SliderContainer>
         <p>hours</p>
         <DesignatorSlider defaultValue={duration.get("h")} unit="h" max={24} onChange={this.setDuration} />
+        </SliderContainer>
+        <SliderContainer>
         <p>minutes</p>
         <DesignatorSlider defaultValue={duration.get("m")} unit="m" max={60} onChange={this.setDuration} />
+        </SliderContainer>
+        <SliderContainer>
         <p>seconds</p>
         <DesignatorSlider defaultValue={duration.get("s")} unit="s" max={60} onChange={this.setDuration} />
+        </SliderContainer>
       </div>
     )
   }
@@ -121,7 +142,7 @@ export const RepeatString = ({duration, repeatCount}) => {
   ]
   return (
     <Flex pt={2} align='center'>
-      <Box><FontIcon value='alarm' /></Box>
+      <Box><AlarmIcon/></Box>
       <Box pl={2}>
       <div>
       Will run

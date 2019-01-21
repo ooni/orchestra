@@ -61,12 +61,14 @@ endif
 			common/data/... $$extra_dirs;                                     \
 	done
 
-build-all: bindata build-orchestrate build-registry
+build-all: bindata build-orchestrate build-registry build-operator
 
 build-orchestrate:
 	go build ${LDFLAGS} -o bin/ooni-orchestrate orchestrate/main.go
 build-registry:
 	go build ${LDFLAGS} -o bin/ooni-registry registry/main.go
+build-operator:
+	go build ${LDFLAGS} -o bin/ooni-operator operator/main.go
 
 orchestra: vendor build-all
 
@@ -80,4 +82,8 @@ release: fmt-check bindata
 	# https://goreleaser.com/#releasing.custom_release_notes
 	GITHUB_TOKEN=`cat .GITHUB_TOKEN` goreleaser --rm-dist
 
-.PHONY: vendor build build-orchestrate build-registry release bindata build-all fmt fmt-check check
+clean:
+	rm -rf dist/*
+	rm -rf bin/*
+
+.PHONY: vendor build build-orchestrate build-registry release bindata build-all fmt fmt-check check clean

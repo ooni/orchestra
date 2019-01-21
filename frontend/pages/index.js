@@ -3,41 +3,19 @@ import Head from 'next/head'
 
 import Layout from '../components/layout'
 
+import { Text, Heading, Container } from 'ooni-components'
+
 export default () => {
   return (
     <Layout>
       <Head>
-        <title>OPOS</title>
+        <title>OONI Orchestra</title>
       </Head>
-      <div className='hero'>
-        <div className='hero-unit'>
-          <img height='100px' src='/static/proteus-white.png' />
-          <h1>Proteus</h1>
-        </div>
-      </div>
-      <style jsx>{`
-        .hero {
-          display: flex;
-          margin: 0 auto;
-          align-items: center;
-          min-height: calc(100vh - 95px);
-          justify-content: center;
-          position: relative;
-        }
-        .hero img {
-          background-color: black;
-          padding: 20px;
-          border-radius: 20px;
-        }
-        h1 {
-          font-size: 80px;
-          font-weight: 200;
-          line-height: 80px;
-        }
-        .hero-unit {
-          text-align: center;
-        }
-      `}</style>
+      <Container>
+        <Heading h={1}>Welcome to the OONI Orchestra!</Heading>
+        <Text>registry: {process.env.REGISTRY_URL}</Text>
+        <Text>orchestrate: {process.env.ORCHESTRATE_URL}</Text>
+      </Container>
     </Layout>
   )
 }

@@ -16,3 +16,11 @@ address = "127.0.0.1"
 
 [database]
 url = "postgres://user:pass@hostname:port/dbname?sslmode=disable"
+
+[operator]
+private-key = "ooni-orchestrate.priv"
+public-key = "ooni-orchestrate.pub"
+pkcs11-lib-path = "/usr/local/lib/libykcs11.dylib"
+token-serial = "1234"
+user-pin = "424242"
+so-pin = "424242"

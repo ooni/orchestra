@@ -33,13 +33,14 @@ type OrchestraClaims struct {
 type Account struct {
 	Username string
 	Role     string
+	KeyID    string
 }
 
 // GinJWTMiddleware provides a Json-Web-Token authentication implementation. On failure, a 401 HTTP response
 // is returned. On success, the wrapped middleware is called, and the userID is made available as
-// c.Get("userID").(string).
+// c.Get("userID").(string). userID is the accounts username column.
 // Users can get a token by posting a json request to LoginHandler. The token then needs to be passed in
-// the Authentication header. Example: Authorization:Bearer XXX_TOKEN_XXX
+// the Authentication header. Example: `Authorization: Bearer XXX_TOKEN_XXX`
 type GinJWTMiddleware struct {
 	// Realm name to display to the user. Required.
 	Realm string
@@ -212,7 +213,6 @@ func (mw *GinJWTMiddleware) middlewareImpl(auth Authorizator, c *gin.Context) {
 // Payload needs to be json in the form of {"username": "USERNAME", "password": "PASSWORD"}.
 // Reply will be of the form {"token": "TOKEN"}.
 func (mw *GinJWTMiddleware) LoginHandler(c *gin.Context) {
-
 	// Initial middleware default setting.
 	mw.MiddlewareInit()
 
@@ -250,7 +250,7 @@ func (mw *GinJWTMiddleware) LoginHandler(c *gin.Context) {
 	tokenString, err := token.SignedString(mw.Key)
 
 	if err != nil {
-		mw.unauthorized(c, http.StatusUnauthorized, "Create JWT Token faild")
+		mw.unauthorized(c, http.StatusUnauthorized, "Create JWT Token failed")
 		return
 	}
 
@@ -436,16 +436,26 @@ func InitAuthMiddleware(db *sqlx.DB) (*GinJWTMiddleware, error) {
 			}
 			// XXX set the last_login value
 			query := fmt.Sprintf(`SELECT
-							password_hash, role
-							FROM %s WHERE username = $1`,
+							account_keys.key_fingerprint,
+							accounts.password_hash,
+							accounts.role
+							FROM %s
+							LEFT JOIN account_keys ON account_keys.account_id = accounts.id
+							WHERE username = $1`,
 				pq.QuoteIdentifier(common.AccountsTable))
+			var keyid sql.NullString
 			err := db.QueryRow(query, userId).Scan(
+				&keyid,
 				&passwordHash,
 				&account.Role)
+			if keyid.Valid {
+				account.KeyID = keyid.String
+			}
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return account, false
 				}
+				ctx.WithError(err).Error("Failed to run query")
 				return account, false
 			}
 			err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))

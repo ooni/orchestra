@@ -25,9 +25,6 @@ func init() {
 	RootCmd.AddCommand(startCmd)
 
 	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
 	startCmd.PersistentFlags().IntP("port", "", 8082, "Which port we should bind to")
 	startCmd.PersistentFlags().StringP("address", "", "127.0.0.1", "Which interface we should listen on")
 	viper.BindPFlag("api.port", startCmd.PersistentFlags().Lookup("port"))

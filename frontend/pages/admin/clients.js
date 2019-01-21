@@ -1,38 +1,51 @@
-import axios from 'axios'
-import moment from 'moment'
-
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import Head from 'next/head'
 import Router from 'next/router'
 
-import { Grid } from 'reflexbox'
+import {
+  Flex,
+  Box,
+  Grid,
+  Container
+} from 'ooni-components'
 
-import Button from 'react-toolbox/lib/button/Button'
-import Card from 'react-toolbox/lib/card/Card'
-import CardTitle from 'react-toolbox/lib/card/CardTitle'
-import CardText from 'react-toolbox/lib/card/CardText'
+import Button from '@material-ui/core/Button'
 
-import List from 'react-toolbox/lib/list/List'
-import ListItem from 'react-toolbox/lib/list/ListItem'
+import Card from '@material-ui/core/Card'
+import CardHeader from '@material-ui/core/CardHeader'
+import CardContent from '@material-ui/core/CardContent'
+import CardActions from '@material-ui/core/CardActions'
+
+import List from '@material-ui/core/List'
+import ListItem from '@material-ui/core/ListItem'
+import ListItemText from '@material-ui/core/ListItemText'
+
+import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp'
+import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown'
 
 import Session from '../../components/session'
 import Layout from '../../components/layout'
 
+import axios from 'axios'
+import moment from 'moment'
+
 class ActiveClient extends React.Component {
   static propTypes = {
-    clientId: React.PropTypes.string,
-    probeAsn: React.PropTypes.string,
-    probeCc: React.PropTypes.string,
-    platform: React.PropTypes.string,
-    softwareName: React.PropTypes.string,
-    softwareVersion: React.PropTypes.string,
-    supportedTests: React.PropTypes.string,
-    networkType: React.PropTypes.string,
-    language: React.PropTypes.string,
-    availableBandwidth: React.PropTypes.number,
-    token: React.PropTypes.string,
-    lastUpdated: React.PropTypes.string,
-    created: React.PropTypes.object,
+    clientId: PropTypes.string,
+    probeAsn: PropTypes.string,
+    probeCc: PropTypes.string,
+    platform: PropTypes.string,
+    softwareName: PropTypes.string,
+    softwareVersion: PropTypes.string,
+    supportedTests: PropTypes.string,
+    networkType: PropTypes.string,
+    language: PropTypes.string,
+    availableBandwidth: PropTypes.number,
+    token: PropTypes.string,
+    lastUpdated: PropTypes.string,
+    created: PropTypes.object,
   }
   constructor (props) {
     super(props)
@@ -66,56 +79,78 @@ class ActiveClient extends React.Component {
     return (
       <Card style={{position: 'relative'}}>
         <div style={{position: 'absolute', right: 0}} onClick={() => {this.setState({isOpen: !this.state.isOpen})}}>
-          {isOpen && <Button icon='keyboard_arrow_up' />}
-          {!isOpen && <Button icon='keyboard_arrow_down' />}
+          {isOpen && <Button><KeyboardArrowUpIcon/></Button>}
+          {!isOpen && <Button><KeyboardArrowDownIcon/></Button>}
         </div>
-        <CardTitle
+        <CardHeader
           title={title}
-          subtitle={subtitle} />
-        <CardText>
+          subheader={subtitle} />
+        <CardContent>
           {isOpen && <List>
-            <ListItem
-                caption={probeAsn}
-                legend="ASN"/>
+            <ListItem>
+            <ListItemText
+                primary={probeAsn}
+                secondary="ASN"/>
+            </ListItem>
 
-            <ListItem
-                caption={probeCc}
-                legend="Country"/>
+            <ListItem>
+            <ListItemText
+                primary={probeCc}
+                secondary="Country"/>
+            </ListItem>
 
-            <ListItem
-                caption={platform}
-                legend="Platform"/>
+            <ListItem>
+            <ListItemText
+                primary={platform}
+                secondary="Platform"/>
+            </ListItem>
 
-            <ListItem
-                caption={softwareName + ' v' + softwareVersion}
-                legend="Software version"/>
+            <ListItem>
+            <ListItemText
+                primary={softwareName + ' v' + softwareVersion}
+                secondary="Software version"/>
+            </ListItem>
 
-            <ListItem
-                caption={supportedTests}
-                legend="Supported tests"/>
-            <ListItem
-                caption={networkType}
-                legend="Network Type"/>
+            <ListItem>
+            <ListItemText
+                primary={supportedTests}
+                secondary="Supported tests"/>
+            </ListItem>
+            <ListItem>
+            <ListItemText
+                primary={networkType}
+                secondary="Network Type"/>
+            </ListItem>
 
-            <ListItem
-                caption={language}
-                legend="Language"/>
+            <ListItem>
+            <ListItemText
+                primary={language}
+                secondary="Language"/>
+            </ListItem>
 
-            <ListItem
-                caption={''+availableBandwidth}
-                legend="Bandwidth"/>
-            <ListItem
-                caption={token}
-                legend="Token"/>
-            <ListItem
-                caption={moment(lastUpdated).fromNow()}
-                legend="Updated"/>
-            <ListItem
-                caption={moment(created).fromNow()}
-                legend="Created"/>
+            <ListItem>
+            <ListItemText
+                primary={''+availableBandwidth}
+                secondary="Bandwidth"/>
+            </ListItem>
+            <ListItem>
+            <ListItemText
+                primary={token}
+                secondary="Token"/>
+            </ListItem>
+            <ListItem>
+            <ListItemText
+                primary={moment(lastUpdated).fromNow()}
+                secondary="Updated"/>
+            </ListItem>
+            <ListItem>
+            <ListItemText
+                primary={moment(created).fromNow()}
+                secondary="Created"/>
+            </ListItem>
           </List>}
 
-        </CardText>
+        </CardContent>
       </Card>
     )
   }
@@ -139,8 +174,8 @@ const Pagination = ({limit, offset, nextPage, prevPage}) => {
     <a style={{paddingLeft: '20px'}} onClick={nextPage}>next page →</a>
   </div>
 }
-export default class AdminClients extends React.Component {
 
+export default class AdminClients extends React.Component {
   constructor (props) {
     super(props)
     this.state = {
@@ -204,22 +239,12 @@ export default class AdminClients extends React.Component {
         <Head>
           <title>Active Clients - OONI Proteus</title>
         </Head>
-        <style jsx>{`
-        .container {
-            max-width: 1024px;
-            padding-left: 20px;
-            padding-right: 20px;
-            margin: auto;
-        }
-        h1 {
-          margin-bottom: 20px;
-        }
-        `}</style>
-        <div className='container'>
+        <Container>
           {metadata.count && <MetadataRow metadata={metadata} />}
+          <Flex wrap>
           {results && results.map((d) => {
             return (
-              <Grid col={4} px={2}>
+              <Box key={d.client_id} width={1/3}>
               <ActiveClient
                 clientId={d.client_id}
                 probeAsn={d.probe_asn}
@@ -234,16 +259,17 @@ export default class AdminClients extends React.Component {
                 token={d.token}
                 lastUpdated={d.last_updated}
                 created={d.creation_time} />
-            </Grid>
+            </Box>
             )
           })}
+          </Flex>
           <Pagination
             limit={limit}
             offset={offset}
             nextPage={this.getNextPage}
             prevPage={this.getPrevPage}
             />
-        </div>
+        </Container>
       </Layout>
     )
   }

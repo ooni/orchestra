@@ -24,7 +24,9 @@ func (mw *GinSchedMiddleware) MiddlewareFunc() gin.HandlerFunc {
 // InitSchedMiddleware create the middleware that injects the database
 func InitSchedMiddleware(db *sqlx.DB) (*GinSchedMiddleware, error) {
 	scheduler := NewScheduler(db)
-	scheduler.Start()
+	if err := scheduler.Start(); err != nil {
+		return nil, err
+	}
 	return &GinSchedMiddleware{
 		db:        db,
 		scheduler: scheduler,
