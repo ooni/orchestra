@@ -43,11 +43,11 @@ func TestToDuration(t *testing.T) {
 		t.Error("failed")
 	}
 	d := s.Duration.ToDuration()
-	// d.Hours() should be > 2.2x the hours in February + 24
-	// and < 2.2x the hours in a month with 31 days + 24
-	febHours := (2.2*28 + 1) * 24
-	decHours := (2.2*31 + 1) * 24
-	if d.Hours() < febHours || d.Hours() > decHours {
+	// d.Hours() should be > 2.2x the hours in a month with 27 days + 24
+	// and < 2.2x the hours in a month with 32 days + 24
+	minHours := 2.2 * 27 * 24
+	maxHours := 2.2 * 32 * 24
+	if d.Hours() < minHours || d.Hours() > maxHours {
 		t.Errorf("expected duration to be in range (1478, 1637) (got: %f)",
 			d.Hours())
 	}

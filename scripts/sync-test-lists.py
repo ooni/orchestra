@@ -1,3 +1,5 @@
+#!/usr/bin/env python2.7
+
 import os
 import csv
 import json
@@ -25,7 +27,7 @@ def _iterate_csv(file_path, skip_header=False):
         for row in reader:
             yield row
 
-special_countries = (
+SPECIAL_COUNTRIES = (
     ('Unknown Country', 'ZZ', 'ZZZ'),
     ('Global', 'XX', 'XXX'),
     ('European Union', 'EU', 'EUE')
@@ -52,24 +54,30 @@ CREATE TABLE IF NOT EXISTS sync_test_lists
 class GitToPostgres(object):
     def __init__(self, working_dir, pgdsn):
         self.working_dir = working_dir
-        self.pgdsn = pgdsn
         self.test_lists_repo = None
-        self.last_commit_hash = None
-        self.read_sync_table()
+        self.pgconn = psycopg2.connect(dsn=pgdsn)
+        with self.pgconn: # PG transaction
+            self.last_commit_hash = self.get_db_head()
 
-    def read_sync_table(self):
-        pgconn = psycopg2.connect(dsn=self.pgdsn)
-        with pgconn, pgconn.cursor() as c:
+    def get_db_head(self):
+        with self.pgconn.cursor() as c:
             c.execute(CREATE_SYNC_TEST_LISTS_TABLE)
-        with pgconn, pgconn.cursor() as c:
             c.execute('SELECT commit_hash FROM sync_test_lists'
                       ' ORDER BY executed_at DESC LIMIT 1;')
             row = c.fetchone()
         if row is not None:
-            self.last_commit_hash = row[0]
+            return row[0]
+        else:
+            return None
+
+    def get_remote_head(self):
+        return git.cmd.Git().ls_remote(TEST_LISTS_GIT_URL, 'HEAD').split('\t', 1)[0]
+
+    def get_local_head(self):
+        return self.test_lists_repo.head.commit.binsha.encode('hex')
 
     def write_sync_table(self, cursor):
-        last_commit_hash = self.test_lists_repo.head.commit.binsha.encode('hex')
+        last_commit_hash = self.get_local_head()
         if last_commit_hash == self.last_commit_hash:
             print("Already in sync")
             return
@@ -117,7 +125,7 @@ class GitToPostgres(object):
         if os.path.isdir(repo_dir):
             print("%s already existing. Deleting it." % repo_dir)
             shutil.rmtree(repo_dir)
-        repo = git.Repo.clone_from(COUNTRY_UTIL_URL,
+        git.Repo.clone_from(COUNTRY_UTIL_URL,
                                    repo_dir,
                                    progress=ProgressHandler())
         with open(os.path.join(repo_dir, 'data', 'country-list.json')) as in_file:
@@ -133,7 +141,7 @@ class GitToPostgres(object):
                       ' ON CONFLICT DO NOTHING RETURNING country_no',
                       (full_name, name, alpha_2, alpha_3))
 
-        for name, alpha_2, alpha_3 in special_countries:
+        for name, alpha_2, alpha_3 in SPECIAL_COUNTRIES:
             cursor.execute('INSERT INTO countries (full_name, name, alpha_2, alpha_3)'
                       ' VALUES (%s, %s, %s, %s)'
                       ' ON CONFLICT DO NOTHING RETURNING country_no',
@@ -175,6 +183,7 @@ class GitToPostgres(object):
                 insert_buf.write(line)
                 insert_buf.write("\n")
 
+            insert_buf.seek(0)
             cursor.copy_from(insert_buf, 'urls', columns=('url', 'cat_no', 'country_no', 'date_added', 'source', 'notes', 'active'))
 
     def update_urls_by_path(self, cursor, changed_path, cat_code_no, country_alpha_2_no):
@@ -215,9 +224,9 @@ class GitToPostgres(object):
                               'SET active = %s'
                               ' WHERE url_no = %s',
                               (False, url['url_no']))
-                except:
-                    print("Failed to mark url_no:%s inactive" % db_urlno_url[0])
-                    raise RuntimeError("Failed to mark url_no:%s inactive" % db_urlno_url[0])
+                except Exception as exc:
+                    print("Failed to mark url_no:%s inactive" % url['url_no'])
+                    raise exc
 
 
         # in the db, and update them if they *are* in the db.
@@ -241,15 +250,15 @@ class GitToPostgres(object):
                               ' VALUES (%s, %s, %s, %s, %s, %s, %s)'
                               ' ON CONFLICT DO NOTHING RETURNING url_no',
                               (url, cat_no, country_no, date_added, source, notes, True))
-                except:
+                except Exception as exc:
                     print("INVALID row in %s: %s" % (csv_path, row))
-                    raise RuntimeError("INVALID row in %s: %s" % (csv_path, row))
+                    raise exc
             elif (url_in_db['cat_no'] != cat_no
                   or url_in_db['source'] != source
                   or url_in_db['notes'] != notes
                   or url_in_db['active'] is False):
                 try:
-                    url_no = url_in_db[3]
+                    url_no = url_in_db['url_no']
                     cursor.execute('UPDATE urls '
                               'SET cat_no = %s,'
                               '    source = %s,'
@@ -257,9 +266,9 @@ class GitToPostgres(object):
                               '    active = %s'
                               ' WHERE url_no = %s',
                               (cat_no, source, notes, True, url_no))
-                except:
+                except Exception as exc:
                     print("Failed to update %s with values: %s" % (csv_path, row))
-                    raise RuntimeError("Failed to update %s with values: %s" % (csv_path, row))
+                    raise exc
             else:
                 # Skip items that don't require update or insert
                 continue
@@ -281,11 +290,13 @@ class GitToPostgres(object):
             print("Updating test list: %s" % changed_path)
             self.update_urls_by_path(cursor, changed_path, cat_code_no, country_alpha_2_no)
 
-    def run(self):
-        self.pull_or_clone_test_lists()
+    def sync_db(self):
+        with self.pgconn, self.pgconn.cursor() as cursor: # PG transaction
+            # `sync_test_lists` table is used to prevent two concurrent runs of
+            # the script. Maybe it's enough to rely on transaction semantics,
+            # but it needs more careful review of the code, so let it be lock :)
+            cursor.execute('LOCK TABLE sync_test_lists IN ACCESS EXCLUSIVE MODE NOWAIT')
 
-        pgconn = psycopg2.connect(dsn=self.pgdsn)
-        with pgconn, pgconn.cursor() as cursor:
             if self.last_commit_hash is None:
                 print("Initialising category codes")
                 self.init_category_codes(cursor)
@@ -296,6 +307,16 @@ class GitToPostgres(object):
                 self.update_url_lists(cursor)
 
             self.write_sync_table(cursor)
+
+    def run(self):
+        if self.get_remote_head() == self.last_commit_hash:
+            # short-circuit without fetching git repo
+            print("Already in sync")
+            return
+
+        self.pull_or_clone_test_lists()
+        self.sync_db()
+
 
 def dirname(s):
     if not os.path.isdir(s):

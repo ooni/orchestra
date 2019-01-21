@@ -1,3 +1,21 @@
+# orchestra 0.2.4 [2018-12-13]
+
+Changes:
+
+* Validate test URLs when returning them and ignore invalid URLs
+
+Fixes:
+
+* Bug with test URLs endpoint: https://github.com/ooni/orchestra/issues/59
+* Bug with test-helpers endpoint: https://github.com/ooni/orchestra/issues/54
+
+# orchestra 0.2.2 [2018-10-22]
+
+Adds:
+
+* test-lists/urls endpoint
+* Support for returning full list of URLs with limit=-1
+
 # orchestra 0.2.1 [2018-07-13]
 
 Changes:
