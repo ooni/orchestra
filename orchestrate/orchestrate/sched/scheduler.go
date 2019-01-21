@@ -349,7 +349,7 @@ type NotifyReq struct {
 	Event     map[string]interface{} `json:"event"`
 }
 
-// GoRushNotification all the notification metadata for gorush
+// GoRushNotification contains all the notification metadata for gorush
 type GoRushNotification struct {
 	Tokens           []string               `json:"tokens"`
 	Platform         int                    `json:"platform"`
@@ -361,13 +361,13 @@ type GoRushNotification struct {
 	Notification     map[string]string      `json:"notification"`
 }
 
-// GoRushReq a wrapper for a gorush notification request
+// GoRushReq is a wrapper for a gorush notification request
 type GoRushReq struct {
 	Notifications []*GoRushNotification `json:"notifications"`
 }
 
-//GoRushLog contains details about the failure. It is available when core->sync
-// is true.
+// GoRushLog contains details about the failure. It is available when core->sync
+// in the gorush settings (https://github.com/appleboy/gorush#features) is true.
 // For expired tokens Error will be:
 // * "Unregistered" or "BadDeviceToken" on iOS
 // https://stackoverflow.com/questions/42511476/what-are-the-possible-reasons-to-get-apns-responses-baddevicetoken-or-unregister
@@ -382,18 +382,11 @@ type GoRushLog struct {
 	Error    string `json:"error"`
 }
 
-//GoRushResponse is a response from gorush on /api/push
+// GoRushResponse is a response from gorush on /api/push
 type GoRushResponse struct {
 	Counts  int         `json:"counts"`
 	Success string      `json:"success"`
 	Logs    []GoRushLog `json:"logs"`
-}
-
-// Notification payload of a notification to be sent to gorush
-type Notification struct {
-	Type    int // 1 is message 2 is Event
-	Message string
-	Event   map[string]interface{}
 }
 
 // ErrExpiredToken not enough permissions
@@ -644,7 +637,7 @@ func Notify(jt *JobTarget, jDB *JobDB) error {
 			viper.GetString("core.gorush-url"),
 			jt)
 	} else if viper.IsSet("core.notify-url") {
-		err = errors.New("proteus notify is deprecated")
+		err = errors.New("proteus notify is no longer supported")
 	} else {
 		err = errors.New("no valid notification service found")
 	}
