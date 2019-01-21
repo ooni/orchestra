@@ -169,9 +169,6 @@ func Update(db *sqlx.DB, clientID string, req ClientData) error {
 
 // Register a new client
 func Register(db *sqlx.DB, req ClientData) (string, error) {
-	if req.Platform == "ios" || req.Platform == "android" {
-		return "", errors.New("missing device token")
-	}
 	if req.Password == "" {
 		return "", errors.New("missing password")
 	}
