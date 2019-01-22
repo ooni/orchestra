@@ -1,3 +1,10 @@
+# orchestra 0.2.5 [2019-01-22]
+
+Changes:
+
+* Support registering clients with an empty push notification token: https://github.com/ooni/orchestra/issues/41
+
+
 # orchestra 0.2.4 [2018-12-13]
 
 Changes:
