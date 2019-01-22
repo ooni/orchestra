@@ -9,6 +9,7 @@
 // common/data/migrations/2_add_language_column.sql
 // common/data/migrations/3_add_job_type_tables.sql
 // common/data/migrations/4_rendezvous_tables.sql
+// common/data/migrations/5_token_expiry.sql
 
 package common
 
@@ -399,6 +400,32 @@ func commonDataMigrations4_rendezvous_tablesSql() (*asset, error) {
 	return a, nil
 }
 
+var _commonDataMigrations5_token_expirySql = []byte(
+	"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x9c\xce\xb1\x0e\xc2\x20\x18\x04\xe0\x9d\xa7\xb8\x74\x35\x7d\x02\x27\x2a" +
+	"\x38\xfd\x82\xa9\x30\x37\x68\x7f\x1b\xa2\xa5\x4d\x21\xea\xe3\xbb\x6a\xa2\x0e\xae\x77\xc9\x7d\x57\xd7\x58\x8d\x71" +
+	"\x58\x42\x61\xa8\xe9\x9e\xc4\x6b\x70\x28\xa1\xf0\xc8\xa9\x34\x3c\xc4\x24\x84\x24\xa7\x5b\x38\xd9\x90\x46\x38\x95" +
+	"\x78\xe3\x6e\x5e\xa6\x23\x67\xa8\xd6\xee\xb1\xb1\xe4\x77\x06\x55\xcc\x5d\x99\x2e\x9c\x3a\x7e\xcc\x71\xe1\xbe\x5a" +
+	"\x8b\xcf\xb3\x3a\xf5\xef\x8d\x9f\xff\xf4\xa5\x52\xdf\x79\x34\xd6\x92\x96\x06\xc6\x3a\x18\x4f\x04\xa5\xb7\xd2\x93" +
+	"\xc3\x39\x5c\x33\xff\x7a\xf7\x0c\x00\x00\xff\xff\xcd\xfd\x32\x80\x1f\x01\x00\x00")
+
+func commonDataMigrations5_token_expirySqlBytes() ([]byte, error) {
+	return bindataRead(
+		_commonDataMigrations5_token_expirySql,
+		"common/data/migrations/5_token_expiry.sql",
+	)
+}
+
+func commonDataMigrations5_token_expirySql() (*asset, error) {
+	bytes, err := commonDataMigrations5_token_expirySqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "common/data/migrations/5_token_expiry.sql", size: 0, md5checksum: "", mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 // Asset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
@@ -462,6 +489,7 @@ var _bindata = map[string]func() (*asset, error){
 	"common/data/migrations/2_add_language_column.sql":  commonDataMigrations2_add_language_columnSql,
 	"common/data/migrations/3_add_job_type_tables.sql":  commonDataMigrations3_add_job_type_tablesSql,
 	"common/data/migrations/4_rendezvous_tables.sql":    commonDataMigrations4_rendezvous_tablesSql,
+	"common/data/migrations/5_token_expiry.sql":         commonDataMigrations5_token_expirySql,
 }
 
 // AssetDir returns the file names below a certain
@@ -517,6 +545,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 				"2_add_language_column.sql": {commonDataMigrations2_add_language_columnSql, map[string]*bintree{}},
 				"3_add_job_type_tables.sql": {commonDataMigrations3_add_job_type_tablesSql, map[string]*bintree{}},
 				"4_rendezvous_tables.sql": {commonDataMigrations4_rendezvous_tablesSql, map[string]*bintree{}},
+				"5_token_expiry.sql": {commonDataMigrations5_token_expirySql, map[string]*bintree{}},
 			}},
 		}},
 	}},

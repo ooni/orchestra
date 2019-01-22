@@ -50,28 +50,27 @@ func loadTemplates(list ...string) multitemplate.Render {
 	return r
 }
 
-// Start starts the events backend including the web handlers
-func Start() {
+// SetupRouter will create a gin.Engine
+func SetupRouter(dbURL string) *gin.Engine {
 	var (
 		err error
 	)
 
-	dbMiddleware, err := middleware.InitDatabaseMiddleware("postgres", viper.GetString("database.url"))
+	dbMiddleware, err := middleware.InitDatabaseMiddleware("postgres", dbURL)
 	if err != nil {
 		ctx.WithError(err).Error("failed to init database middleware")
-		return
+		return nil
 	}
-	defer dbMiddleware.DB.Close()
 
 	authMiddleware, err := middleware.InitAuthMiddleware(dbMiddleware.DB)
 	if err != nil {
 		ctx.WithError(err).Error("failed to initialise authMiddlewareDevice")
-		return
+		return nil
 	}
 	schedMiddleware, err := sched.InitSchedMiddleware(dbMiddleware.DB)
 	if err != nil {
 		ctx.WithError(err).Error("failed to initialise schedMiddleware")
-		return
+		return nil
 	}
 
 	router := gin.Default()
@@ -89,12 +88,22 @@ func Start() {
 	err = apiv1.BindAPI(router, authMiddleware)
 	if err != nil {
 		ctx.WithError(err).Error("failed to BinAPI")
-		return
+		return nil
 	}
+	return router
+}
+
+// Start starts the events backend including the web handlers
+func Start() {
 
 	Addr := fmt.Sprintf("%s:%d", viper.GetString("api.address"),
 		viper.GetInt("api.port"))
 	ctx.Infof("starting on %s", Addr)
+
+	router := SetupRouter(viper.GetString("database.url"))
+	if router == nil {
+		panic("failed to start")
+	}
 
 	s := &http.Server{
 		Addr:    Addr,

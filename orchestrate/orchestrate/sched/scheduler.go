@@ -134,7 +134,7 @@ func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
 		defer stmt.Close()
 
 		taskArgsStr, err := json.Marshal(t.Arguments)
-		ctx.Debugf("task args: %#", t.Arguments)
+		ctx.Debugf("task args: %v", t.Arguments)
 		if err != nil {
 			ctx.WithError(err).Error("failed to serialise task arguments in createTask")
 			return "", err
@@ -259,17 +259,18 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	// it.
 	query = fmt.Sprintf("SELECT id, token, platform FROM %s",
 		pq.QuoteIdentifier(common.ActiveProbesTable))
+	query += " WHERE is_token_expired = false AND token != '' AND"
 	if len(targetCountries) > 0 && len(targetPlatforms) > 0 {
-		query += " WHERE probe_cc = ANY($1) AND platform = ANY($2)"
+		query += " probe_cc = ANY($1) AND platform = ANY($2)"
 		rows, err = jDB.db.Query(query,
 			pq.Array(targetCountries),
 			pq.Array(targetPlatforms))
 	} else if len(targetCountries) > 0 || len(targetPlatforms) > 0 {
 		if len(targetCountries) > 0 {
-			query += " WHERE probe_cc = ANY($1)"
+			query += " probe_cc = ANY($1)"
 			rows, err = jDB.db.Query(query, pq.Array(targetCountries))
 		} else {
-			query += " WHERE platform = ANY($1)"
+			query += " platform = ANY($1)"
 			rows, err = jDB.db.Query(query, pq.Array(targetPlatforms))
 		}
 	} else {
@@ -348,54 +349,7 @@ type NotifyReq struct {
 	Event     map[string]interface{} `json:"event"`
 }
 
-// TaskNotifyOrchestra this will tell the notify backend to notify the client of
-// the task
-func TaskNotifyOrchestra(bu string, jt *JobTarget) error {
-	var err error
-	path, _ := url.Parse("/api/v1/notify")
-
-	baseURL, err := url.Parse(bu)
-	if err != nil {
-		ctx.WithError(err).Error("invalid base url")
-		return err
-	}
-
-	notifyReq := NotifyReq{
-		ClientIDs: []string{jt.ClientID},
-		Event: map[string]interface{}{
-			"type":    "run_task",
-			"task_id": jt.TaskID,
-		},
-	}
-	jsonStr, err := json.Marshal(notifyReq)
-	if err != nil {
-		ctx.WithError(err).Error("failed to marshal data")
-		return err
-	}
-	u := baseURL.ResolveReference(path)
-	req, err := http.NewRequest("POST",
-		u.String(),
-		bytes.NewBuffer(jsonStr))
-	if err != nil {
-		ctx.WithError(err).Error("failed send request")
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		ctx.WithError(err).Error("http request failed")
-		return err
-	}
-	defer resp.Body.Close()
-	// XXX do we also want to check the body?
-	if resp.StatusCode != 200 {
-		return errors.New("http request returned invalid status code")
-	}
-	return nil
-}
-
-// GoRushNotification all the notification metadata for gorush
+// GoRushNotification contains all the notification metadata for gorush
 type GoRushNotification struct {
 	Tokens           []string               `json:"tokens"`
 	Platform         int                    `json:"platform"`
@@ -407,16 +361,101 @@ type GoRushNotification struct {
 	Notification     map[string]string      `json:"notification"`
 }
 
-// GoRushReq a wrapper for a gorush notification request
+// GoRushReq is a wrapper for a gorush notification request
 type GoRushReq struct {
 	Notifications []*GoRushNotification `json:"notifications"`
 }
 
-// Notification payload of a notification to be sent to gorush
-type Notification struct {
-	Type    int // 1 is message 2 is Event
-	Message string
-	Event   map[string]interface{}
+// GoRushLog contains details about the failure. It is available when core->sync
+// in the gorush settings (https://github.com/appleboy/gorush#features) is true.
+// For expired tokens Error will be:
+// * "Unregistered" or "BadDeviceToken" on iOS
+// https://stackoverflow.com/questions/42511476/what-are-the-possible-reasons-to-get-apns-responses-baddevicetoken-or-unregister
+// https://github.com/sideshow/apns2/blob/master/response.go#L85
+// * "NotRegistered" or "InvalidRegistration" on Android:
+// See: https://github.com/appleboy/go-fcm/blob/master/response.go
+type GoRushLog struct {
+	Type     string `json:"type"`
+	Platform string `json:"platform"`
+	Token    string `json:"token"`
+	Message  string `json:"message"`
+	Error    string `json:"error"`
+}
+
+// GoRushResponse is a response from gorush on /api/push
+type GoRushResponse struct {
+	Counts  int         `json:"counts"`
+	Success string      `json:"success"`
+	Logs    []GoRushLog `json:"logs"`
+}
+
+// ErrExpiredToken not enough permissions
+var ErrExpiredToken = errors.New("token is expired")
+
+func gorushPush(baseURL *url.URL, notifyReq GoRushReq) error {
+	jsonStr, err := json.Marshal(notifyReq)
+	if err != nil {
+		ctx.WithError(err).Error("failed to marshal data")
+		return err
+	}
+
+	path, _ := url.Parse("/api/push")
+	u := baseURL.ResolveReference(path)
+
+	ctx.Debugf("sending notify request: %s", jsonStr)
+	req, err := http.NewRequest("POST",
+		u.String(),
+		bytes.NewBuffer(jsonStr))
+	if err != nil {
+		ctx.WithError(err).Error("failed to send request")
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if viper.IsSet("auth.gorush-basic-auth-user") {
+		req.SetBasicAuth(viper.GetString("auth.gorush-basic-auth-user"),
+			viper.GetString("auth.gorush-basic-auth-password"))
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		ctx.WithError(err).Error("http request failed")
+		return err
+	}
+
+	defer resp.Body.Close()
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		ctx.WithError(err).Error("failed to read response body")
+		return err
+	}
+
+	// XXX do we also want to check the body?
+	if resp.StatusCode != 200 {
+		ctx.Debugf("got invalid status code: %d", resp.StatusCode)
+		return errors.New("http request returned invalid status code")
+	}
+
+	var gorushResp GoRushResponse
+	json.Unmarshal(data, &gorushResp)
+	if len(gorushResp.Logs) > 0 {
+		if len(gorushResp.Logs) > 1 {
+			// This should never happen as we currently send one token per HTTP
+			// request.
+			ctx.Error("Found more than 1 log message")
+			return errors.New("inconsistent log message count")
+		}
+		errorStr := gorushResp.Logs[0].Error
+		if errorStr == "Unregistered" ||
+			errorStr == "BadDeviceToken" ||
+			errorStr == "NotRegistered" ||
+			errorStr == "InvalidRegistration" {
+			return ErrExpiredToken
+		}
+		ctx.Errorf("Unhandled token error: %s", errorStr)
+		return fmt.Errorf("Unhandled token error: %s", errorStr)
+	}
+
+	return nil
 }
 
 // NotifyGorush tell gorush to notify clients
@@ -424,8 +463,6 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 	var (
 		err error
 	)
-
-	path, _ := url.Parse("/api/push")
 
 	baseURL, err := url.Parse(bu)
 	if err != nil {
@@ -483,44 +520,7 @@ func NotifyGorush(bu string, jt *JobTarget) error {
 		Notifications: []*GoRushNotification{notification},
 	}
 
-	jsonStr, err := json.Marshal(notifyReq)
-	if err != nil {
-		ctx.WithError(err).Error("failed to marshal data")
-		return err
-	}
-	u := baseURL.ResolveReference(path)
-	ctx.Debugf("sending notify request: %s", jsonStr)
-	req, err := http.NewRequest("POST",
-		u.String(),
-		bytes.NewBuffer(jsonStr))
-	if err != nil {
-		ctx.WithError(err).Error("failed to send request")
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	if viper.IsSet("auth.gorush-basic-auth-user") {
-		req.SetBasicAuth(viper.GetString("auth.gorush-basic-auth-user"),
-			viper.GetString("auth.gorush-basic-auth-password"))
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		ctx.WithError(err).Error("http request failed")
-		return err
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		ctx.WithError(err).Error("failed to read response body")
-		return err
-	}
-	ctx.Debugf("got response: %s", body)
-	// XXX do we also want to check the body?
-	if resp.StatusCode != 200 {
-		ctx.Debugf("got invalid status code: %d", resp.StatusCode)
-		return errors.New("http request returned invalid status code")
-	}
-	return nil
+	return gorushPush(baseURL, notifyReq)
 }
 
 // ErrInconsistentState when you try to accept an already accepted task
@@ -610,6 +610,20 @@ func SetTaskState(tID string, uID string,
 	return nil
 }
 
+// SetTokenExpired marks the token of the uID as expired
+func SetTokenExpired(db *sqlx.DB, uID string) error {
+	query := fmt.Sprintf(`UPDATE %s SET
+		is_token_expired = true
+		WHERE id = $1`,
+		pq.QuoteIdentifier(common.ActiveProbesTable))
+	_, err := db.Exec(query, uID)
+	if err != nil {
+		ctx.WithError(err).Error("failed to set token as expired")
+		return err
+	}
+	return nil
+}
+
 // Notify send a notification for the given JobTarget
 func Notify(jt *JobTarget, jDB *JobDB) error {
 	var err error
@@ -623,17 +637,17 @@ func Notify(jt *JobTarget, jDB *JobDB) error {
 			viper.GetString("core.gorush-url"),
 			jt)
 	} else if viper.IsSet("core.notify-url") {
-		err = errors.New("proteus notify is deprecated")
-		/*
-			err = TaskNotifyOrchestra(
-				viper.GetString("core.notify-url"),
-				jt)
-		*/
+		err = errors.New("proteus notify is no longer supported")
 	} else {
 		err = errors.New("no valid notification service found")
 	}
 
-	if err != nil {
+	if err == ErrExpiredToken {
+		err = SetTokenExpired(jDB.db, jt.ClientID)
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
 		return err
 	}
 	if jt.TaskData != nil {
