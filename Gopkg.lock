@@ -401,14 +401,6 @@
   revision = "5ed0fc31f7f453625df314d8e66b9791e8d13003"
 
 [[projects]]
-  branch = "master"
-  digest = "1:7fd9337a2f43a16a9cf6cd5799355c68037acac8e0de06c2ec8d7cdc51dcdcb8"
-  name = "github.com/thalesignite/crypto11"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "a19b60f16f143e66ed8691e4be095c71e9a0160b"
-
-[[projects]]
   digest = "1:378ab52d8368106d6a290d4ba0fe93f97dd03fcf2d3237989940ad6f77a98ef1"
   name = "github.com/ugorji/go"
   packages = ["codec"]
@@ -519,7 +511,6 @@
     "github.com/satori/go.uuid",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
-    "github.com/thalesignite/crypto11",
     "golang.org/x/crypto/bcrypt",
     "golang.org/x/crypto/ssh/terminal",
     "gopkg.in/DATA-DOG/go-sqlmock.v1",
