@@ -64,7 +64,12 @@ func AddJob(db *sqlx.DB, jd JobData, s *sched.Scheduler) (string, error) {
 		return "", err
 	}
 
-	jd.ID = uuid.NewV4().String()
+	uuid4, err := uuid.NewV4()
+	if err != nil {
+		ctx.WithError(err).Error("failed to generate new UUID4")
+		return "", err
+	}
+	jd.ID = uuid4.String()
 	{
 		if jd.AlertData != nil {
 			query := fmt.Sprintf(`INSERT INTO %s (

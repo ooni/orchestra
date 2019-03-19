@@ -101,7 +101,12 @@ func (j *Job) CreateTask(cID string, t *TaskData, jDB *JobDB) (string, error) {
 		return "", err
 	}
 
-	var taskID = uuid.NewV4().String()
+	uuid4, err := uuid.NewV4()
+	if err != nil {
+		ctx.WithError(err).Error("failed to generate UUID4")
+		return "", err
+	}
+	var taskID = uuid4.String()
 	{
 		query := fmt.Sprintf(`INSERT INTO %s (
 			id, probe_id,
