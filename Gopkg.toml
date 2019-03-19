@@ -45,7 +45,7 @@
   branch = "master"
   name = "github.com/miekg/pkcs11"
 
-[[constraint]]
+[[override]]
   branch = "master"
   name = "github.com/thalesignite/crypto11"
 
