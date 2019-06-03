@@ -148,8 +148,8 @@ func URLsHandler(c *gin.Context) {
 		err       error
 		urlsQuery URLsQuery
 	)
-	// This is equivalent to setting the default value
-	urlsQuery.Limit = 100
+	// This is equivalent to setting no limit
+	urlsQuery.Limit = -1
 
 	if common.ValidateCSVMapStr(urlsQuery.CountryCode, common.AllCountryCodes) == false {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid country_code"})
