@@ -441,7 +441,7 @@ func gorushPush(baseURL *url.URL, notifyReq GoRushReq) error {
 		if len(gorushResp.Logs) > 1 {
 			// This should never happen as we currently send one token per HTTP
 			// request.
-			ctx.Error("Found more than 1 log message")
+			ctx.Errorf("Found more than 1 log message. %v", gorushResp.Logs)
 			return errors.New("inconsistent log message count")
 		}
 		errorStr := gorushResp.Logs[0].Error
