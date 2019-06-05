@@ -1,3 +1,9 @@
+# orchestra 0.3.0 [2019-06-xx]
+
+Changes:
+
+* Returns by default all URLs in the test-lists/urls endpoint
+
 # orchestra 0.2.5 [2019-01-22]
 
 Changes:
