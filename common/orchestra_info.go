@@ -33,8 +33,8 @@ func orchestraVersion(major int, minor int, patchVersion int, suffix string) str
 // CurrentOrchestraVersion is the current version of orchestra. Remember to change this before making a release
 var CurrentOrchestraVersion = OrchestraVersion{
 	Major:  0,
-	Minor:  2,
-	Patch:  5,
+	Minor:  3,
+	Patch:  0,
 	Suffix: "",
 }
 
