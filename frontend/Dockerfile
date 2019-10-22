@@ -18,12 +18,8 @@ WORKDIR /usr/src/app
 
 # .cache removal leads to two times smaller image and
 RUN set -ex \
-    && yarn install --frozen-lockfile \
-    && yarn run build \
-    && rm -rf /home/node/.cache \
-    && :
+    && yarn install --frozen-lockfile
 
 EXPOSE 3000
 
-USER daemon
-CMD [ "node", "index.js" ]
+CMD [ "/usr/src/app/docker-cmd.sh" ]
