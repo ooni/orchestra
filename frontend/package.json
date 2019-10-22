@@ -22,8 +22,7 @@
     "reflexbox": "^2.2.3"
   },
   "devDependencies": {
-    "babel-plugin-transform-define": "^1.2.0",
-    "fsevents": "1.2.9"
+    "babel-plugin-transform-define": "^1.2.0"
   },
   "scripts": {
     "dev": "NODE_ENV=development node index.js",
