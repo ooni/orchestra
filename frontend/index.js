@@ -25,6 +25,11 @@ app.prepare()
     if (err) {
       throw err
     }
+    console.log("PORT: " + process.env.PORT)
+    console.log("NODE_ENV: " + process.env.NODE_ENV)
+    console.log("REGISTRY_URL: " + process.env.REGISTRY_URL)
+    console.log("ORCHESTRATE_URL: " + process.env.ORCHESTRATE_URL)
+
     console.log('> Ready on http://localhost:' +
                 process.env.PORT +
                 '[' + process.env.NODE_ENV + ']')

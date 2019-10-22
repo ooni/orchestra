@@ -26,4 +26,4 @@ RUN set -ex \
 EXPOSE 3000
 
 USER daemon
-CMD [ "yarn", "run", "start" ]
+CMD [ "node", "index.js" ]
