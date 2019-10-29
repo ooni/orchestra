@@ -278,7 +278,7 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	}
 
 	if err != nil {
-		ctx.WithError(err).Error("failed to find targets")
+		ctx.WithError(err).Errorf("failed to find targets '%s'", query)
 		return targets
 	}
 	defer rows.Close()
