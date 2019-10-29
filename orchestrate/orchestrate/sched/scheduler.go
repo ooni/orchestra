@@ -259,18 +259,18 @@ func (j *Job) GetTargets(jDB *JobDB) []*JobTarget {
 	// it.
 	query = fmt.Sprintf("SELECT id, token, platform FROM %s",
 		pq.QuoteIdentifier(common.ActiveProbesTable))
-	query += " WHERE is_token_expired = false AND token != '' AND"
+	query += " WHERE is_token_expired = false AND token != ''"
 	if len(targetCountries) > 0 && len(targetPlatforms) > 0 {
-		query += " probe_cc = ANY($1) AND platform = ANY($2)"
+		query += " AND probe_cc = ANY($1) AND platform = ANY($2)"
 		rows, err = jDB.db.Query(query,
 			pq.Array(targetCountries),
 			pq.Array(targetPlatforms))
 	} else if len(targetCountries) > 0 || len(targetPlatforms) > 0 {
 		if len(targetCountries) > 0 {
-			query += " probe_cc = ANY($1)"
+			query += " AND probe_cc = ANY($1)"
 			rows, err = jDB.db.Query(query, pq.Array(targetCountries))
 		} else {
-			query += " platform = ANY($1)"
+			query += " AND platform = ANY($1)"
 			rows, err = jDB.db.Query(query, pq.Array(targetPlatforms))
 		}
 	} else {
