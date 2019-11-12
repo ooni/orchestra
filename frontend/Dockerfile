@@ -18,7 +18,8 @@ WORKDIR /usr/src/app
 
 # .cache removal leads to two times smaller image and
 RUN set -ex \
-    && yarn install --frozen-lockfile
+    && yarn install --frozen-lockfile \
+    && rm -rf /home/node/.cache
 
 EXPOSE 3000
 
