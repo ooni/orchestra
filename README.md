@@ -11,7 +11,14 @@ Probe Orcehstration System.
 
 ## Getting started
 
-You should have a working golang installation. Then you can:
+You should have a working golang installation. We don't use golang modules
+yet, therefore ensure that:
+
+```
+export GO111MODULE=off
+```
+
+Then you can:
 
 ```
 go get github.com/ooni/orchestra
