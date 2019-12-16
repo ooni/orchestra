@@ -39,11 +39,12 @@ func BindAPI(router *gin.Engine, authMiddleware *middleware.GinJWTMiddleware) er
 	device.Use(authMiddleware.MiddlewareFunc(middleware.DeviceAuthorizor))
 	{
 		device.GET("/tasks", handler.ListTasksHandler)
-
 		device.GET("/task/:task_id", handler.GetTaskHandler)
 		device.POST("/task/:task_id/accept", handler.AcceptTaskHandler)
 		device.POST("/task/:task_id/reject", handler.RejectTaskHandler)
 		device.POST("/task/:task_id/done", handler.DoneTaskHandler)
+		device.GET("/test-list/psiphon-config", handler.PsiphonConfigHandler)
 	}
+
 	return nil
 }
