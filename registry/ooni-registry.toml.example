@@ -4,6 +4,7 @@ log-level = "debug"
 
 [auth]
 jwt-secret = "CHANGEME (must be in sync amongst all instances using JWT)"
+admin-password = "CHANGEME"
 
 [api]
 port = 8080
