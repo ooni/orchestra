@@ -2,7 +2,9 @@ FROM golang:latest
 
 RUN mkdir /go/src/app
 
-RUN go get -u github.com/golang/dep/cmd/dep
+ARG GO111MODULE=off
+RUN go get -u -v github.com/golang/dep/cmd/dep
+RUN go get -u -v github.com/shuLhan/go-bindata/cmd/go-bindata
 
 COPY . /go/src/app
 
