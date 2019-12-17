@@ -1,4 +1,14 @@
-# orchestra 0.3.0 [2019-06-xx]
+# orchestra 0.3.1 [2019-12-17]
+
+Changes:
+
+* add Dockerfile for the daemons
+* add Dockerfile for frontend
+* fix bug in list-target query (dfa1d7c527)
+* bump frontend dependencies
+* distribute psiphon config (#80)
+
+# orchestra 0.3.0 [2019-06-05]
 
 Changes:
 

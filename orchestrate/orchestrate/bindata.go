@@ -14,6 +14,7 @@
 
 package orchestrate
 
+
 import (
 	"bytes"
 	"compress/gzip"
@@ -45,6 +46,7 @@ func bindataRead(data []byte, name string) ([]byte, error) {
 
 	return buf.Bytes(), nil
 }
+
 
 type asset struct {
 	bytes []byte
@@ -86,7 +88,7 @@ func (fi bindataFileInfo) Sys() interface{} {
 	return nil
 }
 
-var _commonDataMigrations1_accounts_createSql = []byte(
+var _bindataCommonDataMigrations1accountscreatesql = []byte(
 	"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x7c\x52\xc1\x8e\xda\x30\x10\xbd\xfb\x2b\xde\x01\x29\xa0\xee\x1e\x7a\x8e" +
 	"\x7a\x30\xc9\x50\xac\x26\x0e\x75\x9c\xee\xd2\x4b\x64\x25\x16\x6b\x09\x4c\x84\x4d\x77\xf7\xef\x2b\x42\xa9\x36\x52" +
 	"\xcb\x6d\xfc\xe6\xcd\x9b\x79\x4f\x7e\x7c\xc4\xa7\x83\xdb\x9d\x4c\xb4\xc8\x8f\xaf\x9e\x7d\x04\xea\x68\xa2\x3d\x58" +
@@ -102,25 +104,35 @@ var _commonDataMigrations1_accounts_createSql = []byte(
 	"\xdf\x9e\x9d\xef\xed\x1b\x2a\xf9\x17\xc5\xdc\xf5\x8b\x3b\xdf\xe1\x77\x00\x00\x00\xff\xff\x49\x92\xd5\x50\x73\x02" +
 	"\x00\x00")
 
-func commonDataMigrations1_accounts_createSqlBytes() ([]byte, error) {
+func bindataCommonDataMigrations1accountscreatesqlBytes() ([]byte, error) {
 	return bindataRead(
-		_commonDataMigrations1_accounts_createSql,
+		_bindataCommonDataMigrations1accountscreatesql,
 		"common/data/migrations/1_accounts_create.sql",
 	)
 }
 
-func commonDataMigrations1_accounts_createSql() (*asset, error) {
-	bytes, err := commonDataMigrations1_accounts_createSqlBytes()
+
+
+func bindataCommonDataMigrations1accountscreatesql() (*asset, error) {
+	bytes, err := bindataCommonDataMigrations1accountscreatesqlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "common/data/migrations/1_accounts_create.sql", size: 0, md5checksum: "", mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{
+		name: "common/data/migrations/1_accounts_create.sql",
+		size: 0,
+		md5checksum: "",
+		mode: os.FileMode(0),
+		modTime: time.Unix(0, 0),
+	}
+
 	a := &asset{bytes: bytes, info: info}
+
 	return a, nil
 }
 
-var _commonDataMigrations1_active_probes_createSql = []byte(
+var _bindataCommonDataMigrations1activeprobescreatesql = []byte(
 	"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x74\x92\xcf\x8e\xd3\x30\x10\x87\xef\x7e\x8a\x39\xb6\x82\x95\x16\x38\xf6" +
 	"\x94\xdd\x18\xad\x45\x9b\x94\xfc\x81\x2d\x08\x59\x6e\x3c\x2d\x56\x13\x3b\xb2\xa7\x0d\x7d\x7b\xa4\x84\x94\xa6\xea" +
 	"\x1e\x67\xbe\xf9\xc6\xb2\x7f\x7e\x78\x80\x77\x8d\xd9\x7b\x45\x08\xb1\xeb\x2c\x8b\xb3\x74\x0d\x45\xf4\xb4\xe4\x20" +
@@ -135,25 +147,35 @@ var _commonDataMigrations1_active_probes_createSql = []byte(
 	"\x26\x51\x8f\x7b\x13\x08\x3d\xea\x7f\xa9\x4a\xa3\xe5\xd1\x58\x8d\x7f\x20\x4d\xa6\x81\xc3\xcc\xe8\xf9\xe2\xfe\xd7" +
 	"\xe1\x56\xb3\xbf\x01\x00\x00\xff\xff\x64\x48\x47\x43\x99\x02\x00\x00")
 
-func commonDataMigrations1_active_probes_createSqlBytes() ([]byte, error) {
+func bindataCommonDataMigrations1activeprobescreatesqlBytes() ([]byte, error) {
 	return bindataRead(
-		_commonDataMigrations1_active_probes_createSql,
+		_bindataCommonDataMigrations1activeprobescreatesql,
 		"common/data/migrations/1_active_probes_create.sql",
 	)
 }
 
-func commonDataMigrations1_active_probes_createSql() (*asset, error) {
-	bytes, err := commonDataMigrations1_active_probes_createSqlBytes()
+
+
+func bindataCommonDataMigrations1activeprobescreatesql() (*asset, error) {
+	bytes, err := bindataCommonDataMigrations1activeprobescreatesqlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "common/data/migrations/1_active_probes_create.sql", size: 0, md5checksum: "", mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{
+		name: "common/data/migrations/1_active_probes_create.sql",
+		size: 0,
+		md5checksum: "",
+		mode: os.FileMode(0),
+		modTime: time.Unix(0, 0),
+	}
+
 	a := &asset{bytes: bytes, info: info}
+
 	return a, nil
 }
 
-var _commonDataMigrations1_jobs_createSql = []byte(
+var _bindataCommonDataMigrations1jobscreatesql = []byte(
 	"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x6c\x92\x41\x8f\x9b\x30\x10\x85\xef\xfe\x15\xef\x10\x89\x44\xdd\x95\xba" +
 	"\xbd\xa2\x1e\x60\x71\x1a\x6f\xc1\x44\x60\xba\x4d\xab\xca\xf2\x86\x29\x65\x1b\x0c\x02\xa7\x6d\xfe\x7d\x05\x49\x94" +
 	"\x44\xda\x9b\x9f\xe7\xe3\x31\x6f\xc6\xf7\xf7\x78\xd7\xd4\x55\x6f\x1c\x21\x6a\xff\x5a\x16\x65\xe9\x1a\x2a\x08\x63" +
@@ -170,25 +192,35 @@ var _commonDataMigrations1_jobs_createSql = []byte(
 	"\xbd\x74\x64\xe9\x9f\x1b\x6f\xb4\x71\xc7\x44\x6f\x65\xab\x07\x3d\xee\x00\x61\x9a\xc6\x3c\x90\xa7\xc0\xe3\x6e\x2f" +
 	"\x4b\x64\x0b\xff\xed\x77\xc5\x6d\xc9\xfe\x07\x00\x00\xff\xff\x0d\xbe\x24\xa3\xad\x02\x00\x00")
 
-func commonDataMigrations1_jobs_createSqlBytes() ([]byte, error) {
+func bindataCommonDataMigrations1jobscreatesqlBytes() ([]byte, error) {
 	return bindataRead(
-		_commonDataMigrations1_jobs_createSql,
+		_bindataCommonDataMigrations1jobscreatesql,
 		"common/data/migrations/1_jobs_create.sql",
 	)
 }
 
-func commonDataMigrations1_jobs_createSql() (*asset, error) {
-	bytes, err := commonDataMigrations1_jobs_createSqlBytes()
+
+
+func bindataCommonDataMigrations1jobscreatesql() (*asset, error) {
+	bytes, err := bindataCommonDataMigrations1jobscreatesqlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "common/data/migrations/1_jobs_create.sql", size: 0, md5checksum: "", mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{
+		name: "common/data/migrations/1_jobs_create.sql",
+		size: 0,
+		md5checksum: "",
+		mode: os.FileMode(0),
+		modTime: time.Unix(0, 0),
+	}
+
 	a := &asset{bytes: bytes, info: info}
+
 	return a, nil
 }
 
-var _commonDataMigrations1_probe_updates_createSql = []byte(
+var _bindataCommonDataMigrations1probeupdatescreatesql = []byte(
 	"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x6c\x91\xcf\x6e\xc2\x30\x0c\x87\xef\x79\x0a\x1f\x41\x1b\x12\xdb\x8e\x9c" +
 	"\x0a\x64\xa2\x1a\xff\xd4\xa6\xdb\xd8\x34\x45\x81\x18\x16\xd1\x26\x55\x6a\xa8\x78\xfb\x49\x74\x65\x94\xf5\x68\x7f" +
 	"\xbf\xcf\x56\xe2\x5e\x0f\xee\x32\xb3\xf3\x8a\x10\xc6\xae\xb4\x6c\x1c\x2d\x96\x20\x82\xe1\x94\x43\xf8\x0c\xfc\x3d" +
@@ -202,25 +234,35 @@ var _commonDataMigrations1_probe_updates_createSql = []byte(
 	"\x26\x35\x68\x49\xfe\x1e\x84\x75\x07\xed\x57\xe6\x56\xb3\x9f\x00\x00\x00\xff\xff\xaf\x10\xdb\xee\x44\x02\x00\x00" +
 	"")
 
-func commonDataMigrations1_probe_updates_createSqlBytes() ([]byte, error) {
+func bindataCommonDataMigrations1probeupdatescreatesqlBytes() ([]byte, error) {
 	return bindataRead(
-		_commonDataMigrations1_probe_updates_createSql,
+		_bindataCommonDataMigrations1probeupdatescreatesql,
 		"common/data/migrations/1_probe_updates_create.sql",
 	)
 }
 
-func commonDataMigrations1_probe_updates_createSql() (*asset, error) {
-	bytes, err := commonDataMigrations1_probe_updates_createSqlBytes()
+
+
+func bindataCommonDataMigrations1probeupdatescreatesql() (*asset, error) {
+	bytes, err := bindataCommonDataMigrations1probeupdatescreatesqlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "common/data/migrations/1_probe_updates_create.sql", size: 0, md5checksum: "", mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{
+		name: "common/data/migrations/1_probe_updates_create.sql",
+		size: 0,
+		md5checksum: "",
+		mode: os.FileMode(0),
+		modTime: time.Unix(0, 0),
+	}
+
 	a := &asset{bytes: bytes, info: info}
+
 	return a, nil
 }
 
-var _commonDataMigrations1_tasks_createSql = []byte(
+var _bindataCommonDataMigrations1taskscreatesql = []byte(
 	"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x8c\x92\x41\x8f\xd3\x30\x10\x85\xef\xfe\x15\xef\x50\x29\xad\xd8\x3d\x70" +
 	"\x8e\x38\xa4\x8d\x4b\x0d\xad\x53\xc5\x0e\x0b\x5c\x22\x6f\x32\x44\x59\x68\x12\xc5\xb3\x82\xfe\x7b\x14\xa7\x8b\xba" +
 	"\x12\x2b\xf5\xf6\xe6\xf9\xcd\x8c\xe6\x93\xef\xef\xf1\xee\xd4\x36\xa3\x63\x42\xda\xff\xee\x44\x9a\x67\x47\xd8\x64" +
@@ -236,25 +278,35 @@ var _commonDataMigrations1_tasks_createSql = []byte(
 	"\x39\x3f\x43\xbc\x25\x39\x61\xbd\x25\xf7\xcb\x79\x2e\x9f\x87\xda\x31\xd5\x6f\x46\xc5\x2a\xfe\xff\x87\x93\x5d\x2d" +
 	"\xfe\x06\x00\x00\xff\xff\x3a\x61\xc2\x6a\xc7\x02\x00\x00")
 
-func commonDataMigrations1_tasks_createSqlBytes() ([]byte, error) {
+func bindataCommonDataMigrations1taskscreatesqlBytes() ([]byte, error) {
 	return bindataRead(
-		_commonDataMigrations1_tasks_createSql,
+		_bindataCommonDataMigrations1taskscreatesql,
 		"common/data/migrations/1_tasks_create.sql",
 	)
 }
 
-func commonDataMigrations1_tasks_createSql() (*asset, error) {
-	bytes, err := commonDataMigrations1_tasks_createSqlBytes()
+
+
+func bindataCommonDataMigrations1taskscreatesql() (*asset, error) {
+	bytes, err := bindataCommonDataMigrations1taskscreatesqlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "common/data/migrations/1_tasks_create.sql", size: 0, md5checksum: "", mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{
+		name: "common/data/migrations/1_tasks_create.sql",
+		size: 0,
+		md5checksum: "",
+		mode: os.FileMode(0),
+		modTime: time.Unix(0, 0),
+	}
+
 	a := &asset{bytes: bytes, info: info}
+
 	return a, nil
 }
 
-var _commonDataMigrations2_add_jobs_stateSql = []byte(
+var _bindataCommonDataMigrations2addjobsstatesql = []byte(
 	"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x7c\x91\x4f\x8f\x9b\x30\x10\xc5\xef\xfe\x14\xef\x80\xe4\x5d\xb5\x5b\xa9" +
 	"\x67\xd4\x03\x7f\x86\xc6\x15\x31\x11\x38\xda\xed\x09\xd8\x60\x45\xac\xc0\xa0\xe0\xb4\xcd\xb7\xaf\x70\x9b\x7f\x4d" +
 	"\xba\x9c\x06\xcf\xf8\xcd\xef\x3d\x3f\x3d\xe1\x43\xdf\x6e\x77\xb5\xd5\x88\x87\x9f\x86\x5d\x1e\x14\xb6\xb6\xba\xd7" +
@@ -269,25 +321,35 @@ var _commonDataMigrations2_add_jobs_stateSql = []byte(
 	"\x27\xb4\x06\xd5\x4c\x52\x7d\xe2\x17\x1b\x65\x7c\x72\xea\x33\xcf\xfb\xff\xab\xfe\x0e\x00\x00\xff\xff\x64\x65\x02" +
 	"\xda\x68\x02\x00\x00")
 
-func commonDataMigrations2_add_jobs_stateSqlBytes() ([]byte, error) {
+func bindataCommonDataMigrations2addjobsstatesqlBytes() ([]byte, error) {
 	return bindataRead(
-		_commonDataMigrations2_add_jobs_stateSql,
+		_bindataCommonDataMigrations2addjobsstatesql,
 		"common/data/migrations/2_add_jobs_state.sql",
 	)
 }
 
-func commonDataMigrations2_add_jobs_stateSql() (*asset, error) {
-	bytes, err := commonDataMigrations2_add_jobs_stateSqlBytes()
+
+
+func bindataCommonDataMigrations2addjobsstatesql() (*asset, error) {
+	bytes, err := bindataCommonDataMigrations2addjobsstatesqlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "common/data/migrations/2_add_jobs_state.sql", size: 0, md5checksum: "", mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{
+		name: "common/data/migrations/2_add_jobs_state.sql",
+		size: 0,
+		md5checksum: "",
+		mode: os.FileMode(0),
+		modTime: time.Unix(0, 0),
+	}
+
 	a := &asset{bytes: bytes, info: info}
+
 	return a, nil
 }
 
-var _commonDataMigrations2_add_language_columnSql = []byte(
+var _bindataCommonDataMigrations2addlanguagecolumnsql = []byte(
 	"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\xcc\x92\xcd\x4e\x84\x30\x14\x85\xf7\x3c\xc5\x59\x90\x8c\xc6\x8c\x3b\x57" +
 	"\xb3\xea\xd0\xea\x34\x41\x98\x40\x47\x67\x07\x15\x1a\xd2\x04\x0a\x81\xe2\xcf\xdb\x9b\x41\x25\xd3\xe8\xa8\x71\x65" +
 	"\x57\xf7\x27\xe7\xde\xef\xa4\x77\xb9\xc4\x45\xa3\xab\x5e\x5a\x05\xda\x3e\x19\xef\xb8\x90\x5a\x69\x55\xa3\x8c\x5d" +
@@ -299,25 +361,35 @@ var _commonDataMigrations2_add_language_columnSql = []byte(
 	"\x5e\xc9\xf2\x05\xea\x59\x0f\x76\x80\x36\xc8\x1d\xb6\xfc\x72\x71\xb4\x3e\xa2\x6f\xc9\x14\xf8\xfe\xea\xaf\xf6\xdd" +
 	"\x8f\xfa\x5f\xf6\x1d\xb6\x9f\xec\x9f\x3c\xa1\xd7\x00\x00\x00\xff\xff\xa2\x48\x52\x38\xfe\x02\x00\x00")
 
-func commonDataMigrations2_add_language_columnSqlBytes() ([]byte, error) {
+func bindataCommonDataMigrations2addlanguagecolumnsqlBytes() ([]byte, error) {
 	return bindataRead(
-		_commonDataMigrations2_add_language_columnSql,
+		_bindataCommonDataMigrations2addlanguagecolumnsql,
 		"common/data/migrations/2_add_language_column.sql",
 	)
 }
 
-func commonDataMigrations2_add_language_columnSql() (*asset, error) {
-	bytes, err := commonDataMigrations2_add_language_columnSqlBytes()
+
+
+func bindataCommonDataMigrations2addlanguagecolumnsql() (*asset, error) {
+	bytes, err := bindataCommonDataMigrations2addlanguagecolumnsqlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "common/data/migrations/2_add_language_column.sql", size: 0, md5checksum: "", mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{
+		name: "common/data/migrations/2_add_language_column.sql",
+		size: 0,
+		md5checksum: "",
+		mode: os.FileMode(0),
+		modTime: time.Unix(0, 0),
+	}
+
 	a := &asset{bytes: bytes, info: info}
+
 	return a, nil
 }
 
-var _commonDataMigrations3_add_job_type_tablesSql = []byte(
+var _bindataCommonDataMigrations3addjobtypetablessql = []byte(
 	"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x8c\x94\x4f\x73\xda\x3c\x10\xc6\xef\xfe\x14\xba\x91\xcc\xfb\xa6\x1f\x20" +
 	"\x9c\x0c\xa8\x6d\x5a\x0a\xd4\x98\xce\x70\xd2\xac\xed\xc5\x28\xc8\x92\x23\xad\x21\xf9\xf6\x1d\xdb\xc8\x31\x34\x10" +
 	"\x8e\x7e\xf6\xd1\xea\xa7\xfd\xe3\x87\x07\xf6\x5f\x21\x73\x0b\x84\x6c\x62\x0e\x3a\xe8\x0b\x4b\x02\xc2\x02\x35\x8d" +
@@ -338,25 +410,35 @@ var _commonDataMigrations3_add_job_type_tablesSql = []byte(
 	"\xdd\x2a\xd6\x12\xbe\x92\x85\x1e\xf0\xa7\x7b\xd9\x02\xdd\xb0\xc5\x7d\xfe\x4f\xec\xef\xff\x9e\xae\xae\xb7\x98\xbb" +
 	"\x82\x5f\x59\xe9\xbf\x01\x00\x00\xff\xff\x93\xf2\x5e\x9a\x49\x05\x00\x00")
 
-func commonDataMigrations3_add_job_type_tablesSqlBytes() ([]byte, error) {
+func bindataCommonDataMigrations3addjobtypetablessqlBytes() ([]byte, error) {
 	return bindataRead(
-		_commonDataMigrations3_add_job_type_tablesSql,
+		_bindataCommonDataMigrations3addjobtypetablessql,
 		"common/data/migrations/3_add_job_type_tables.sql",
 	)
 }
 
-func commonDataMigrations3_add_job_type_tablesSql() (*asset, error) {
-	bytes, err := commonDataMigrations3_add_job_type_tablesSqlBytes()
+
+
+func bindataCommonDataMigrations3addjobtypetablessql() (*asset, error) {
+	bytes, err := bindataCommonDataMigrations3addjobtypetablessqlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "common/data/migrations/3_add_job_type_tables.sql", size: 0, md5checksum: "", mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{
+		name: "common/data/migrations/3_add_job_type_tables.sql",
+		size: 0,
+		md5checksum: "",
+		mode: os.FileMode(0),
+		modTime: time.Unix(0, 0),
+	}
+
 	a := &asset{bytes: bytes, info: info}
+
 	return a, nil
 }
 
-var _commonDataMigrations4_rendezvous_tablesSql = []byte(
+var _bindataCommonDataMigrations4rendezvoustablessql = []byte(
 	"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x8c\x55\xc1\x72\xa3\x38\x10\xbd\xf3\x15\x7d\xc3\xae\x4d\x2e\xc9\x2d\x3e" +
 	"\x11\x47\xd9\x50\x8b\xc1\xc1\xb0\xbb\x99\xa9\x29\x4a\x81\xb6\xad\x2a\x59\xf2\x20\x39\x33\x99\xaf\x9f\x12\x06\x82" +
 	"\x00\x33\x39\xaa\xfb\xa9\xbb\xdf\xd3\x93\x74\x7d\x0d\x7f\x1d\xd8\xae\xa4\x1a\xe1\x41\xfe\x10\x4e\x37\xb0\xd1\x54" +
@@ -383,25 +465,35 @@ var _commonDataMigrations4_rendezvous_tablesSql = []byte(
 	"\x27\x5e\x20\x2e\xc5\xce\xc2\x7c\xa4\x24\x2f\xaa\x1e\xad\x5d\xbf\x7e\xab\x4c\x79\xf1\xb7\xfb\x1d\x00\x00\xff\xff" +
 	"\x2d\xa1\xf1\xcf\x79\x08\x00\x00")
 
-func commonDataMigrations4_rendezvous_tablesSqlBytes() ([]byte, error) {
+func bindataCommonDataMigrations4rendezvoustablessqlBytes() ([]byte, error) {
 	return bindataRead(
-		_commonDataMigrations4_rendezvous_tablesSql,
+		_bindataCommonDataMigrations4rendezvoustablessql,
 		"common/data/migrations/4_rendezvous_tables.sql",
 	)
 }
 
-func commonDataMigrations4_rendezvous_tablesSql() (*asset, error) {
-	bytes, err := commonDataMigrations4_rendezvous_tablesSqlBytes()
+
+
+func bindataCommonDataMigrations4rendezvoustablessql() (*asset, error) {
+	bytes, err := bindataCommonDataMigrations4rendezvoustablessqlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "common/data/migrations/4_rendezvous_tables.sql", size: 0, md5checksum: "", mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{
+		name: "common/data/migrations/4_rendezvous_tables.sql",
+		size: 0,
+		md5checksum: "",
+		mode: os.FileMode(0),
+		modTime: time.Unix(0, 0),
+	}
+
 	a := &asset{bytes: bytes, info: info}
+
 	return a, nil
 }
 
-var _commonDataMigrations5_token_expirySql = []byte(
+var _bindataCommonDataMigrations5tokenexpirysql = []byte(
 	"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x9c\xce\xb1\x0e\xc2\x20\x18\x04\xe0\x9d\xa7\xb8\x74\x35\x7d\x02\x27\x2a" +
 	"\x38\xfd\x82\xa9\x30\x37\x68\x7f\x1b\xa2\xa5\x4d\x21\xea\xe3\xbb\x6a\xa2\x0e\xae\x77\xc9\x7d\x57\xd7\x58\x8d\x71" +
 	"\x58\x42\x61\xa8\xe9\x9e\xc4\x6b\x70\x28\xa1\xf0\xc8\xa9\x34\x3c\xc4\x24\x84\x24\xa7\x5b\x38\xd9\x90\x46\x38\x95" +
@@ -409,25 +501,35 @@ var _commonDataMigrations5_token_expirySql = []byte(
 	"\x8b\xcf\xb3\x3a\xf5\xef\x8d\x9f\xff\xf4\xa5\x52\xdf\x79\x34\xd6\x92\x96\x06\xc6\x3a\x18\x4f\x04\xa5\xb7\xd2\x93" +
 	"\xc3\x39\x5c\x33\xff\x7a\xf7\x0c\x00\x00\xff\xff\xcd\xfd\x32\x80\x1f\x01\x00\x00")
 
-func commonDataMigrations5_token_expirySqlBytes() ([]byte, error) {
+func bindataCommonDataMigrations5tokenexpirysqlBytes() ([]byte, error) {
 	return bindataRead(
-		_commonDataMigrations5_token_expirySql,
+		_bindataCommonDataMigrations5tokenexpirysql,
 		"common/data/migrations/5_token_expiry.sql",
 	)
 }
 
-func commonDataMigrations5_token_expirySql() (*asset, error) {
-	bytes, err := commonDataMigrations5_token_expirySqlBytes()
+
+
+func bindataCommonDataMigrations5tokenexpirysql() (*asset, error) {
+	bytes, err := bindataCommonDataMigrations5tokenexpirysqlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "common/data/migrations/5_token_expiry.sql", size: 0, md5checksum: "", mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{
+		name: "common/data/migrations/5_token_expiry.sql",
+		size: 0,
+		md5checksum: "",
+		mode: os.FileMode(0),
+		modTime: time.Unix(0, 0),
+	}
+
 	a := &asset{bytes: bytes, info: info}
+
 	return a, nil
 }
 
-var _orchestrateDataTemplatesHomeTmpl = []byte(
+var _bindataOrchestrateDataTemplatesHometmpl = []byte(
 	"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x7c\x54\x41\x73\xdb\x36\x13\x3d\x93\xbf\x62\x3f\xe4\xf6\x8d\x68\x4a\x69" +
 	"\xd3\xda\x34\xc9\x43\xec\x66\x92\x43\xed\x4c\x9d\x1c\x7a\x04\xc1\x25\x89\x06\xc4\x72\x80\x95\x2c\xc5\xa3\xff\xde" +
 	"\x01\x28\x31\xaa\x3b\xd3\x93\x76\x1f\x76\xdf\x7b\x5a\x60\x59\xfe\xef\xfe\xf1\xee\xcb\x9f\x9f\x7f\x83\x81\x47\x53" +
@@ -454,27 +556,40 @@ var _orchestrateDataTemplatesHomeTmpl = []byte(
 	"\x18\xbc\x62\x72\x93\xa3\xbf\x50\xf1\x15\xb9\x3e\x17\xf5\x7f\x9d\x96\xb9\xac\x17\xd1\x32\x3f\x4f\xb3\xcc\xe7\x11" +
 	"\x97\xf9\xfc\x7d\xfb\x3b\x00\x00\xff\xff\xec\xc7\xc0\x2a\xf0\x04\x00\x00")
 
-func orchestrateDataTemplatesHomeTmplBytes() ([]byte, error) {
+func bindataOrchestrateDataTemplatesHometmplBytes() ([]byte, error) {
 	return bindataRead(
-		_orchestrateDataTemplatesHomeTmpl,
+		_bindataOrchestrateDataTemplatesHometmpl,
 		"orchestrate/data/templates/home.tmpl",
 	)
 }
 
-func orchestrateDataTemplatesHomeTmpl() (*asset, error) {
-	bytes, err := orchestrateDataTemplatesHomeTmplBytes()
+
+
+func bindataOrchestrateDataTemplatesHometmpl() (*asset, error) {
+	bytes, err := bindataOrchestrateDataTemplatesHometmplBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "orchestrate/data/templates/home.tmpl", size: 0, md5checksum: "", mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{
+		name: "orchestrate/data/templates/home.tmpl",
+		size: 0,
+		md5checksum: "",
+		mode: os.FileMode(0),
+		modTime: time.Unix(0, 0),
+	}
+
 	a := &asset{bytes: bytes, info: info}
+
 	return a, nil
 }
 
+
+//
 // Asset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
+//
 func Asset(name string) ([]byte, error) {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
 	if f, ok := _bindata[cannonicalName]; ok {
@@ -487,9 +602,11 @@ func Asset(name string) ([]byte, error) {
 	return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrNotExist}
 }
 
+//
 // MustAsset is like Asset but panics when Asset would return an error.
 // It simplifies safe initialization of global variables.
 // nolint: deadcode
+//
 func MustAsset(name string) []byte {
 	a, err := Asset(name)
 	if err != nil {
@@ -499,9 +616,10 @@ func MustAsset(name string) []byte {
 	return a
 }
 
+//
 // AssetInfo loads and returns the asset info for the given name.
-// It returns an error if the asset could not be found or
-// could not be loaded.
+// It returns an error if the asset could not be found or could not be loaded.
+//
 func AssetInfo(name string) (os.FileInfo, error) {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
 	if f, ok := _bindata[cannonicalName]; ok {
@@ -514,8 +632,10 @@ func AssetInfo(name string) (os.FileInfo, error) {
 	return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrNotExist}
 }
 
+//
 // AssetNames returns the names of the assets.
 // nolint: deadcode
+//
 func AssetNames() []string {
 	names := make([]string, 0, len(_bindata))
 	for name := range _bindata {
@@ -524,21 +644,24 @@ func AssetNames() []string {
 	return names
 }
 
+//
 // _bindata is a table, holding each asset generator, mapped to its name.
+//
 var _bindata = map[string]func() (*asset, error){
-	"common/data/migrations/1_accounts_create.sql":      commonDataMigrations1_accounts_createSql,
-	"common/data/migrations/1_active_probes_create.sql": commonDataMigrations1_active_probes_createSql,
-	"common/data/migrations/1_jobs_create.sql":          commonDataMigrations1_jobs_createSql,
-	"common/data/migrations/1_probe_updates_create.sql": commonDataMigrations1_probe_updates_createSql,
-	"common/data/migrations/1_tasks_create.sql":         commonDataMigrations1_tasks_createSql,
-	"common/data/migrations/2_add_jobs_state.sql":       commonDataMigrations2_add_jobs_stateSql,
-	"common/data/migrations/2_add_language_column.sql":  commonDataMigrations2_add_language_columnSql,
-	"common/data/migrations/3_add_job_type_tables.sql":  commonDataMigrations3_add_job_type_tablesSql,
-	"common/data/migrations/4_rendezvous_tables.sql":    commonDataMigrations4_rendezvous_tablesSql,
-	"common/data/migrations/5_token_expiry.sql":         commonDataMigrations5_token_expirySql,
-	"orchestrate/data/templates/home.tmpl":              orchestrateDataTemplatesHomeTmpl,
+	"common/data/migrations/1_accounts_create.sql":      bindataCommonDataMigrations1accountscreatesql,
+	"common/data/migrations/1_active_probes_create.sql": bindataCommonDataMigrations1activeprobescreatesql,
+	"common/data/migrations/1_jobs_create.sql":          bindataCommonDataMigrations1jobscreatesql,
+	"common/data/migrations/1_probe_updates_create.sql": bindataCommonDataMigrations1probeupdatescreatesql,
+	"common/data/migrations/1_tasks_create.sql":         bindataCommonDataMigrations1taskscreatesql,
+	"common/data/migrations/2_add_jobs_state.sql":       bindataCommonDataMigrations2addjobsstatesql,
+	"common/data/migrations/2_add_language_column.sql":  bindataCommonDataMigrations2addlanguagecolumnsql,
+	"common/data/migrations/3_add_job_type_tables.sql":  bindataCommonDataMigrations3addjobtypetablessql,
+	"common/data/migrations/4_rendezvous_tables.sql":    bindataCommonDataMigrations4rendezvoustablessql,
+	"common/data/migrations/5_token_expiry.sql":         bindataCommonDataMigrations5tokenexpirysql,
+	"orchestrate/data/templates/home.tmpl":              bindataOrchestrateDataTemplatesHometmpl,
 }
 
+//
 // AssetDir returns the file names below a certain
 // directory embedded in the file by go-bindata.
 // For example if you run go-bindata on data/... and data contains the
@@ -552,6 +675,7 @@ var _bindata = map[string]func() (*asset, error){
 // AssetDir("data/img") would return []string{"a.png", "b.png"}
 // AssetDir("foo.txt") and AssetDir("notexist") would return an error
 // AssetDir("") will return []string{"data"}.
+//
 func AssetDir(name string) ([]string, error) {
 	node := _bintree
 	if len(name) != 0 {
@@ -560,12 +684,20 @@ func AssetDir(name string) ([]string, error) {
 		for _, p := range pathList {
 			node = node.Children[p]
 			if node == nil {
-				return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrNotExist}
+				return nil, &os.PathError{
+					Op: "open",
+					Path: name,
+					Err: os.ErrNotExist,
+				}
 			}
 		}
 	}
 	if node.Func != nil {
-		return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrNotExist}
+		return nil, &os.PathError{
+			Op: "open",
+			Path: name,
+			Err: os.ErrNotExist,
+		}
 	}
 	rv := make([]string, 0, len(node.Children))
 	for childName := range node.Children {
@@ -574,32 +706,33 @@ func AssetDir(name string) ([]string, error) {
 	return rv, nil
 }
 
+
 type bintree struct {
 	Func     func() (*asset, error)
 	Children map[string]*bintree
 }
 
-var _bintree = &bintree{nil, map[string]*bintree{
-	"common": {nil, map[string]*bintree{
-		"data": {nil, map[string]*bintree{
-			"migrations": {nil, map[string]*bintree{
-				"1_accounts_create.sql": {commonDataMigrations1_accounts_createSql, map[string]*bintree{}},
-				"1_active_probes_create.sql": {commonDataMigrations1_active_probes_createSql, map[string]*bintree{}},
-				"1_jobs_create.sql": {commonDataMigrations1_jobs_createSql, map[string]*bintree{}},
-				"1_probe_updates_create.sql": {commonDataMigrations1_probe_updates_createSql, map[string]*bintree{}},
-				"1_tasks_create.sql": {commonDataMigrations1_tasks_createSql, map[string]*bintree{}},
-				"2_add_jobs_state.sql": {commonDataMigrations2_add_jobs_stateSql, map[string]*bintree{}},
-				"2_add_language_column.sql": {commonDataMigrations2_add_language_columnSql, map[string]*bintree{}},
-				"3_add_job_type_tables.sql": {commonDataMigrations3_add_job_type_tablesSql, map[string]*bintree{}},
-				"4_rendezvous_tables.sql": {commonDataMigrations4_rendezvous_tablesSql, map[string]*bintree{}},
-				"5_token_expiry.sql": {commonDataMigrations5_token_expirySql, map[string]*bintree{}},
+var _bintree = &bintree{Func: nil, Children: map[string]*bintree{
+	"common": {Func: nil, Children: map[string]*bintree{
+		"data": {Func: nil, Children: map[string]*bintree{
+			"migrations": {Func: nil, Children: map[string]*bintree{
+				"1_accounts_create.sql": {Func: bindataCommonDataMigrations1accountscreatesql, Children: map[string]*bintree{}},
+				"1_active_probes_create.sql": {Func: bindataCommonDataMigrations1activeprobescreatesql, Children: map[string]*bintree{}},
+				"1_jobs_create.sql": {Func: bindataCommonDataMigrations1jobscreatesql, Children: map[string]*bintree{}},
+				"1_probe_updates_create.sql": {Func: bindataCommonDataMigrations1probeupdatescreatesql, Children: map[string]*bintree{}},
+				"1_tasks_create.sql": {Func: bindataCommonDataMigrations1taskscreatesql, Children: map[string]*bintree{}},
+				"2_add_jobs_state.sql": {Func: bindataCommonDataMigrations2addjobsstatesql, Children: map[string]*bintree{}},
+				"2_add_language_column.sql": {Func: bindataCommonDataMigrations2addlanguagecolumnsql, Children: map[string]*bintree{}},
+				"3_add_job_type_tables.sql": {Func: bindataCommonDataMigrations3addjobtypetablessql, Children: map[string]*bintree{}},
+				"4_rendezvous_tables.sql": {Func: bindataCommonDataMigrations4rendezvoustablessql, Children: map[string]*bintree{}},
+				"5_token_expiry.sql": {Func: bindataCommonDataMigrations5tokenexpirysql, Children: map[string]*bintree{}},
 			}},
 		}},
 	}},
-	"orchestrate": {nil, map[string]*bintree{
-		"data": {nil, map[string]*bintree{
-			"templates": {nil, map[string]*bintree{
-				"home.tmpl": {orchestrateDataTemplatesHomeTmpl, map[string]*bintree{}},
+	"orchestrate": {Func: nil, Children: map[string]*bintree{
+		"data": {Func: nil, Children: map[string]*bintree{
+			"templates": {Func: nil, Children: map[string]*bintree{
+				"home.tmpl": {Func: bindataOrchestrateDataTemplatesHometmpl, Children: map[string]*bintree{}},
 			}},
 		}},
 	}},
