@@ -27,7 +27,7 @@ func initJobDB() (*sqlx.DB, error) {
 var notify = &cobra.Command{
 	Use:   "notify",
 	Short: "Send a notification message to some users",
-	Long:  ``,
+	Long:  `This command sends notifications to some users`,
 	Run: func(cmd *cobra.Command, args []string) {
 		where := viper.GetString("notify.where")
 		message := viper.GetString("notify.message")

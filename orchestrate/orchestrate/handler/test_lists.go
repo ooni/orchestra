@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/ooni/orchestra/common"
+	"github.com/spf13/viper"
 )
 
 // prepareURLsQuery returns the statement to get all the inputs for the
@@ -189,4 +191,16 @@ func URLsHandler(c *gin.Context) {
 			"results":  urls,
 		})
 	return
+}
+
+// PsiphonConfigHandler returns the psiphon configuration.
+func PsiphonConfigHandler(c *gin.Context) {
+	content, err := ioutil.ReadFile(viper.GetString("psiphon.config-file"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "server side error",
+		})
+		return
+	}
+	c.Data(http.StatusOK, "application/json", content)
 }

@@ -16,3 +16,6 @@ address = "127.0.0.1"
 
 [database]
 url = "postgres://user:pass@hostname:port/dbname?sslmode=disable"
+
+[psiphon]
+config-file = "CHANGEME"
