@@ -44,6 +44,7 @@ func BindAPI(router *gin.Engine, authMiddleware *middleware.GinJWTMiddleware) er
 		device.POST("/task/:task_id/reject", handler.RejectTaskHandler)
 		device.POST("/task/:task_id/done", handler.DoneTaskHandler)
 		device.GET("/test-list/psiphon-config", handler.PsiphonConfigHandler)
+		device.GET("/test-list/tor-targets", handler.TorTargetsHandler)
 	}
 
 	return nil
