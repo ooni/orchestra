@@ -1,0 +1,12 @@
+{
+  "f372c264e9a470335d9ac79fe780847bda052aa3b6a9ee5ff497cb6501634f9f": {
+    "address": "38.229.1.78:80",
+    "params": {
+      "cert": [
+        "Hmyfd2ev46gGY7NoVxA9ngrPF2zCZtzskRTzoWXbxNkzeVnGFPWmrTtILRyqCTjHR+s9dg"
+      ],
+      "iat-mode": [
+        "1"
+     ],
+  }
+}
