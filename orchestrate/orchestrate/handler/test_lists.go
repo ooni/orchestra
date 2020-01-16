@@ -204,3 +204,15 @@ func PsiphonConfigHandler(c *gin.Context) {
 	}
 	c.Data(http.StatusOK, "application/json", content)
 }
+
+// TorTargetsHandler returns the targets for the tor nettest.
+func TorTargetsHandler(c *gin.Context) {
+	content, err := ioutil.ReadFile(viper.GetString("tor.targets-file"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "server side error",
+		})
+		return
+	}
+	c.Data(http.StatusOK, "application/json", content)
+}

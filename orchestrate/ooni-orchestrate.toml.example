@@ -19,3 +19,6 @@ url = "postgres://user:pass@hostname:port/dbname?sslmode=disable"
 
 [psiphon]
 config-file = "CHANGEME"
+
+[tor]
+targets-file = "CHANGEME"
