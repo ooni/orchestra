@@ -11,24 +11,8 @@ Probe Orcehstration System.
 
 ## Getting started
 
-You should have a working golang installation. We don't use golang modules
-yet, therefore ensure that:
-
-```
-export GO111MODULE=off
-```
-
-Then you can:
-
-```
-go get github.com/ooni/orchestra
-```
-
-You will also need to install:
-
-```
-go get -u github.com/shuLhan/go-bindata/...
-```
+We use a simple `Makefile`. Please, check it out to see how we invoke `go` in
+a farily standard way for building and running tests.
 
 To build all the binaries, run:
 
@@ -72,7 +56,6 @@ You should then be able to start the services by running:
 ```
 ./bin/ooni-orchestrate --config orchestrate/ooni-orchestrate.toml start
 ```
-
 
 ## Components
 
