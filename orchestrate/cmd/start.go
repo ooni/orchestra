@@ -10,7 +10,7 @@ import (
 var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Start the server",
-	Long: `This command starts the OONI orchestrate service.`,
+	Long:  `This command starts the OONI orchestrate service.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		orchestrate.Start()
 	},
