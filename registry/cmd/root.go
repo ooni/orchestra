@@ -28,7 +28,7 @@ var ctx = log.WithFields(log.Fields{
 var RootCmd = &cobra.Command{
 	Use:   "ooni-registry",
 	Short: "I know what probes are out there",
-	Long: `The OONI registry knows what probes are running`,
+	Long:  `The OONI registry knows what probes are running`,
 }
 
 // Execute parse command line arguments and run

@@ -10,7 +10,7 @@ import (
 var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Start the server",
-	Long: `This command starts the OONI registry service.`,
+	Long:  `This command starts the OONI registry service.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		registry.Start()
 	},
