@@ -1,3 +1,10 @@
+# orchestra 0.3.2 [2020-01-21]
+
+Changes:
+
+* Go 1.13 support including migrating to Go modules
+* Fetch tor targets via authenticated orchestra (#83)
+
 # orchestra 0.3.1 [2019-12-17]
 
 Changes:
