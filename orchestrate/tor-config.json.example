@@ -6,7 +6,7 @@
       "cert": [
         "Hmyfd2ev46gGY7NoVxA9ngrPF2zCZtzskRTzoWXbxNkzeVnGFPWmrTtILRyqCTjHR+s9dg"
       ],
-      "iat-mode": ["1"],
+      "iat-mode": ["1"]
     },
     "protocol": "obfs4"
   },
