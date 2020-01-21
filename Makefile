@@ -3,8 +3,8 @@ COMMIT_HASH = `git rev-parse --short HEAD 2>/dev/null`
 BUILD_DATE = `date +%FT%T%z`
 LDFLAGS = -ldflags "-X ${PACKAGE}/common.CommitHash=${COMMIT_HASH} -X ${PACKAGE}/common.BuildDate=${BUILD_DATE}"
 NOGI_LDFLAGS = -ldflags "-X ${PACKAGE}/common.BuildDate=${BUILD_DATE}"
-TOOL_LIST=registry orchestrate
-GOPATH=$$(go env GOPATH)
+TOOL_LIST = registry orchestrate
+GOPATH ?= `go env GOPATH`
 
 vendor: vendor-fetch
 vendor-fetch:
