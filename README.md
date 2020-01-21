@@ -7,7 +7,7 @@
 The OONI Probe Orchestration System.
 
 This repository contains the various microservices that compose the OONI
-Probe Orcehstration System.
+Probe Orchestration System.
 
 ## Getting started
 
