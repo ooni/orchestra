@@ -58,10 +58,9 @@ require (
 	github.com/spf13/viper v0.0.0-20161213093849-5ed0fc31f7f4
 	github.com/ugorji/go v0.0.0-20171210084538-f57d8945648d // indirect
 	github.com/ziutek/mymysql v1.5.4 // indirect
-	golang.org/x/crypto v0.0.0-20180904163835-0709b304e793
-	golang.org/x/net v0.0.0-20181114220301-adae6a3d119a // indirect
+	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
+	golang.org/x/net v0.0.0-20190620200207-3b0461eec859 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
-	golang.org/x/text v0.0.0-20170201102450-506f9d5c962f // indirect
 	gopkg.in/DATA-DOG/go-sqlmock.v1 v1.2.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/gin-contrib/cors.v1 v1.0.0-20170318125340-cf4846e6a636
