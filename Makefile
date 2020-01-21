@@ -57,11 +57,19 @@ orchestra: vendor build-all
 orchestra-no-gitinfo: LDFLAGS = ${NOGI_LDFLAGS}
 orchestra-no-gitinfo: vendor orchestra
 
-release: fmt-check bindata
+dirty-check:
+	# Until https://github.com/golang/go/issues/30515 lands, we need to
+	# prevent go get from changing go.mod, or goreleaser punts. So we
+	# make sure there are no changes in tree manually first. Then we make
+	# sure we have goreleaser. Finally we reset go.mod go.sum changes.
+	git diff --exit-code --quiet
+
+release: dirty-check fmt-check bindata
 	go get -u -v github.com/goreleaser/goreleaser
+	git checkout go.mod go.sum  # See dirty-check's comment
 	# XXX Not a fan of how it autogens the release notes, we should probably
 	# extract them from our changelog and embed them using:
 	# https://goreleaser.com/#releasing.custom_release_notes
 	GITHUB_TOKEN=`cat .GITHUB_TOKEN` ${GOPATH}/bin/goreleaser --rm-dist
 
-.PHONY: vendor build build-orchestrate build-registry release bindata build-all fmt fmt-check check
+.PHONY: vendor build build-orchestrate build-registry release bindata build-all fmt fmt-check check dirty-check
