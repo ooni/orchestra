@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import ThemeProvider from 'react-toolbox/lib/ThemeProvider'
-import theme from '../static/theme'
+import theme from '../public/static/theme'
 
 import Drawer from 'react-toolbox/lib/drawer/Drawer'
 import MenuItem from 'react-toolbox/lib/menu/MenuItem'
