@@ -2,6 +2,7 @@ import axios from 'axios'
 import moment from 'moment'
 
 import React from 'react'
+import PropTypes from 'prop-types'
 import Head from 'next/head'
 import Router from 'next/router'
 
@@ -20,19 +21,19 @@ import Layout from '../../components/layout'
 
 class ActiveClient extends React.Component {
   static propTypes = {
-    clientId: React.PropTypes.string,
-    probeAsn: React.PropTypes.string,
-    probeCc: React.PropTypes.string,
-    platform: React.PropTypes.string,
-    softwareName: React.PropTypes.string,
-    softwareVersion: React.PropTypes.string,
-    supportedTests: React.PropTypes.string,
-    networkType: React.PropTypes.string,
-    language: React.PropTypes.string,
-    availableBandwidth: React.PropTypes.number,
-    token: React.PropTypes.string,
-    lastUpdated: React.PropTypes.string,
-    created: React.PropTypes.object,
+    clientId: PropTypes.string,
+    probeAsn: PropTypes.string,
+    probeCc: PropTypes.string,
+    platform: PropTypes.string,
+    softwareName: PropTypes.string,
+    softwareVersion: PropTypes.string,
+    supportedTests: PropTypes.string,
+    networkType: PropTypes.string,
+    language: PropTypes.string,
+    availableBandwidth: PropTypes.number,
+    token: PropTypes.string,
+    lastUpdated: PropTypes.string,
+    created: PropTypes.object,
   }
   constructor (props) {
     super(props)

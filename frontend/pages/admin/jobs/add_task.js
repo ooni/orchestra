@@ -1,4 +1,5 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import Head from 'next/head'
 import Router from 'next/router'
 
@@ -34,16 +35,16 @@ import { Flex, Box, Grid } from 'reflexbox'
 
 class JobCreateConfirm extends React.Component {
   static propTypes = {
-    startMoment: React.PropTypes.object,
-    duration: React.PropTypes.object,
-    repeatCount: React.PropTypes.number,
-    globalCategories: React.PropTypes.array,
-    countryCategories: React.PropTypes.array,
-    selectedTest: React.PropTypes.object,
-    targetCountries: React.PropTypes.array,
-    targetPlatforms: React.PropTypes.array,
-    urls: React.PropTypes.string,
-    comment: React.PropTypes.string
+    startMoment: PropTypes.object,
+    duration: PropTypes.object,
+    repeatCount: PropTypes.number,
+    globalCategories: PropTypes.array,
+    countryCategories: PropTypes.array,
+    selectedTest: PropTypes.object,
+    targetCountries: PropTypes.array,
+    targetPlatforms: PropTypes.array,
+    urls: PropTypes.string,
+    comment: PropTypes.string
   }
 
   constructor(props) {

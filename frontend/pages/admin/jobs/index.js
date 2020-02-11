@@ -1,4 +1,5 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import Head from 'next/head'
 import Link from 'next/link'
 import Select from 'react-select'
@@ -24,15 +25,15 @@ import { Flex, Box, Grid } from 'reflexbox'
 
 class JobCard extends React.Component {
   static propTypes = {
-    onDelete: React.PropTypes.func,
-    comment: React.PropTypes.string,
-    creationTime: React.PropTypes.string,
-    delay: React.PropTypes.number,
-    id: React.PropTypes.string,
-    state: React.PropTypes.string,
-    schedule: React.PropTypes.string,
-    target: React.PropTypes.object,
-    task: React.PropTypes.object
+    onDelete: PropTypes.func,
+    comment: PropTypes.string,
+    creationTime: PropTypes.string,
+    delay: PropTypes.number,
+    id: PropTypes.string,
+    state: PropTypes.string,
+    schedule: PropTypes.string,
+    target: PropTypes.object,
+    task: PropTypes.object
   }
 
   constructor (props) {
