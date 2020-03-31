@@ -10,7 +10,7 @@
     "immutable": "^3.8.1",
     "material-design-icons-iconfont": "^3.0.3",
     "moment": "^2.19.3",
-    "next": "^3.2.3",
+    "next": "^9.3.2",
     "nprogress": "^0.2.0",
     "react": "^15.4.2",
     "react-addons-shallow-compare": "^15.4.2",
