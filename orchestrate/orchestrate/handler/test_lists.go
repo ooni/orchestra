@@ -3,12 +3,14 @@ package handler
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/apex/log"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -213,8 +215,7 @@ type BridgeInfo struct {
 	Port        int                    `json:"port"`
 	Protocol    string                 `json:"protocol"`
 	Type        string                 `json:"type"`
-	Arguments   map[string]string      `json:"arguments"`
-	Params      map[string]interface{} `json:"params"`
+	Params      map[string]interface{} `json:"params,omitempty"`
 }
 
 // BridgeMap is a mapping between the bridge ID (to be shown in the OONI Probe
@@ -222,21 +223,27 @@ type BridgeInfo struct {
 type BridgeMap map[string]BridgeInfo
 
 func lookupPrivateBridges() (BridgeMap, error) {
+	var reqURL = "https://bridges.torproject.org/wolpertinger/bridges?id=&type=ooni&country_code=it"
 	bridgeMap := BridgeMap{}
 
-	u, err := url.Parse("https://bridges.torproject.org/wolpertinger/bridges?type=ooni")
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
 		return bridgeMap, err
 	}
-	q := u.Query()
-	q.Set("auth_token", viper.GetString("tor.bridges-api-key"))
-	u.RawQuery = q.Encode()
-
-	resp, err := http.Get(u.String())
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", viper.GetString("tor.bridges-api-key")))
+	resp, err := client.Do(req)
 	if err != nil {
 		return bridgeMap, err
 	}
 	defer resp.Body.Close()
+	log.Debugf("GET %s", reqURL)
+	log.Debugf("%d %s", resp.StatusCode, resp.Status)
+	if resp.StatusCode != 200 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Errorf("Got bad response %s %d %s", reqURL, resp.StatusCode, body)
+		return bridgeMap, errors.New("Bad response")
+	}
 	json.NewDecoder(resp.Body).Decode(&bridgeMap)
 	return bridgeMap, nil
 }
@@ -265,8 +272,6 @@ func TorTargetsHandler(c *gin.Context) {
 			})
 		}
 		for k, v := range tpoBridgeMap {
-			// XXX the tor API returns arguments instead of params, so we need
-			// to align the two.
 			finalBridgeMap[k] = v
 		}
 	}
