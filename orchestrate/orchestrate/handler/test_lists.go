@@ -2,6 +2,7 @@ package handler
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -205,8 +206,44 @@ func PsiphonConfigHandler(c *gin.Context) {
 	c.Data(http.StatusOK, "application/json", content)
 }
 
+// BridgeInfo is the metadata of a tor bridge
+type BridgeInfo struct {
+	Address     string                 `json:"address"`
+	Fingerprint string                 `json:"fingerprint,omitempty"`
+	Port        int                    `json:"port"`
+	Protocol    string                 `json:"protocol"`
+	Type        string                 `json:"type"`
+	Arguments   map[string]string      `json:"arguments"`
+	Params      map[string]interface{} `json:"params"`
+}
+
+// BridgeMap is a mapping between the bridge ID (to be shown in the OONI Probe
+// UI) and the BridgeInfo
+type BridgeMap map[string]BridgeInfo
+
+func lookupPrivateBridges() (BridgeMap, error) {
+	bridgeMap := BridgeMap{}
+
+	u, err := url.Parse("https://bridges.torproject.org/wolpertinger/bridges?type=ooni")
+	if err != nil {
+		return bridgeMap, err
+	}
+	q := u.Query()
+	q.Set("auth_token", viper.GetString("tor.bridges-api-key"))
+	u.RawQuery = q.Encode()
+
+	resp, err := http.Get(u.String())
+	if err != nil {
+		return bridgeMap, err
+	}
+	defer resp.Body.Close()
+	json.NewDecoder(resp.Body).Decode(&bridgeMap)
+	return bridgeMap, nil
+}
+
 // TorTargetsHandler returns the targets for the tor nettest.
 func TorTargetsHandler(c *gin.Context) {
+	finalBridgeMap := BridgeMap{}
 	content, err := ioutil.ReadFile(viper.GetString("tor.targets-file"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -214,5 +251,24 @@ func TorTargetsHandler(c *gin.Context) {
 		})
 		return
 	}
-	c.Data(http.StatusOK, "application/json", content)
+	err = json.Unmarshal(content, &finalBridgeMap)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "server side error",
+		})
+	}
+	if len(viper.GetString("tor.bridges-api-key")) > 0 {
+		tpoBridgeMap, err := lookupPrivateBridges()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "server side error",
+			})
+		}
+		for k, v := range tpoBridgeMap {
+			// XXX the tor API returns arguments instead of params, so we need
+			// to align the two.
+			finalBridgeMap[k] = v
+		}
+	}
+	c.JSON(http.StatusOK, finalBridgeMap)
 }
