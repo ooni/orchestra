@@ -215,6 +215,7 @@ type BridgeInfo struct {
 	Port        int                    `json:"port"`
 	Protocol    string                 `json:"protocol"`
 	Type        string                 `json:"type"`
+	Source      string                 `json:"source"`
 	Params      map[string]interface{} `json:"params,omitempty"`
 }
 
@@ -222,8 +223,8 @@ type BridgeInfo struct {
 // UI) and the BridgeInfo
 type BridgeMap map[string]BridgeInfo
 
-func lookupPrivateBridges() (BridgeMap, error) {
-	var reqURL = "https://bridges.torproject.org/wolpertinger/bridges?id=&type=ooni&country_code=it"
+func lookupPrivateBridges(countryCode string) (BridgeMap, error) {
+	var reqURL = fmt.Sprintf("https://bridges.torproject.org/wolpertinger/bridges?id=&type=ooni&country_code=%s", countryCode)
 	bridgeMap := BridgeMap{}
 
 	client := &http.Client{}
@@ -245,11 +246,14 @@ func lookupPrivateBridges() (BridgeMap, error) {
 		return bridgeMap, errors.New("Bad response")
 	}
 	json.NewDecoder(resp.Body).Decode(&bridgeMap)
+	log.Debugf("bridgeMap %v", bridgeMap)
 	return bridgeMap, nil
 }
 
 // TorTargetsHandler returns the targets for the tor nettest.
 func TorTargetsHandler(c *gin.Context) {
+	countryCode := c.Query("country_code")
+
 	finalBridgeMap := BridgeMap{}
 	content, err := ioutil.ReadFile(viper.GetString("tor.targets-file"))
 	if err != nil {
@@ -264,14 +268,16 @@ func TorTargetsHandler(c *gin.Context) {
 			"error": "server side error",
 		})
 	}
-	if len(viper.GetString("tor.bridges-api-key")) > 0 {
-		tpoBridgeMap, err := lookupPrivateBridges()
+	if (len(viper.GetString("tor.bridges-api-key")) > 0) && countryCode != "" {
+		log.Debug("Requesting bridges from bridgedb")
+		tpoBridgeMap, err := lookupPrivateBridges(countryCode)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "server side error",
 			})
 		}
 		for k, v := range tpoBridgeMap {
+			v.Source = "bridgedb"
 			finalBridgeMap[k] = v
 		}
 	}
