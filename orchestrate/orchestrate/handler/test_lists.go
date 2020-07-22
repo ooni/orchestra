@@ -227,7 +227,7 @@ func lookupPrivateBridges(countryCode string) (BridgeMap, error) {
 	var reqURL = fmt.Sprintf("https://bridges.torproject.org/wolpertinger/bridges?id=&type=ooni&country_code=%s", countryCode)
 	bridgeMap := BridgeMap{}
 
-	client := &http.Client{}
+	client := http.DefaultClient
 	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
 		return bridgeMap, err
@@ -245,7 +245,10 @@ func lookupPrivateBridges(countryCode string) (BridgeMap, error) {
 		log.Errorf("Got bad response %s %d %s", reqURL, resp.StatusCode, body)
 		return bridgeMap, errors.New("Bad response")
 	}
-	json.NewDecoder(resp.Body).Decode(&bridgeMap)
+	if err := json.NewDecoder(resp.Body).Decode(&bridgeMap); err != nil {
+		log.Errorf("Got decoding error: %s %d %+v", reqURL, resp.StatusCode, err)
+		return bridgeMap, err
+	}
 	log.Debugf("bridgeMap %v", bridgeMap)
 	return bridgeMap, nil
 }
@@ -267,14 +270,21 @@ func TorTargetsHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "server side error",
 		})
+		// If we don't have anything meaningful to return to the user
+		// from our default list, then it's a hard error.
+		return
 	}
 	if (len(viper.GetString("tor.bridges-api-key")) > 0) && countryCode != "" {
 		log.Debug("Requesting bridges from bridgedb")
 		tpoBridgeMap, err := lookupPrivateBridges(countryCode)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "server side error",
-			})
+			// We don't explicitly handle this error. Here's why:
+			//
+			// Be flexible here and return _some_ information to the user
+			// rather than a hard error. Ideally, here we would like to have
+			// a prometheus metric counting the number of times in which
+			// this specific query is failing. For now, we just log inside
+			// of the lookupPrivateBridged function.
 		}
 		for k, v := range tpoBridgeMap {
 			v.Source = "bridgedb"
