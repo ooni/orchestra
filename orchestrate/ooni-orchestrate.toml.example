@@ -22,3 +22,4 @@ config-file = "CHANGEME"
 
 [tor]
 targets-file = "CHANGEME"
+bridges-api-key = "CHANGEME"

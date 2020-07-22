@@ -2,12 +2,15 @@ package handler
 
 import (
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/apex/log"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -205,8 +208,56 @@ func PsiphonConfigHandler(c *gin.Context) {
 	c.Data(http.StatusOK, "application/json", content)
 }
 
+// BridgeInfo is the metadata of a tor bridge
+type BridgeInfo struct {
+	Address     string                 `json:"address"`
+	Fingerprint string                 `json:"fingerprint,omitempty"`
+	Port        int                    `json:"port"`
+	Protocol    string                 `json:"protocol"`
+	Type        string                 `json:"type"`
+	Source      string                 `json:"source"`
+	Params      map[string]interface{} `json:"params,omitempty"`
+}
+
+// BridgeMap is a mapping between the bridge ID (to be shown in the OONI Probe
+// UI) and the BridgeInfo
+type BridgeMap map[string]BridgeInfo
+
+func lookupPrivateBridges(countryCode string) (BridgeMap, error) {
+	var reqURL = fmt.Sprintf("https://bridges.torproject.org/wolpertinger/bridges?id=&type=ooni&country_code=%s", countryCode)
+	bridgeMap := BridgeMap{}
+
+	client := http.DefaultClient
+	req, err := http.NewRequest("GET", reqURL, nil)
+	if err != nil {
+		return bridgeMap, err
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", viper.GetString("tor.bridges-api-key")))
+	resp, err := client.Do(req)
+	if err != nil {
+		return bridgeMap, err
+	}
+	defer resp.Body.Close()
+	log.Debugf("GET %s", reqURL)
+	log.Debugf("%d %s", resp.StatusCode, resp.Status)
+	if resp.StatusCode != 200 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Errorf("Got bad response %s %d %s", reqURL, resp.StatusCode, body)
+		return bridgeMap, errors.New("Bad response")
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&bridgeMap); err != nil {
+		log.Errorf("Got decoding error: %s %d %+v", reqURL, resp.StatusCode, err)
+		return bridgeMap, err
+	}
+	log.Debugf("bridgeMap %v", bridgeMap)
+	return bridgeMap, nil
+}
+
 // TorTargetsHandler returns the targets for the tor nettest.
 func TorTargetsHandler(c *gin.Context) {
+	countryCode := c.Query("country_code")
+
+	finalBridgeMap := BridgeMap{}
 	content, err := ioutil.ReadFile(viper.GetString("tor.targets-file"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -214,5 +265,31 @@ func TorTargetsHandler(c *gin.Context) {
 		})
 		return
 	}
-	c.Data(http.StatusOK, "application/json", content)
+	err = json.Unmarshal(content, &finalBridgeMap)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "server side error",
+		})
+		// If we don't have anything meaningful to return to the user
+		// from our default list, then it's a hard error.
+		return
+	}
+	if (len(viper.GetString("tor.bridges-api-key")) > 0) && countryCode != "" {
+		log.Debug("Requesting bridges from bridgedb")
+		tpoBridgeMap, err := lookupPrivateBridges(countryCode)
+		if err != nil {
+			// We don't explicitly handle this error. Here's why:
+			//
+			// Be flexible here and return _some_ information to the user
+			// rather than a hard error. Ideally, here we would like to have
+			// a prometheus metric counting the number of times in which
+			// this specific query is failing. For now, we just log inside
+			// of the lookupPrivateBridged function.
+		}
+		for k, v := range tpoBridgeMap {
+			v.Source = "bridgedb"
+			finalBridgeMap[k] = v
+		}
+	}
+	c.JSON(http.StatusOK, finalBridgeMap)
 }
